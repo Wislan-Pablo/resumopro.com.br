@@ -1,0 +1,5 @@
+fastapi
+uvicorn[standard]
+python-multipart  # Necessário para FastAPI processar dados de formulário (form-data) e arquivos
+aiofiles          # Para lidar com I/O assíncrono de arquivos
+Pillow

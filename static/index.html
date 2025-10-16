@@ -1,0 +1,499 @@
+<!-- CÓDIGO FRONT COMPLETO PARA A INTERFACE WEB -->
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ResumeFull.AI - Potencialize seus Resumos</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <style>
+        /* --- ESTILOS GLOBAIS --- */
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-color: #f4f7f6;
+            color: #333;
+            margin: 0;
+            padding: 0;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 32px auto;
+            padding: 16px 32px 32px 32px;
+            background-color: #ffffff;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        }
+
+        /* --- SEÇÃO DE TÍTULO --- */
+        .header-section {
+            text-align: center;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #e0e0e0;
+            margin-bottom: 30px;
+        }
+
+        .header-title-wrapper {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            /* Centraliza o wrapper inteiro */
+            gap: 15px;
+
+            /* Espaço entre a imagem e o título */
+            img {
+                width: 220px;
+                height: auto;
+            }
+        }
+
+        .header-logo {
+            height: 80px;
+            /* Ajuste o tamanho conforme necessário */
+            width: auto;
+        }
+
+        .header-section h1 {
+            color: #007bff;
+            font-size: 1.6em;
+            text-align: justify;
+            margin-bottom: 5px;
+            font-weight: 700;
+        }
+
+        .header-section h2 {
+            color: #555;
+            font-size: 1.4em;
+            margin-bottom: 5px;
+            font-weight: 400;
+        }
+
+        .header-section p {
+            color: #555;
+            text-align: justify;
+            font-size: 1.2em;
+            max-width: 100%;
+            margin: 0 auto;
+        }
+
+        /* --- SEÇÃO DE INPUTS --- */
+        .input-section {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .input-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            font-size: 1.2em;
+            color: #333;
+        }
+
+        input[type="file"] {
+            border: 1px solid #ccc;
+            padding: 12px 16px;
+            border-radius: 6px;
+            width: 100%;
+            box-sizing: border-box;
+            background-color: #f9f9f9;
+        }
+
+        textarea {
+            width: 100%;
+            min-height: 550px;
+            padding: 15px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            resize: vertical;
+            font-size: 1.2em;
+            box-sizing: border-box;
+        }
+
+        /* --- BOTÃO DE SUBMISSÃO --- */
+        #submitButton {
+            background-color: #28a745;
+            color: white;
+            padding: 15px 30px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1.1em;
+            font-weight: 700;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            margin-top: 20px;
+        }
+
+        #submitButton:hover {
+            background-color: #218838;
+        }
+
+        #submitButton:disabled {
+            background-color: #6c757d;
+            cursor: not-allowed;
+        }
+
+        /* --- COMPONENTE DE PROGRESSO --- */
+        #processingArea {
+            margin-top: 30px;
+            text-align: center;
+            border: 1px dashed #007bff;
+            padding: 20px;
+            border-radius: 8px;
+            display: none;
+            /* Inicialmente oculto */
+        }
+
+        .progress-bar-container {
+            background-color: #e9ecef;
+            border-radius: 10px;
+            margin: 10px 0 20px;
+            height: 20px;
+            overflow: hidden;
+        }
+
+        .progress-bar {
+            height: 100%;
+            width: 0;
+            background-color: #007bff;
+            border-radius: 10px;
+            transition: width 0.4s ease;
+            text-align: center;
+            line-height: 20px;
+            color: white;
+            font-weight: bold;
+        }
+
+        .progress-bar.animated {
+            background-image: linear-gradient(45deg,
+                    rgba(255, 255, 255, 0.15) 25%,
+                    transparent 25%,
+                    transparent 50%,
+                    rgba(255, 255, 255, 0.15) 50%,
+                    rgba(255, 255, 255, 0.15) 75%,
+                    transparent 75%,
+                    transparent);
+            background-size: 40px 40px;
+            animation: progress-bar-stripes 2s linear infinite;
+        }
+
+        @keyframes progress-bar-stripes {
+            from {
+                background-position: 40px 0;
+            }
+
+            to {
+                background-position: 0 0;
+            }
+        }
+
+        #successMessage {
+            color: #28a745;
+            font-size: 1.2em;
+            margin-bottom: 20px;
+            font-weight: 600;
+        }
+
+        /* --- BOTÃO DE DOWNLOAD --- */
+        #downloadButton {
+            background-color: #007bff;
+            color: white;
+            padding: 12px 25px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        #downloadButton:hover {
+            background-color: #0056b3;
+        }
+
+        footer {
+            text-align: center;
+            padding: 20px 0;
+            margin-top: 40px;
+            border-top: 2px solid #e0e0e0;
+            color: #555;
+            font-size: 1.2em;
+        }
+
+        footer p {
+            margin: 5px 0;
+        }
+
+        /* Estilos para o contador de palavras */
+        #wordCountDisplay {
+            font-size: 1.1em;
+            color: #555;
+            font-weight: bold;
+            margin-top: 10px;
+            text-align: right;
+        }
+
+        .word-count-red {
+            color: #dc3545;
+            /* Vermelho para palavras abaixo de 500 */
+        }
+
+        .word-count-green {
+            color: #28a745;
+            /* Verde para palavras 500 ou mais */
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+        <header class="header-section">
+            <div class="header-title-wrapper">
+                <img src="/images/Logo-ResumeFull.AI.png" alt="ResumeFull.AI Logo" class="header-logo">
+                <h1>Potencialize seus Resumos de PDFs gerados de IAs — Integre textos e elementos gráficos
+                    vetoriais de forma coerente em um só PDF com a <strong>ResumeFull.AI</strong>
+                </h1>
+            </div>
+            </br>
+            <h2>
+                Não perca mais nem um ponto importante do seu PDF original na geração do seu resumo:
+            </h2>
+            <p>
+                <b>Adicione também as imagens contextualizadas</b> do PDF original de forma automática,
+                <b>e ganhe mais fidelidade e robustez para o seu resumo, refletindo em muito mais qualidade para o seu
+                    aprendizado!</b>
+            </p>
+        </header>
+        <form id="uploadForm">
+            <div class="input-section">
+
+                <div class="input-group">
+                    <label for="originalPdf">Selecione seu arquivo PDF com o texto original completo:</label>
+                    <input type="file" id="originalPdf" name="originalPdf" accept=".pdf" required>
+                </div>
+
+                <div class="input-group">
+                    <label for="iaSummaryText">Cole aqui o texto de resumo copiado da inteligência artificial. Seu texto
+                        deve ter no mínimo 1000 palavras:</label>
+                    <textarea id="iaSummaryText" name="iaSummaryText" required
+                        placeholder="Cole o resumo gerado pelo NotebookLM ou outra IA aqui..."></textarea>
+                    <div id="wordCountDisplay" style="text-align: right; margin-top: 10px; font-weight: 600;"></div>
+                </div>
+
+                <button type="submit" id="submitButton">GERAR RESUMO FULL INTEGRADO COM IMAGENS</button>
+
+            </div>
+        </form>
+        <div id="processingArea">
+            <div id="processingStatus">Aguarde, processando a correlação de dados...</div>
+
+            <div class="progress-bar-container">
+                <div class="progress-bar" id="progressBar">0%</div>
+            </div>
+
+            <div id="resultArea" style="display: none;">
+                <div id="successMessage">
+                    Processamento concluído com sucesso - Aqui está o seu novo arquivo PDF com o seu resumo completo
+                    gerado por IA + as imagens do seu PDF original, semanticamente integrados - com cada imagem
+                    relacionada ao seu próprio contexto.
+                </div>
+                <button id="downloadButton" onclick="window.location.href='/download-final-pdf'">Baixar Resumo Full
+                </button>
+            </div>
+        </div>
+        <footer>
+            <p>Software version: <i>[DEMO]</i></p>
+            <p>By: <b>Pablo Souza</b></p>
+        </footer>
+
+    </div>
+
+    <script>
+        $(document).ready(function () {
+            const $form = $('#uploadForm');
+            const $submitButton = $('#submitButton');
+            const $processingArea = $('#processingArea');
+            const $progressBar = $('#progressBar');
+            const $processingStatus = $('#processingStatus');
+            const $resultArea = $('#resultArea');
+            const $wordCountDisplay = $('#wordCountDisplay'); // Novo elemento para o contador de palavras
+            const $iaSummaryText = $('#iaSummaryText'); // Referência ao textarea
+
+            const originalSubmitButtonText = $submitButton.text(); // Armazena o texto original do botão
+
+            function updateProgressBar(progress, statusText) {
+                $progressBar.css('width', progress + '%').text(progress + '%');
+                $processingStatus.text(statusText);
+            }
+
+            // Função para atualizar o contador de palavras
+            function updateWordCountDisplay() {
+                const text = $iaSummaryText.val();
+                const wordCount = text.split(/\s+/).filter(word => word.length > 0).length;
+                $wordCountDisplay.text(`Quantidade de palavras inseridas: ${wordCount}`);
+            }
+
+            // Inicializa o contador de palavras ao carregar a página
+            updateWordCountDisplay();
+
+            // Adiciona um listener para atualizar o contador de palavras em tempo real
+            $iaSummaryText.on('input', updateWordCountDisplay);
+
+            let ws;
+
+            function connectWebSocket() {
+                ws = new WebSocket(`ws://${window.location.host}/ws/progress`);
+
+                ws.onopen = function (event) {
+                    console.log("WebSocket conectado.");
+                    updateProgressBar(5, 'Conectado ao servidor, aguardando início do processamento...');
+                    $progressBar.addClass('animated'); // Inicia a animação
+                };
+
+                ws.onmessage = function (event) {
+                    const data = JSON.parse(event.data);
+                    console.log("Mensagem WebSocket recebida:", data);
+
+                    if (data.progress === -1) {
+                        // Erro
+                        $processingStatus.text(`Erro: ${data.status}`);
+                        $progressBar.css('background-color', '#dc3545'); // Cor de erro
+                        alert(data.status); // Exibe o erro
+                        $submitButton.prop('disabled', false).text(originalSubmitButtonText); // Volta ao texto original
+                        $processingArea.hide(); // Oculta a área de processamento em caso de erro
+                        $progressBar.removeClass('animated'); // Para a animação em caso de erro
+                    } else {
+                        updateProgressBar(data.progress, data.status);
+                        if (data.progress === 100) {
+                            // Processamento concluído com sucesso
+                            $progressBar.removeClass('animated'); // Para a animação ao concluir
+                            setTimeout(() => {
+                                $processingStatus.hide();
+                                $resultArea.show();
+                                // Configura o botão de download
+                                const finalPdfFilename = "Resumo_Final_Com_Prints.pdf"; // Este nome deve vir do backend ou ser um padrão
+                                $('#downloadButton').off('click').on('click', function (e) {
+                                    e.preventDefault(); // Impede a ação padrão do link/botão por um instante
+                                    const $thisButton = $(this);
+                                    $thisButton.prop('disabled', true).text('Baixando...'); // Desabilita e muda o texto
+                                    window.location.href = `/download-final-pdf/${finalPdfFilename}`;
+                                    // Nota: o botão permanece desabilitado e com texto alterado após o início do download.
+                                });
+
+                                // Modifica o botão de submissão para reiniciar a página
+                                $submitButton.prop('disabled', false).text('REINICIAR E GERAR UM NOVO RESUMO FULL');
+                                // Remove o manipulador de clique anterior e adiciona um novo para recarregar a página
+                                $submitButton.off('click').on('click', function (e) {
+                                    e.preventDefault();
+                                    window.location.reload();
+                                });
+
+                            }, 1000); // Pequeno atraso para a animação da barra de progresso
+                        }
+                    }
+                };
+
+                ws.onclose = function (event) {
+                    console.log("WebSocket desconectado.");
+                    $progressBar.removeClass('animated'); // Para a animação ao desconectar
+                    // Opcional: tentar reconectar ou mostrar uma mensagem de erro
+                };
+
+                ws.onerror = function (error) {
+                    console.error("Erro no WebSocket:", error);
+                    $processingStatus.text('Erro na conexão com o servidor. Tente novamente.');
+                    $progressBar.css('background-color', '#dc3545'); // Cor de erro
+                    alert('Erro na conexão com o servidor. Por favor, tente novamente.');
+                    $submitButton.prop('disabled', false).text(originalSubmitButtonText); // Volta ao texto original
+                    $processingArea.hide(); // Oculta a área de processamento em caso de erro
+                    $progressBar.removeClass('animated'); // Para a animação em caso de erro
+                };
+            }
+
+            // Remove o manipulador de submit do formulário, o botão agora controlará a submissão.
+            $form.off('submit');
+
+            // Adiciona o manipulador de clique inicial ao botão de submissão
+            $submitButton.on('click', function (e) {
+                e.preventDefault(); // Previne a submissão padrão do formulário
+
+                if ($submitButton.text() === originalSubmitButtonText) {
+                    const iaSummaryText = $('#iaSummaryText').val();
+                    const wordCount = iaSummaryText.split(/\s+/).filter(word => word.length > 0).length;
+                    $wordCountDisplay.text(`Palavras: ${wordCount}`).removeClass('word-count-red').removeClass('word-count-green');
+
+                    if (wordCount < 1000) {
+                        $wordCountDisplay.addClass('word-count-red');
+                        alert(`A quantidade de palavras do resumo deve ser maior que 1000.\nQuantidade atual: ${wordCount} palavras.`);
+                        return; // Impede a submissão do formulário
+                    } else {
+                        $wordCountDisplay.addClass('word-count-green');
+                    }
+
+                    // 1. Desabilita o botão e mostra a área de processamento
+                    $submitButton.prop('disabled', true).text('PROCESSANDO...');
+                    $processingArea.show();
+                    $resultArea.hide();
+                    $progressBar.css('background-color', '#007bff'); // Reseta a cor da barra de progresso
+                    updateProgressBar(0, 'Iniciando...'); // Reinicia o progresso visualmente
+                    $progressBar.addClass('animated'); // Inicia a animação ao submeter o formulário
+
+                    // Conectar WebSocket antes de enviar o formulário
+                    connectWebSocket();
+
+                    // 2. Coleta os dados do formulário (incluindo o arquivo PDF)
+                    const formData = new FormData($form[0]); // Passa o elemento DOM nativo
+
+                    // --- CHAMADA AJAX REAL PARA O FASTAPI ---
+                    $.ajax({
+                        url: '/api/processamento-full', // Rota do seu FastAPI
+                        type: 'POST',
+                        data: formData,
+                        // CRUCIAIS para enviar arquivos
+                        processData: false,
+                        contentType: false,
+
+                        xhr: function () {
+                            // Opcional: Adicionar um listener para o progresso do upload do arquivo
+                            var xhr = new window.XMLHttpRequest();
+                            xhr.upload.addEventListener("progress", function (evt) {
+                                if (evt.lengthComputable) {
+                                    var percentComplete = evt.loaded / evt.total;
+                                    // Apenas atualiza o status de envio do arquivo, o progresso principal vem do WS
+                                    $processingStatus.text(`Enviando arquivo: ${Math.round(percentComplete * 100)}%`);
+                                }
+                            }, false);
+                            return xhr;
+                        },
+
+                        success: function (response) {
+                            console.log("Upload de arquivo bem-sucedido, aguardando progresso via WebSocket...");
+                            // Não atualiza a barra de progresso aqui, isso será feito pelo WebSocket
+                            // A mensagem de 'Iniciando processamento...' será enviada pelo backend via WS
+                        },
+                        error: function (xhr, status, error) {
+                            // Lógica de tratamento de erro no frontend
+                            console.error("Erro no processamento AJAX:", status, error);
+                            $processingStatus.text('Erro ao enviar arquivos. Tente novamente.');
+                            $progressBar.css('background-color', '#dc3545'); // Cor de erro
+                            alert("Erro ao processar. Verifique o console do navegador e do servidor.");
+                            $processingArea.hide();
+                            $submitButton.prop('disabled', false).text(originalSubmitButtonText); // Volta ao texto original
+                            if (ws) ws.close(); // Fechar WebSocket em caso de erro AJAX
+                            $progressBar.removeClass('animated'); // Para a animação em caso de erro AJAX
+                        }
+                    });
+                }
+            });
+        });
+    </script>
+</body>
+
+</html>
