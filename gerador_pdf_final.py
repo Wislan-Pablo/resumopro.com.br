@@ -54,27 +54,139 @@ def limpar_e_reconstruir_tabelas(texto):
     # Retorna o texto reconstruído
     return '\n'.join(linhas)
 
+def detectar_e_corrigir_tabelas_malformadas(texto):
+    """
+    Detecta e corrige tabelas que podem ter sido malformadas durante o processamento.
+    """
+    linhas = texto.splitlines()
+    linhas_corrigidas = []
+    i = 0
+    
+    while i < len(linhas):
+        linha = linhas[i].strip()
+        
+        # Detectar possíveis tabelas por padrões comuns
+        if _eh_possivel_tabela(linha):
+            # Coletar linhas consecutivas que parecem ser parte de uma tabela
+            linhas_tabela = []
+            j = i
+            while j < len(linhas) and _eh_possivel_tabela(linhas[j].strip()):
+                linhas_tabela.append(linhas[j].strip())
+                j += 1
+            
+            if len(linhas_tabela) >= 2:
+                # Tentar reconstruir como tabela markdown
+                tabela_reconstruida = _reconstruir_tabela_markdown(linhas_tabela)
+                if tabela_reconstruida:
+                    linhas_corrigidas.extend(tabela_reconstruida)
+                    i = j
+                    continue
+        
+        linhas_corrigidas.append(linhas[i])
+        i += 1
+    
+    return '\n'.join(linhas_corrigidas)
+
+def _eh_possivel_tabela(linha):
+    """Verifica se uma linha pode ser parte de uma tabela."""
+    if not linha or len(linha.strip()) < 5:
+        return False
+    
+    # Padrões que indicam possíveis tabelas
+    padroes_tabela = [
+        r'\|\s*.*\s*\|',  # Já tem pipes
+        r'\s+\w+\s+\w+',  # Múltiplas palavras com espaços
+        r'\w+\s*:\s*\w+',  # Padrão chave:valor
+        r'\w+\s*-\s*\w+',  # Padrão chave-valor
+    ]
+    
+    return any(re.search(padrao, linha) for padrao in padroes_tabela)
+
+def _reconstruir_tabela_markdown(linhas_tabela):
+    """Tenta reconstruir uma tabela markdown a partir de linhas malformadas."""
+    if len(linhas_tabela) < 2:
+        return None
+    
+    # Se já tem pipes, apenas limpar
+    if all('|' in linha for linha in linhas_tabela):
+        return linhas_tabela
+    
+    # Tentar detectar colunas por espaços
+    primeira_linha = linhas_tabela[0]
+    posicoes_colunas = []
+    
+    # Encontrar posições de múltiplos espaços
+    for match in re.finditer(r'  +', primeira_linha):
+        posicoes_colunas.append(match.start())
+    
+    if len(posicoes_colunas) < 1:
+        # Tentar por padrão chave:valor
+        if ':' in primeira_linha or '-' in primeira_linha:
+            return _formatar_como_tabela_chave_valor(linhas_tabela)
+        return None
+    
+    # Adicionar posição final
+    posicoes_colunas.append(len(primeira_linha))
+    
+    # Reconstruir cada linha
+    linhas_formatadas = []
+    for i, linha in enumerate(linhas_tabela):
+        colunas = []
+        for j in range(len(posicoes_colunas) - 1):
+            inicio = posicoes_colunas[j]
+            fim = posicoes_colunas[j + 1] if j + 1 < len(posicoes_colunas) else len(linha)
+            conteudo_celula = linha[inicio:fim].strip()
+            colunas.append(conteudo_celula)
+        
+        if colunas:
+            linha_formatada = "| " + " | ".join(colunas) + " |"
+            linhas_formatadas.append(linha_formatada)
+            
+            # Adicionar separador após cabeçalho
+            if i == 0:
+                separador = "|" + "---|" * len(colunas)
+                linhas_formatadas.append(separador)
+    
+    return linhas_formatadas
+
+def _formatar_como_tabela_chave_valor(linhas_tabela):
+    """Formata linhas como tabela chave-valor."""
+    linhas_formatadas = []
+    linhas_formatadas.append("| Campo | Valor |")
+    linhas_formatadas.append("|-------|-------|")
+    
+    for linha in linhas_tabela:
+        # Tentar diferentes separadores
+        for separador in [':', '-', '=']:
+            if separador in linha:
+                partes = linha.split(separador, 1)
+                if len(partes) == 2:
+                    chave = partes[0].strip()
+                    valor = partes[1].strip()
+                    linhas_formatadas.append(f"| {chave} | {valor} |")
+                    break
+    
+    return linhas_formatadas
+
 # --- FUNÇÕES DE MONTAGEM E CONVERSÃO ---
 
 def montar_resumo_com_imagens(caminho_resumo_tags, caminho_html_saida, nome_subpasta_imagens_html):
     """
-    Carrega o resumo (Markdown), converte para HTML, substitui as tags de imagem
-    e garante que o caminho de SRC do HTML seja relativo (ex: prints_imagens/img.png).
+    Carrega o resumo (HTML editado pelo usuário) e processa as imagens posicionadas.
     """
     print("--- 1. Montagem: Gerando HTML ---")
 
     try:
-        # 1. Carregar como TEXTO (esperando Markdown)
+        # 1. Carregar como HTML (já editado pelo usuário)
         with open(caminho_resumo_tags, "r", encoding="utf-8") as f:
-            resumo_texto = f.read()
+            resumo_html = f.read()
     except FileNotFoundError:
-        print(f"❌ ERRO: Arquivo de resumo com tags não encontrado em '{caminho_resumo_tags}'")
+        print(f"❌ ERRO: Arquivo de resumo editado não encontrado em '{caminho_resumo_tags}'")
         return None
 
-    # 2. CONVERTER MARKDOWN PARA HTML (ignora a pré-limpeza, que é falha)
-    md = MarkdownIt()
-    resumo_html_base = md.render(resumo_texto)
-    resumo_montado_html = resumo_html_base
+    # 2. Processar HTML editado (já contém as imagens posicionadas)
+    # Aplicar correções de tabelas malformadas
+    resumo_montado_html = detectar_e_corrigir_tabelas_malformadas(resumo_html)
     
     # Define a estrutura HTML básica e estilos (com CSS de tabela)
     html_header = """
@@ -120,31 +232,25 @@ def montar_resumo_com_imagens(caminho_resumo_tags, caminho_html_saida, nome_subp
 """
     html_footer = "</body></html>"
     
-    # 3. Substituir TAGs ([IMAGEM_ID_X_Y]) no HTML
+    # 3. Processar imagens já posicionadas no HTML
     
-    # O caminho COMPLETO não é usado aqui, apenas o nome relativo para o HTML
-    pasta_imagens_caminho_html = os.path.join("temp_uploads", nome_subpasta_imagens_html)
-    
-    # Nota: Precisamos dos arquivos PNG para saber quais tags substituir.
-    # O loop abaixo usa a pasta temporária para listar os nomes de arquivo
-    # mas o HTML usará o caminho relativo para o servidor.
-
-    # Lista arquivos para substituição (assumindo que a pasta prints_imagens existe dentro de temp_uploads)
+    # O HTML já contém as imagens posicionadas pelo usuário
+    # Apenas precisamos ajustar os caminhos das imagens para o formato correto
     pasta_prints_completa = os.path.join(os.path.dirname(caminho_html_saida), nome_subpasta_imagens_html)
     
     if not os.path.exists(pasta_prints_completa):
         print(f"❌ ERRO: Pasta de imagens '{pasta_prints_completa}' não encontrada. Abortando montagem.")
         return None
 
-    for nome_arquivo in os.listdir(pasta_prints_completa):
-        if nome_arquivo.endswith(".png"):
-            img_id = nome_arquivo.replace(".png", "")
-            tag_marcador = f"[{img_id}]"
-            
-            # CRÍTICO: O caminho SRC precisa ser relativo ao diretório raiz do servidor (temp_uploads/)
-            html_imagem = f'<div class="image-container"><img src="{nome_subpasta_imagens_html}/{nome_arquivo}" alt="Diagrama {img_id}"></div>'
-            
-            resumo_montado_html = resumo_montado_html.replace(tag_marcador, html_imagem)
+    # Listar imagens disponíveis para ajustar caminhos
+    imagens_disponiveis = [f for f in os.listdir(pasta_prints_completa) if f.endswith(".png")]
+    
+    # Ajustar caminhos das imagens no HTML
+    for nome_arquivo in imagens_disponiveis:
+        # Substituir caminhos relativos por caminhos corretos
+        old_path = f"/temp_uploads/{nome_subpasta_imagens_html}/{nome_arquivo}"
+        new_path = f"{nome_subpasta_imagens_html}/{nome_arquivo}"
+        resumo_montado_html = resumo_montado_html.replace(old_path, new_path)
 
     # 4. Finalizar o arquivo HTML
     conteudo_final_html = html_header + resumo_montado_html + html_footer

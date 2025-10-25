@@ -103,7 +103,6 @@ def capturar_imagens_do_corpo_html(caminho_html: str, caminho_imagens_destino: s
             imagens_salvas.append(caminho_saida)
             print(f"   ✅ Imagem única salva como: {nome_arquivo}")
 
-        
     print(f"✅ Captura concluída. {len(imagens_salvas)} imagens únicas salvas em {caminho_imagens_destino}")
     print(f"   Foram encontradas e descartadas {total_imagens_encontradas - len(imagens_salvas)} imagens repetidas (incluindo a primeira cópia).")
     

@@ -1,0 +1,1531 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Editor Semântico - ResumeFull.AI</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked@9.1.6/marked.min.js"></script>
+    <script src="https://documentcloud.adobe.com/view-sdk/main.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-color: #f4f7f6;
+            color: #333;
+        }
+
+        .container {
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* Painel Lateral - Imagens */
+        .sidebar {
+            width: 300px;
+            background: #e0e0e0;
+            border-right: 1px solid #bbb;
+            padding: 15px 20px 15px 20px;
+            overflow-y: auto;
+            transition: all 0.3s ease;
+            flex-shrink: 0;
+        }
+
+        .main-editor {
+            transition: margin-left 0.4s cubic-bezier(0.25, 0.8, 0.25, 1),
+                        width 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+        }
+
+        /* Animação suave para o container */
+        .container {
+            transition: all 0.3s ease;
+        }
+
+        .sidebar h2 {
+            color: #007bff;
+            font-size: 1.4em;
+        }
+        .sidebar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        .sidebar-toggle {
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            font-size: 2.2em;
+            font-weight: 600;
+            color: #007bff;
+            border-radius: 6px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .sidebar.collapsed {
+            width: 60px;
+            padding: 15px 0 15px 0;
+            overflow: visible;
+        }
+        .sidebar.collapsed .sidebar-header { justify-content: center; }
+        .sidebar.collapsed .sidebar-header h2 { display: none; }
+        .sidebar.collapsed #galleryContent,
+        .sidebar.collapsed #galleryLoading {
+            display: none !important;
+        }
+
+        .sidebar h3 {
+            color: #666;
+            margin-bottom: 15px;
+            font-size: 0.9em;
+            line-height: 1.4;
+            text-align: justify;
+        }
+
+        .info-message {
+            position: relative;
+            background: #eef5ff;
+            border: 1px solid #cfe0ff;
+            color: #334;
+            border-radius: 6px;
+            padding: 10px 36px 10px 12px;
+            margin-bottom: 15px;
+        }
+        .info-close {
+            position: absolute;
+            right: 8px;
+            top: 8px;
+            border: none;
+            background: transparent;
+            color: #666;
+            font-size: 16px;
+            cursor: pointer;
+        }
+
+        .image-gallery {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .image-item {
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 10px;
+            cursor: grab;
+            transition: all 0.3s ease;
+            background: #f9f9f9;
+            position: relative;
+        }
+
+        .image-item:hover {
+            border-color: #007bff;
+            background: #f0f8ff;
+        }
+
+        .image-item.dragging {
+            opacity: 0.5;
+            transform: scale(0.95);
+        }
+
+        .image-item img {
+            width: 100%;
+            height: auto;
+            border-radius: 4px;
+            margin-bottom: 8px;
+        }
+
+        .image-item .image-name {
+            font-size: 0.9em;
+            color: #666;
+            text-align: center;
+            font-weight: 600;
+        }
+
+        .image-item .delete-btn {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            background: #dc3545;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            cursor: pointer;
+            font-size: 12px;
+            display: none;
+            z-index: 10;
+        }
+
+        .image-item:hover .delete-btn {
+            display: block;
+        }
+
+        .image-item .view-btn {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0,0,0,0.6);
+            color: #fff;
+            border: none;
+            border-radius: 50%;
+            width: 42px;
+            height: 42px;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            z-index: 9;
+        }
+        .image-item:hover .view-btn { display: flex; }
+        .image-item .view-btn:hover { background: rgba(0,0,0,0.75); }
+
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.6);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+        .modal-overlay.active { display: flex; }
+        .modal-content {
+            background: #fff;
+            border-radius: 10px;
+            max-width: 80vw;
+            max-height: 80vh;
+            padding: 16px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .modal-image {
+            max-width: 76vw;
+            max-height: 65vh;
+            object-fit: contain;
+            border-radius: 6px;
+        }
+        .modal-image-wrapper { position: relative; }
+        .modal-filename {
+            position: absolute;
+            top: 8px;
+            left: 8px;
+            background: rgba(0,0,0,0.6);
+            color: #fff;
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-size: 12px;
+            max-width: calc(100% - 16px);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            pointer-events: none;
+            z-index: 1002;
+        }
+        .modal-actions {
+            margin-top: 12px;
+            display: flex;
+            gap: 30px;
+        }
+        .modal-close {
+            position: absolute;
+            top: -17px;
+            right: -17px;
+            width: 35px;
+            height: 35px;
+            border-radius: 50%;
+            background: #ffffff;
+            color: #333;
+            border: 1px solid rgba(0,0,0,0.2);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.18);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            font-weight: bold;
+            line-height: 1;
+            cursor: pointer;
+            z-index: 1001;
+        }
+        .modal-close:hover { background: #f5f5f5; }
+
+        .gallery-actions {
+            margin-bottom: 15px;
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn-danger {
+            margin: 0 auto;
+            background: #777;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #c82333;
+        }
+
+        /* Área Principal - Editor */
+        .main-editor {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: #fff;
+        }
+
+        .editor-header {
+            position: relative;
+            height: 80px;
+            background: #e0e0e0;
+            color: white;
+            padding: 15px 20px;
+            border-bottom: 1px solid #bbb;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .editor-header h1 {
+            font-size: 1.2em;
+            font-weight: 600;
+        }
+        .page-title {
+            text-align: center;
+            font-size: 1.4em;
+            margin: 10px 40px 16px;
+        }
+
+        .editor-actions {
+            width: 600px;
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary {
+            background: #28a745;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #218838;
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #007bff;
+        }
+
+        /* Área de Conteúdo */
+        .content-area {
+            flex: 1;
+            display: flex;
+            overflow-y: auto;
+            background-color: #f9f9f9;
+        }
+
+        .text-panel {
+            flex: 1;
+            padding: 0;
+            overflow-y: visible;
+        }
+
+        .text-panel h3 {
+            color: #007bff;
+            margin-top: 15px;
+            margin-left: 40px;
+            margin-right: 40px;
+            font-size: 1.3em;
+        }
+
+        /* Abas do Editor */
+        .editor-tabs {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        .tab-btn.active {
+            background: #007bff;
+            color: #fff;
+        }
+
+        /* Seção de Captura de Imagens do PDF */
+        .pdf-capture-section {
+            padding: 0;
+        }
+        .pdf-viewer-toolbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 20px;
+            margin: 20px 20px 0 20px;
+            border: 1px solid #ddd;
+            border-radius: 4px 4px 0 0;
+            background-color: #fff;
+            position: sticky;
+            top: 0;
+            z-index: 5;
+        }
+        .pdf-viewer-toolbar .toolbar-left,
+        .pdf-viewer-toolbar .toolbar-right {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        .pdf-viewer-toolbar #pageIndicator {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .pdf-viewer-toolbar #pageInput {
+            width: 64px;
+            padding: 4px 6px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        .pdf-viewer-toolbar #zoomLabel {
+            min-width: 52px;
+            text-align: center;
+        }
+        .pdf-capture-container {
+            height: 1000px;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 0 0 4px 4px;
+            background-color: #fff;
+            margin: 0 20px 20px 20px;
+        }
+        #adobe-dc-view {
+            height: 1000px;
+            width: 100%;
+            overflow: hidden;
+        }
+        .pdf-page {
+            margin: 0 20px 30px 20px;
+            border: 1px solid #ddd;
+            border-top: none;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            background-color: white;
+            position: relative;
+        }
+        .pdf-page canvas {
+            display: block;
+            margin: 0 auto;
+        }
+        .pdf-page-number {
+            position: absolute;
+            top: 5px;
+            right: 10px;
+            background-color: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 2px 8px;
+            border-radius: 3px;
+            font-size: 0.8em;
+        }
+        .pdf-loading {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+        .pdf-loading-spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #007bff;
+            border-radius: 50%;
+            width: 60px;
+            height: 60px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+
+        /* Estilos para a div structuredSummary (mesma formatação do index.html) */
+        .formatted-summary {
+            background-color: #fff;
+            margin: 20px;
+            padding: 20px;
+            border: 1px solid #5a6268;
+            flex: 1;
+            overflow: visible;
+        }
+
+
+
+        .formatted-summary h1 {
+            color: #333;
+            font-size: 1em;
+            font-weight: normal;
+            margin-bottom: 15px;
+            border-bottom: 2px solid #007bff;
+            padding-bottom: 10px;
+        }
+
+        .formatted-summary h2 {
+            color: #333;
+            font-size: 1em;
+            font-weight: normal;
+            margin-top: 20px;
+            margin-bottom: 10px;
+        }
+
+        .formatted-summary h3 {
+            color: #333;
+            font-size: 1em;
+            font-weight: normal;
+            margin-top: 15px;
+            margin-bottom: 8px;
+        }
+
+        .formatted-summary p {
+            line-height: 1.6;
+            margin-bottom: 10px;
+            text-align: justify;
+        }
+
+        .formatted-summary ul,
+        .formatted-summary ol {
+            margin-left: 20px;
+            margin-bottom: 10px;
+        }
+
+        .formatted-summary li {
+            margin-bottom: 5px;
+        }
+
+        .formatted-summary ul li {
+            margin-left: 30px;
+        }
+
+        /* Estilos para tópicos numerados */
+        .formatted-summary ol li {
+            font-size: 1em;
+            font-weight: normal;
+            margin-bottom: 8px;
+            line-height: 1.4;
+        }
+
+        /* Estilos para subtópicos (listas não ordenadas dentro de listas ordenadas) */
+        .formatted-summary ol ul {
+            margin-left: 30px;
+            margin-top: 5px;
+            margin-bottom: 10px;
+        }
+
+        .formatted-summary ol ul li {
+            font-size: 1em;
+            margin-left: 30px;
+            font-weight: normal;
+            margin-bottom: 4px;
+            list-style-type: disc;
+        }
+
+        /* Estilos para listas aninhadas mais profundas */
+        .formatted-summary ol ul ul {
+            margin-left: 25px;
+        }
+
+        .formatted-summary ol ul ul li {
+            list-style-type: circle;
+        }
+
+        /* Estilos específicos para Marked.js */
+        .formatted-summary blockquote {
+            border-left: 4px solid #007bff;
+            margin: 20px 0;
+            padding: 10px 20px;
+            background-color: #f8f9fa;
+            font-style: italic;
+        }
+
+        .formatted-summary code {
+            background-color: #f1f3f4;
+            padding: 2px 6px;
+            border-radius: 3;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+        }
+
+        .formatted-summary pre {
+            background-color: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 6px;
+            padding: 15px;
+            overflow-x: auto;
+            margin: 15px 0;
+        }
+
+        .formatted-summary pre code {
+            background-color: transparent;
+            padding: 0;
+            border-radius: 0;
+        }
+
+        .formatted-summary table {
+            border-collapse: collapse;
+            width: 100%;
+            margin: 15px 0;
+        }
+
+        .formatted-summary th,
+        .formatted-summary td {
+            border: 1px solid #333;
+            padding: 8px 12px;
+            text-align: left;
+        }
+
+        .formatted-summary th {
+            background-color: #f8f9fa;
+            font-weight: normal;
+        }
+
+        .formatted-summary hr {
+            border: none;
+            border-top: 2px solid #e9ecef;
+            margin: 20px 0;
+        }
+
+        .formatted-summary .drop-zone {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 123, 255, 0.1);
+            border: 2px dashed #007bff;
+            border-radius: 8px;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2em;
+            color: #007bff;
+            font-weight: 600;
+        }
+
+        .formatted-summary.drag-over .drop-zone {
+            display: flex;
+        }
+
+        .image-placeholder {
+            display: inline-block;
+            background: #e9ecef;
+            border: 2px dashed #6c757d;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 10px 0;
+            text-align: center;
+            color: #6c757d;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            min-height: 100px;
+            position: relative;
+        }
+
+        .image-placeholder:hover {
+            border-color: #007bff;
+            background: #f0f8ff;
+            color: #007bff;
+        }
+
+        .image-placeholder img {
+            max-width: 100%;
+            max-height: 200px;
+            border-radius: 4px;
+            margin-bottom: 10px;
+        }
+
+        .image-placeholder .remove-btn {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            background: #dc3545;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            cursor: pointer;
+            font-size: 12px;
+            display: none;
+        }
+
+        .image-placeholder:hover .remove-btn {
+            display: block;
+        }
+
+
+        /* Status Bar */
+        .status-bar {
+            background: #f8f9fa;
+            border-top: 1px solid #e0e0e0;
+            padding: 10px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        .status-info {
+            display: flex;
+            gap: 20px;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .container {
+                flex-direction: column;
+            }
+
+            .content-area {
+                flex-direction: column;
+            }
+        }
+
+        /* Melhorar a transição do editor principal */
+        .main-editor {
+            transition: all 0.3s ease;
+            flex: 1;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <!-- Painel Lateral - Imagens -->
+        <div class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <h2>Galeria</h2>
+                <button id="sidebarToggle" class="sidebar-toggle" aria-label="Retrair Galeria" title="Retrair Galeria">
+    <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" fill="currentColor" class="bi bi-x-lg" viewBox="0 0 16 16">
+        <path d="M2.146 2.854a.5.5 0 1 1 .708-.708L8 7.293l5.146-5.147a.5.5 0 0 1 .708.708L8.707 8l5.147 5.146a.5.5 0 0 1-.708.708L8 8.707l-5.146 5.147a.5.5 0 0 1-.708-.708L7.293 8z"/>
+    </svg>
+</button>
+            </div>
+            <div id="galleryLoading" class="pdf-loading">
+                <div class="pdf-loading-spinner"></div>
+                <p>Carregando imagens da galeria...</p>
+            </div>
+            <div id="galleryContent" style="display: none;">
+                <div class="info-message" id="galleryInfoMessage">
+                    <h3 id="imageCountInfo">Identifiquei 0 imagens vetoriais no PDF</h3>
+                    <button class="info-close" id="galleryInfoClose" title="Fechar" aria-label="Fechar">×</button>
+                </div>
+                <div class="gallery-actions">
+                    <button class="btn btn-danger" onclick="deleteAllGalleryImages()">Excluir Todas as Imagens</button>
+                </div>
+                <div class="image-gallery" id="imageGallery">
+                    <!-- Imagens serão carregadas dinamicamente -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Área Principal -->
+        <div class="main-editor">
+            <div class="editor-header">
+                <div class="editor-tabs">
+                    <button id="tabEditor" class="btn btn-secondary tab-btn active">Editor</button>
+                    <button id="btnCapture" class="btn btn-secondary tab-btn">Capturar Imagens no PDF</button>
+                </div>
+                <div class="editor-actions">
+                    <button class="btn btn-secondary" onclick="clearAllImages()">Mover todas as imagens do documento para a
+                        galeria</button>
+                    <button class="btn btn-primary" onclick="generateFinalPDF()">Gerar PDF Final</button>
+                </div>
+            </div>
+
+            <div class="content-area">
+                <!-- Painel de Texto -->
+                <div class="text-panel">
+                    <div id="editorSection" class="editor-section">
+                        <h1 class="page-title">Selecione as imagens na galeria ou capture de qualquer parte do PDF (botão-menu: Capturar Imagens no PDF) e posicione em qualquer parte do seu resumo</h1>
+                        <h3>Seu resumo estruturado gerado pela IA:</h3>
+                        <div id="structuredSummary" class="formatted-summary" contenteditable="true">
+                            <div class="drop-zone">Solte a imagem aqui para inserir</div>
+                            <!-- Conteúdo do resumo será carregado aqui -->
+                        </div>
+                    </div>
+                    <div id="pdfCaptureSection" class="pdf-capture-section" style="display: none;">
+                         <div id="pdfViewerToolbar" class="pdf-viewer-toolbar">
+                             <div class="toolbar-left">
+                                 <span id="adobeToolbarTitle">Visualizador Adobe PDF</span>
+                             </div>
+                             <div class="toolbar-right">
+                                 <span id="adobeToolbarInfo"></span>
+                                 <button id="btnCaptureImage" class="btn btn-secondary tab-btn" title="Capturar imagem" aria-label="Capturar imagem">
+                                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-fullscreen" viewBox="0 0 16 16">
+                                         <path d="M1.5 1a.5.5 0 0 0-.5.5v4a.5.5 0 0 1-1 0v-4A1.5 1.5 0 0 1 1.5 0h4a.5.5 0 0 1 0 1zM10 .5a.5.5 0 0 1 .5-.5h4A1.5 1.5 0 0 1 16 1.5v4a.5.5 0 0 1-1 0v-4a.5.5 0 0 0-.5-.5h-4a.5.5 0 0 1-.5-.5M.5 10a.5.5 0 0 1 .5.5v4a.5.5 0 0 0 .5.5h4a.5.5 0 0 1 0 1h-4A1.5 1.5 0 0 1 0 14.5v-4a.5.5 0 0 1 .5-.5m15 0a.5.5 0 0 1 .5.5v4a1.5 1.5 0 0 1-1.5 1.5h-4a.5.5 0 0 1 0-1h4a.5.5 0 0 0 .5-.5v-4a.5.5 0 0 1 .5-.5"/>
+                                     </svg>
+                                     <span style="margin-left: 10px;">CAPTURAR IMAGEM</span>
+                                 </button>
+                             </div>
+                         </div>
+                         <div id="pdfCaptureContainer" class="pdf-capture-container">
+                            <div id="adobe-dc-view" style="height: 1000px; width: 100%;"></div>
+                            <script src="https://acrobatservices.adobe.com/view-sdk/viewer.js"></script>
+                            <script type="text/javascript">
+                                document.addEventListener("adobe_dc_view_sdk.ready", function(){
+                                var adobeDCView = new AdobeDC.View({clientId: "<b06000c70bd143a0adc54a2f6d394b2a>", divId: "adobe-dc-view"});
+                                adobeDCView.previewFile({
+                                content:{location: {url: "https://acrobatservices.adobe.com/view-sdk-demo/PDFs/Bodea Brochure.pdf"}},
+                                metaData : { fileName : "Bodea Brochure.pdf" } 
+                                }, { embedMode: "SIZED_CONTAINER"});
+                            });
+                            </script>
+                         </div>
+                     </div>
+                </div>
+
+            </div>
+
+            <div class="status-bar">
+                <div class="status-info">
+                    <span>Imagens posicionadas: <span id="imageCount">0</span></span>
+                    <span>Status: <span id="status">Pronto para editar</span></span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="imageModal" class="modal-overlay" onclick="closeImageModal()">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <button class="modal-close" onclick="closeImageModal()" title="Fechar" aria-label="Fechar">X</button>
+            <div id="modalFilename" class="modal-filename"></div>
+             <div class="modal-image-wrapper">
+                 <img id="modalImage" class="modal-image" src="" alt="">
+             </div>
+            <div class="modal-actions">
+                <button class="btn btn-secondary" onclick="prevModalImage()">◀ Anterior</button>
+                <button class="btn btn-secondary" onclick="nextModalImage()">Próxima ▶</button>
+                <button class="btn btn-danger" onclick="deleteCurrentModalImage()">Excluir da galeria</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let estruturaEdicao = null;
+        let imagensPosicionadas = [];
+        let galleryCacheBust = Date.now();
+
+        // Função para converter Markdown para HTML usando a mesma lógica do index.html
+        function convertMarkdownToHtml(markdown) {
+            // Usar a biblioteca marked.js se disponível, senão usar conversão manual
+            if (typeof marked !== 'undefined') {
+                return marked.parse(markdown, {
+                    breaks: true,
+                    gfm: true,
+                    tables: true,
+                    pedantic: false,
+                    sanitize: false,
+                    smartLists: true,
+                    smartypants: false
+                });
+            } else {
+                // Fallback para conversão manual
+                let html = markdown
+                    // Headers
+                    .replace(/^### (.*$)/gim, '<h3>$1</h3>')
+                    .replace(/^## (.*$)/gim, '<h2>$1</h2>')
+                    .replace(/^# (.*$)/gim, '<h1>$1</h1>')
+                    // Bold
+                    .replace(/\*\*(.*?)\*\*/gim, '<strong>$1</strong>')
+                    // Italic
+                    .replace(/\*(.*?)\*/gim, '<em>$1</em>')
+                    // Lists
+                    .replace(/^\* (.*$)/gim, '<li>$1</li>')
+                    .replace(/^- (.*$)/gim, '<li>$1</li>')
+                    // Numbered lists
+                    .replace(/^\d+\. (.*$)/gim, '<li>$1</li>')
+                    // Line breaks
+                    .replace(/\n\n/gim, '</p><p>')
+                    .replace(/\n/gim, '<br>');
+
+                // Wrap in paragraphs
+                html = '<p>' + html + '</p>';
+
+                // Fix lists
+                html = html.replace(/(<li>.*<\/li>)/gims, '<ul>$1</ul>');
+                html = html.replace(/<\/li><ul>/gim, '</li>');
+                html = html.replace(/<ul><li>/gim, '<ul><li>');
+
+                return html;
+            }
+        }
+
+
+
+
+
+        // Carregar dados da estrutura de edição
+        async function loadEditorData() {
+            try {
+                const response = await fetch('/api/get-editor-data');
+                estruturaEdicao = await response.json();
+                galleryCacheBust = Date.now();
+
+                // Persistir nome do PDF para ser exibido corretamente na galeria
+                try {
+                    if (!localStorage.getItem('selectedPdfName')) {
+                        const pdfCandidate = estruturaEdicao.pdf_name || (estruturaEdicao.pdf_path ? estruturaEdicao.pdf_path.split('/').pop() : null);
+                        if (pdfCandidate) localStorage.setItem('selectedPdfName', pdfCandidate);
+                    }
+                } catch (e) {}
+
+
+                // Verificar se o resumo já está formatado como HTML
+                let htmlContent;
+                if (estruturaEdicao.resumo_formatado) {
+                    // Já é HTML formatado, usar diretamente
+                    htmlContent = estruturaEdicao.resumo_text;
+                    console.log('Carregando resumo com formatação HTML preservada');
+                } else {
+                    // É Markdown, converter para HTML
+                    htmlContent = convertMarkdownToHtml(estruturaEdicao.resumo_text);
+                    console.log('Convertendo resumo de Markdown para HTML');
+                }
+
+                // Carregar o conteúdo na div structuredSummary (mesma estrutura do index.html)
+                document.getElementById('structuredSummary').innerHTML = htmlContent;
+
+                // Carregar imagens na galeria
+                loadImageGallery();
+
+                updateStatus('Dados carregados com sucesso');
+            } catch (error) {
+                console.error('Erro ao carregar dados:', error);
+                const galleryEl = document.getElementById('imageGallery');
+                if (galleryEl) {
+                    galleryEl.innerHTML = '<p>Não foi possível carregar a galeria.</p>';
+                }
+                updateStatus('Erro ao carregar dados');
+            }
+        }
+
+        // Carregar galeria de imagens
+        function loadImageGallery() {
+            const gallery = document.getElementById('imageGallery');
+            gallery.innerHTML = '';
+
+            if (!estruturaEdicao || !Array.isArray(estruturaEdicao.images)) {
+                updateImageCountInfo();
+                return;
+            }
+
+            const sortedImages = [...estruturaEdicao.images].sort((a, b) =>
+                a.localeCompare(b, 'pt-BR', { numeric: true, sensitivity: 'base' })
+            );
+
+            sortedImages.forEach((imageName) => {
+                const imageItem = document.createElement('div');
+                imageItem.className = 'image-item';
+                imageItem.draggable = true;
+                imageItem.dataset.imageName = imageName;
+
+                imageItem.innerHTML = `
+                    <img src="/temp_uploads/imagens_extraidas/${imageName}?v=${galleryCacheBust}" alt="${imageName}">
+                    <button class="view-btn" title="Visualizar imagem" onclick="openImageModal('${imageName}')" onmousedown="event.stopPropagation()">
+                        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7"></path>
+                            <circle cx="12" cy="12" r="3"></circle>
+                        </svg>
+                    </button>
+                    <div class="image-name">${imageName}</div>
+                    <button class="delete-btn" onclick="deleteGalleryImage('${imageName}')" title="Excluir esta imagem da galeria">X</button>
+                `;
+
+                // Event listeners para drag and drop
+                imageItem.addEventListener('dragstart', handleDragStart);
+                imageItem.addEventListener('dragend', handleDragEnd);
+
+                gallery.appendChild(imageItem);
+            });
+
+            // Atualizar o texto do h3 com informações das imagens
+            updateImageCountInfo();
+        }
+
+        // Drag and Drop handlers
+        function handleDragStart(e) {
+            this.classList.add('dragging');
+            e.dataTransfer.setData('text/plain', this.dataset.imageName);
+        }
+
+        function handleDragEnd(e) {
+            this.classList.remove('dragging');
+        }
+
+        // Configurar drop zones no conteúdo do resumo
+        function setupDropZones() {
+            const structuredSummary = document.getElementById('structuredSummary');
+
+            structuredSummary.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                structuredSummary.classList.add('drag-over');
+            });
+
+            structuredSummary.addEventListener('dragleave', (e) => {
+                if (!structuredSummary.contains(e.relatedTarget)) {
+                    structuredSummary.classList.remove('drag-over');
+                }
+            });
+
+            structuredSummary.addEventListener('drop', (e) => {
+                e.preventDefault();
+                structuredSummary.classList.remove('drag-over');
+
+                const imageName = e.dataTransfer.getData('text/plain');
+                if (imageName) {
+                    insertImageAtPosition(imageName, e.clientX, e.clientY);
+                }
+            });
+        }
+
+        // Inserir imagem na posição do mouse
+        function insertImageAtPosition(imageName, mouseX, mouseY) {
+            const structuredSummary = document.getElementById('structuredSummary');
+            const rect = structuredSummary.getBoundingClientRect();
+            const relativeY = mouseY - rect.top;
+
+            // Encontrar a posição no texto
+            const textNodes = getTextNodes(structuredSummary);
+            let targetNode = null;
+            let targetOffset = 0;
+
+            for (let i = 0; i < textNodes.length; i++) {
+                const range = document.createRange();
+                range.setStart(textNodes[i], 0);
+                range.setEnd(textNodes[i], textNodes[i].textContent.length);
+                const textRect = range.getBoundingClientRect();
+
+                if (textRect.top <= relativeY && textRect.bottom >= relativeY) {
+                    targetNode = textNodes[i];
+                    targetOffset = textNodes[i].textContent.length;
+                    break;
+                }
+            }
+
+            if (targetNode) {
+                // Criar placeholder para a imagem
+                const imagePlaceholder = createImagePlaceholder(imageName);
+
+                // Inserir após o nó de texto
+                const parent = targetNode.parentNode;
+                const nextSibling = targetNode.nextSibling;
+
+                if (nextSibling) {
+                    parent.insertBefore(imagePlaceholder, nextSibling);
+                } else {
+                    parent.appendChild(imagePlaceholder);
+                }
+
+                // Adicionar quebra de linha após a imagem
+                const br = document.createElement('br');
+                parent.insertBefore(br, imagePlaceholder.nextSibling);
+
+                // Atualizar contadores
+                imagensPosicionadas.push(imageName);
+                updateImageCount();
+                updateStatus(`Imagem ${imageName} inserida`);
+            }
+        }
+
+        // Criar placeholder para imagem
+        function createImagePlaceholder(imageName) {
+            const placeholder = document.createElement('div');
+            placeholder.className = 'image-placeholder';
+            placeholder.dataset.imageName = imageName;
+
+            placeholder.innerHTML = `
+                <img src="/temp_uploads/imagens_extraidas/${imageName}?v=${galleryCacheBust}" alt="${imageName}">
+                <div class="remove-btn" onclick="removeImage(this)">×</div>
+            `;
+
+            return placeholder;
+        }
+
+        // Remover imagem
+        function removeImage(button) {
+            const placeholder = button.parentElement;
+            const imageName = placeholder.dataset.imageName;
+
+            // Remover da lista de imagens posicionadas
+            const index = imagensPosicionadas.indexOf(imageName);
+            if (index > -1) {
+                imagensPosicionadas.splice(index, 1);
+            }
+
+            // Remover do DOM
+            placeholder.remove();
+
+            updateImageCount();
+            updateStatus(`Imagem ${imageName} removida`);
+        }
+
+        // Limpar todas as imagens
+        function clearAllImages() {
+            const structuredSummary = document.getElementById('structuredSummary');
+            const placeholders = structuredSummary.querySelectorAll('.image-placeholder');
+            placeholders.forEach(placeholder => placeholder.remove());
+
+            imagensPosicionadas = [];
+            updateImageCount();
+            updateStatus('Todas as imagens removidas');
+        }
+
+
+        // Gerar PDF final
+        async function generateFinalPDF() {
+            try {
+                updateStatus('Gerando PDF final...');
+
+                // Coletar estrutura final
+                const finalStructure = {
+                    resumo_text: document.getElementById('structuredSummary').innerHTML,
+                    imagens_posicionadas: imagensPosicionadas,
+                    upload_dir: estruturaEdicao.upload_dir
+                };
+
+                const response = await fetch('/api/generate-final-pdf', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(finalStructure)
+                });
+
+                if (response.ok) {
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = 'Resumo_Final_Com_Prints.pdf';
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                    document.body.removeChild(a);
+
+                    updateStatus('PDF gerado com sucesso!');
+                } else {
+                    throw new Error('Erro ao gerar PDF');
+                }
+            } catch (error) {
+                console.error('Erro ao gerar PDF:', error);
+                updateStatus('Erro ao gerar PDF');
+            }
+        }
+
+        // Funções auxiliares
+        function getTextNodes(element) {
+            const textNodes = [];
+            const walker = document.createTreeWalker(
+                element,
+                NodeFilter.SHOW_TEXT,
+                null,
+                false
+            );
+
+            let node;
+            while (node = walker.nextNode()) {
+                if (node.textContent.trim()) {
+                    textNodes.push(node);
+                }
+            }
+
+            return textNodes;
+        }
+
+        function updateImageCount() {
+            document.getElementById('imageCount').textContent = imagensPosicionadas.length;
+        }
+
+        function updateStatus(message) {
+            document.getElementById('status').textContent = message;
+        }
+
+        // Atualizar informações do contador de imagens
+        function updateImageCountInfo() {
+            const imageCountInfo = document.getElementById('imageCountInfo');
+            if (imageCountInfo && estruturaEdicao) {
+                const imageCount = Array.isArray(estruturaEdicao.images) ? estruturaEdicao.images.length : 0;
+                const storedPdfName = (() => { try { return localStorage.getItem('selectedPdfName'); } catch (e) { return null; } })();
+                const fromPath = (p) => {
+                    if (!p || typeof p !== 'string') return null;
+                    const base = p.split('/').pop();
+                    return base && base.toLowerCase().endsWith('.pdf') ? base : null;
+                };
+                const candidateFromPath = fromPath(estruturaEdicao.pdf_path);
+                const pdfNameCandidate = storedPdfName || estruturaEdicao.pdf_name || candidateFromPath;
+                const pdfName = pdfNameCandidate || 'PDF selecionado';
+                imageCountInfo.textContent = `Identifiquei ${imageCount} imagens vetoriais no PDF [ ${pdfName} ]. Abaixo, exclua as que não são relevantes para o seu resumo, ou ainda, use o painel ao lado para capturar qualquer parte do PDF como uma nova imagem para a insersão.`;
+            }
+        }
+
+        // Deletar imagem individual da galeria
+        function deleteGalleryImage(imageName) {
+            if (confirm(`Tem certeza que deseja excluir a imagem ${imageName} da galeria?`)) {
+                // Remover da estrutura de edição
+                const index = estruturaEdicao.images.indexOf(imageName);
+                if (index > -1) {
+                    estruturaEdicao.images.splice(index, 1);
+                }
+
+                // Recarregar galeria
+                loadImageGallery();
+                updateImageCountInfo();
+                updateStatus(`Imagem ${imageName} removida da galeria`);
+            }
+        }
+
+        // Deletar todas as imagens da galeria
+        function deleteAllGalleryImages() {
+            if (confirm('Tem certeza que deseja excluir todas as imagens da galeria?')) {
+                estruturaEdicao.images = [];
+                loadImageGallery();
+                updateImageCountInfo();
+                updateStatus('Todas as imagens removidas da galeria');
+            }
+        }
+
+        // Utilitário para obter lista ordenada
+        function getSortedImages() {
+            if (!estruturaEdicao || !Array.isArray(estruturaEdicao.images)) return [];
+            return [...estruturaEdicao.images].sort((a, b) =>
+                a.localeCompare(b, 'pt-BR', { numeric: true, sensitivity: 'base' })
+            );
+        }
+
+        let modalCurrentIndex = null;
+
+        function openImageModal(imageName) {
+            const images = getSortedImages();
+            if (images.length === 0) return;
+            const idx = images.indexOf(imageName);
+            modalCurrentIndex = idx >= 0 ? idx : 0;
+            updateModalImage();
+            document.getElementById('imageModal').classList.add('active');
+        }
+
+        function closeImageModal() {
+            document.getElementById('imageModal').classList.remove('active');
+        }
+
+        function updateModalImage() {
+            const images = getSortedImages();
+            if (images.length === 0) { closeImageModal(); return; }
+            if (modalCurrentIndex == null) modalCurrentIndex = 0;
+            if (modalCurrentIndex < 0) modalCurrentIndex = images.length - 1;
+            if (modalCurrentIndex >= images.length) modalCurrentIndex = 0;
+            const name = images[modalCurrentIndex];
+            const imgEl = document.getElementById('modalImage');
+            imgEl.src = `/temp_uploads/imagens_extraidas/${name}?v=${galleryCacheBust}`;
+            imgEl.alt = name;
+            const labelEl = document.getElementById('modalFilename');
+            if (labelEl) labelEl.textContent = name;
+        }
+
+        function nextModalImage() { modalCurrentIndex++; updateModalImage(); }
+        function prevModalImage() { modalCurrentIndex--; updateModalImage(); }
+
+        function deleteCurrentModalImage() {
+            const images = getSortedImages();
+            if (images.length === 0 || modalCurrentIndex == null) return;
+            const name = images[modalCurrentIndex];
+            deleteGalleryImage(name);
+            setTimeout(() => {
+                const updated = getSortedImages();
+                if (updated.length === 0) {
+                    closeImageModal();
+                } else {
+                    if (modalCurrentIndex >= updated.length) {
+                        modalCurrentIndex = updated.length - 1;
+                    }
+                    updateModalImage();
+                }
+            }, 0);
+        }
+
+        // Controle de abas e captura de PDF (Adobe Embed API)
+         let pdfLoadedForCapture = false;
+         let adobeView = null;
+
+        function initAdobeViewer(url, fileName) {
+            const divId = 'adobe-dc-view';
+            const containerDiv = document.getElementById(divId);
+            if (!containerDiv) return;
+
+            if (!window.AdobeDC || !AdobeDC.View) {
+                console.warn('AdobeDC View SDK não carregado.');
+                return;
+            }
+
+            try {
+                adobeView = new AdobeDC.View({ clientId: 'b06000c70bd143a0adc54a2f6d394b2a', divId });
+                adobeView.previewFile({
+                    content: { location: { url } },
+                    metaData: { fileName: fileName || 'documento.pdf' }
+                }, {
+                    embedMode: 'SIZED_CONTAINER',
+                    showDownloadPDF: true,
+                    showPrintPDF: true,
+                    showFullScreen: true,
+                }).then(() => {
+                    pdfLoadedForCapture = true;
+                }).catch((e) => {
+                    console.error('Falha ao inicializar Adobe Viewer:', e);
+                });
+            } catch (e) {
+                console.error('Erro ao criar AdobeDC.View:', e);
+            }
+        }
+        function initEditorTabs() {
+            const tabEditor = document.getElementById('tabEditor');
+            const btnCapture = document.getElementById('btnCapture');
+            const editorSection = document.getElementById('editorSection');
+            const pdfSection = document.getElementById('pdfCaptureSection');
+            
+            let activeTab = 'editor';
+
+            function activate(tab) {
+                activeTab = tab;
+                tabEditor.classList.remove('active');
+                if (btnCapture) btnCapture.classList.remove('active');
+
+                if (tab === 'editor') {
+                    tabEditor.classList.add('active');
+                    editorSection.style.display = '';
+                    pdfSection.style.display = 'none';
+                } else {
+                    if (btnCapture) btnCapture.classList.add('active');
+                    editorSection.style.display = 'none';
+                    pdfSection.style.display = '';
+                    if (!pdfLoadedForCapture) {
+                        loadPdfForCapture();
+                    }
+                }
+            }
+
+            tabEditor.addEventListener('click', () => activate('editor'));
+            
+            if (btnCapture) {
+                btnCapture.disabled = false;
+                btnCapture.title = 'Abrir Visualizar PDF';
+                btnCapture.style.cursor = '';
+                btnCapture.addEventListener('click', () => activate('pdf'));
+            }
+
+            // Estado inicial
+            activate('editor');
+        }
+
+        function loadPdfForCapture() {
+            const container = document.getElementById('pdfCaptureContainer');
+            if (!container) return;
+
+            // Descobrir caminho do PDF
+            const candidatePaths = [];
+            const selectedName = (() => { try { return localStorage.getItem('selectedPdfName'); } catch (e) { return null; } })();
+            const uploadDir = (estruturaEdicao && estruturaEdicao.upload_dir) ? estruturaEdicao.upload_dir : 'temp_uploads';
+            if (selectedName && selectedName.trim()) {
+                const encoded = encodeURIComponent(selectedName.trim());
+                candidatePaths.push(`/${uploadDir}/${encoded}`);
+                candidatePaths.push(`/temp_uploads/${encoded}`);
+            }
+            try {
+                if (estruturaEdicao && estruturaEdicao.pdf_path) {
+                    candidatePaths.push(estruturaEdicao.pdf_path);
+                }
+                if (estruturaEdicao && estruturaEdicao.upload_dir) {
+                    candidatePaths.push(`/${estruturaEdicao.upload_dir}/arquivoteste.pdf`);
+                }
+            } catch (e) {}
+            candidatePaths.push('/temp_uploads/arquivoteste.pdf');
+
+            // Tentar carregar o primeiro disponível usando Adobe Embed API
+            const tryLoad = (idx) => {
+                if (idx >= candidatePaths.length) {
+                    container.innerHTML = `
+                        <div class="pdf-error">
+                            <p>Não foi possível localizar o PDF para captura.</p>
+                        </div>
+                    `;
+                    return;
+                }
+                const url = candidatePaths[idx];
+                fetch(url, { method: 'HEAD' })
+                    .then(resp => {
+                        if (resp.ok) {
+                            const fileName = selectedName && selectedName.trim() ? selectedName.trim() : (url.split('/').pop() || 'documento.pdf');
+                            initAdobeViewer(url, fileName);
+                        } else {
+                            throw new Error('PDF não encontrado');
+                        }
+                    })
+                    .catch(() => tryLoad(idx + 1));
+            };
+
+            tryLoad(0);
+        }
+
+        function renderAllPagesCapture() {
+            const container = document.getElementById('pdfCaptureContainer');
+            if (!container || !pdfDocCapture) return;
+            if (isRenderingCapture) return;
+            isRenderingCapture = true;
+ 
+            container.innerHTML = `
+                <div class="pdf-loading">
+                    <div class="pdf-loading-spinner"></div>
+                    <p style="color: #007bff; font-weight: 600; font-size: 1em;">Renderizando páginas...</p>
+                </div>
+            `;
+ 
+            // Limpar o loader e garantir ordem crescente de páginas
+            container.innerHTML = '';
+ 
+            const renderPromises = [];
+            for (let pageNum = 1; pageNum <= totalPagesCapture; pageNum++) {
+                renderPromises.push(renderPageCapture(pageNum));
+            }
+ 
+            return Promise.all(renderPromises)
+                .then(() => { isRenderingCapture = false; })
+                .catch(() => { isRenderingCapture = false; });
+        }
+ 
+        function renderPageCapture(pageNum) {
+            return pdfDocCapture.getPage(pageNum).then(function (page) {
+                const viewport = page.getViewport({ scale: currentScaleCapture });
+ 
+                const canvas = document.createElement('canvas');
+                const context = canvas.getContext('2d');
+                canvas.height = viewport.height;
+                canvas.width = viewport.width;
+                canvas.className = 'pdf-page-canvas';
+ 
+                const pageDiv = document.createElement('div');
+                pageDiv.className = 'pdf-page';
+                pageDiv.id = `pdf-page-${pageNum}`;
+ 
+                const pageNumberDiv = document.createElement('div');
+                pageNumberDiv.className = 'pdf-page-number';
+                pageNumberDiv.textContent = `Página ${pageNum}`;
+ 
+                pageDiv.appendChild(canvas);
+                pageDiv.appendChild(pageNumberDiv);
+ 
+                // Anexar imediatamente para manter a ordem visual
+                const container = document.getElementById('pdfCaptureContainer');
+                if (container) {
+                    if (container.querySelector('.pdf-loading')) {
+                        container.innerHTML = '';
+                    }
+                    container.appendChild(pageDiv);
+                }
+ 
+                const renderContext = {
+                    canvasContext: context,
+                    viewport: viewport
+                };
+ 
+                // Renderizar a página dentro do canvas já anexado
+                return page.render(renderContext).promise;
+            });
+        }
+
+
+
+
+        // Inicializar editor e abas
+        document.addEventListener('DOMContentLoaded', function () {
+            const closeBtn = document.getElementById('galleryInfoClose');
+            const infoMessage = document.getElementById('galleryInfoMessage');
+            if (closeBtn && infoMessage) {
+                closeBtn.addEventListener('click', function () {
+                    infoMessage.style.display = 'none';
+                });
+            }
+
+            // Mostrar loader da galeria por 3 segundos
+            const galleryLoading = document.getElementById('galleryLoading');
+            const galleryContent = document.getElementById('galleryContent');
+            if (galleryLoading && galleryContent) {
+                galleryLoading.style.display = '';
+                galleryContent.style.display = 'none';
+                setTimeout(() => {
+                    galleryLoading.style.display = 'none';
+                    galleryContent.style.display = '';
+                }, 3000);
+            }
+
+            // Toggle de retração/expansão da galeria
+            const sidebar = document.getElementById('sidebar');
+            const toggleBtn = document.getElementById('sidebarToggle');
+            function setToggleState(collapsed) {
+                if (!toggleBtn || !sidebar) return;
+                if (collapsed) {
+                    toggleBtn.textContent = '☰';
+                    toggleBtn.title = 'Abrir Galeria';
+                    toggleBtn.setAttribute('aria-label', 'Abrir Galeria');
+                } else {
+                    toggleBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" fill="currentColor" class="bi bi-x-lg" viewBox="0 0 16 16"><path d="M2.146 2.854a.5.5 0 1 1 .708-.708L8 7.293l5.146-5.147a.5.5 0 0 1 .708.708L8.707 8l5.147 5.146a.5.5 0 0 1-.708.708L8 8.707l-5.146 5.147a.5.5 0 0 1-.708-.708L7.293 8z"/></svg>';
+                    toggleBtn.title = 'Retrair Galeria';
+                    toggleBtn.setAttribute('aria-label', 'Retrair Galeria');
+                }
+            }
+            setToggleState(false);
+            if (toggleBtn && sidebar) {
+                toggleBtn.addEventListener('click', () => {
+                    const isCollapsed = sidebar.classList.toggle('collapsed');
+                    setToggleState(isCollapsed);
+                });
+            }
+
+            loadEditorData();
+             setupDropZones();
+             initEditorTabs();
+
+             const btnCaptureImage = document.getElementById('btnCaptureImage');
+             if (btnCaptureImage) {
+                 btnCaptureImage.addEventListener('mousedown', function () { btnCaptureImage.classList.add('active'); });
+                 function removeActive() { btnCaptureImage.classList.remove('active'); }
+                 btnCaptureImage.addEventListener('mouseup', removeActive);
+                 btnCaptureImage.addEventListener('mouseleave', removeActive);
+                 btnCaptureImage.addEventListener('blur', removeActive);
+             }
+        });
+    </script>
+</body>
+
+</html>

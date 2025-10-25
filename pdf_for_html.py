@@ -5,13 +5,20 @@ def converter_pdf_para_html_simples(caminho_pdf: str, caminho_html_saida: str):
     """
     Converte o PDF para um formato HTML, garantindo que o PyMuPDF gere a saída 
     corretamente, mesmo com versões antigas.
+    Retorna uma tupla: (caminho_html_saida, texto_extraido_do_pdf)
     """
     print("--- FASE A: Convertendo PDF para HTML ---")
     
     try:
         doc = fitz.open(caminho_pdf)
         
-        # 1. Obter o conteúdo do documento em formato de texto estruturado (XHTML/HTML)
+        # 1. Extrair texto puro do PDF para análise semântica
+        texto_pdf_completo = ""
+        for page_num in range(doc.page_count):
+            page = doc.load_page(page_num)
+            texto_pdf_completo += page.get_text() + "\n"
+        
+        # 2. Obter o conteúdo do documento em formato de texto estruturado (XHTML/HTML)
         # Utilizando o método 'save' com 'output="html"' para compatibilidade
         # doc.save(caminho_html_saida, output="html") # Linha original com erro
         
@@ -45,9 +52,9 @@ def converter_pdf_para_html_simples(caminho_pdf: str, caminho_html_saida: str):
         #      f.write(html_content)
 
         print(f"✅ Conversão concluída. HTML salvo em: {caminho_html_saida}")
-        return caminho_html_saida
+        return caminho_html_saida, texto_pdf_completo.strip()
         
     except Exception as e:
         print(f"❌ Erro na conversão para HTML: {e}")
         # Se for um problema de argumento, registra o erro e retorna None
-        return None
+        return None, None

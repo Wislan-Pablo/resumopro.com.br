@@ -1,5 +1,10 @@
-fastapi
-uvicorn[standard]
+fastapi>=0.104.0
+uvicorn[standard]>=0.24.0
 python-multipart  # Necessário para FastAPI processar dados de formulário (form-data) e arquivos
 aiofiles          # Para lidar com I/O assíncrono de arquivos
 Pillow
+google-generativeai>=0.8.0  # Para usar a API do Gemini
+python-dotenv     # Para carregar variáveis de ambiente
+PyMuPDF          # Para manipulação de PDFs
+weasyprint       # Para conversão HTML para PDF
+markdown-it-py   # Para processamento de Markdown

@@ -5,12 +5,36 @@ import json
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException, BackgroundTasks, WebSocket, WebSocketDisconnect
 from fastapi.responses import HTMLResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
+from fastapi.middleware.cors import CORSMiddleware
+from dotenv import load_dotenv
 from typing import List, Optional
+
+# Carregar variáveis do arquivo .env (se existir)
+load_dotenv(os.path.join(os.path.dirname(__file__), '.env'))
 
 app = FastAPI()
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:8000",
+        "http://127.0.0.1:8000",
+        "http://localhost:8001",
+        "http://127.0.0.1:8001",
+        "http://resumefull.com.br",
+        "https://resumefull.com.br",
+        "http://resumefull.com.br:8001",
+        "http://www.resumefull.com.br",
+        "https://www.resumefull.com.br",
+        "http://www.resumefull.com.br:8001"
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 app.mount("/images", StaticFiles(directory="images"), name="images")
 app.mount("/static", StaticFiles(directory="static"), name="static")
+app.mount("/temp_uploads", StaticFiles(directory="temp_uploads"), name="temp_uploads")
 
 UPLOAD_DIR = "temp_uploads"
 if not os.path.exists(UPLOAD_DIR):
@@ -26,13 +50,29 @@ def normalize_to_markdown(raw_text: str) -> str:
     while i < len(lines):
         line = lines[i].strip()
 
+        # Detectar tabelas por tabs
         if '\t' in line:
+            # NOVO: Verificar se é uma lista numerada antes de processar como tabela
+            if re.match(r'^\s*\d+\.\s*', line.strip()):
+                # É uma lista numerada, não processar como tabela
+                processed_lines.append(line)
+                i += 1
+                continue
+                
             table_block_lines = []
             while i < len(lines) and '\t' in lines[i]:
                 table_block_lines.append(lines[i].strip())
                 i += 1
 
             if table_block_lines:
+                # NOVO: Verificar se é uma sequência de listas numeradas
+                if _is_numbered_list_sequence(table_block_lines):
+                    # Manter como lista numerada, não converter para tabela
+                    for list_line in table_block_lines:
+                        processed_lines.append(list_line)
+                    processed_lines.append("")
+                    continue
+                
                 header_columns = table_block_lines[0].split('\t')
                 num_columns = len(header_columns)
                 processed_lines.append("| " + " | ".join(header_columns) + " |")
@@ -41,6 +81,48 @@ def normalize_to_markdown(raw_text: str) -> str:
                     row_columns = data_row_text.split('\t')
                     row_columns = [col.strip() for col in row_columns] + [''] * (num_columns - len(row_columns))
                     processed_lines.append("| " + " | ".join(row_columns) + " |")
+                processed_lines.append("")
+                continue
+
+        # Detectar tabelas por múltiplos espaços (dados alinhados)
+        if _is_tabular_data(line):
+            table_block_lines = []
+            while i < len(lines) and _is_tabular_data(lines[i].strip()):
+                table_block_lines.append(lines[i].strip())
+                i += 1
+
+            if table_block_lines and len(table_block_lines) > 1:
+                # NOVO: Verificar se é uma sequência de listas numeradas
+                if _is_numbered_list_sequence(table_block_lines):
+                    # Manter como lista numerada, não converter para tabela
+                    for list_line in table_block_lines:
+                        processed_lines.append(list_line)
+                    processed_lines.append("")
+                    continue
+                
+                # Processar como tabela
+                processed_lines.extend(_format_tabular_data_as_table(table_block_lines))
+                processed_lines.append("")
+                continue
+
+        # Detectar tabelas por padrões de dados estruturados
+        if _is_structured_data(line):
+            table_block_lines = []
+            while i < len(lines) and _is_structured_data(lines[i].strip()):
+                table_block_lines.append(lines[i].strip())
+                i += 1
+
+            if table_block_lines and len(table_block_lines) > 1:
+                # NOVO: Verificar se é uma sequência de listas numeradas
+                if _is_numbered_list_sequence(table_block_lines):
+                    # Manter como lista numerada, não converter para tabela
+                    for list_line in table_block_lines:
+                        processed_lines.append(list_line)
+                    processed_lines.append("")
+                    continue
+                
+                # Processar como tabela
+                processed_lines.extend(_format_structured_data_as_table(table_block_lines))
                 processed_lines.append("")
                 continue
         
@@ -58,6 +140,230 @@ def normalize_to_markdown(raw_text: str) -> str:
 
     final_text = "\n".join([line for line in processed_lines if line is not None])
     return final_text.replace('\n\n\n', '\n\n')
+
+def _is_tabular_data(line: str) -> bool:
+    """Detecta se uma linha contém dados tabulares (múltiplos espaços, alinhamento)."""
+    if not line or len(line.strip()) < 10:
+        return False
+    
+    # PRIMEIRO: Verificar se já é uma tabela markdown válida
+    # Se a linha já tem pipes e está formatada como tabela, não processar
+    if '|' in line and line.count('|') >= 2:
+        return False
+    
+    # NOVO: Verificar se é uma lista numerada (padrão: número + ponto + espaço)
+    if re.match(r'^\s*\d+\.\s+', line.strip()):
+        return False
+    
+    # NOVO: Verificar se é uma lista com marcadores (-, *, +)
+    if re.match(r'^\s*[-*+]\s+', line.strip()):
+        return False
+    
+    # NOVO: Verificar se é uma lista com números entre parênteses
+    if re.match(r'^\s*\d+\)\s+', line.strip()):
+        return False
+    
+    # Verificar se tem múltiplos espaços consecutivos (indicativo de alinhamento)
+    spaces_count = len([m for m in re.finditer(r'  +', line)])
+    if spaces_count >= 2:
+        return True
+    
+    # Verificar padrões de dados numéricos alinhados
+    if re.search(r'\d+\s+\d+', line):
+        return True
+    
+    # Verificar se tem pelo menos 3 palavras e não é uma lista
+    words = line.split()
+    if len(words) >= 3 and not line.strip().startswith(('-', '*', '#')):
+        # Verificar se não é um título ou cabeçalho
+        if not (line[0].isupper() and line.endswith(':')):
+            return True
+    
+    return False
+
+def _is_structured_data(line: str) -> bool:
+    """Detecta se uma linha contém dados estruturados (padrões como 'Campo: Valor')."""
+    if not line or len(line.strip()) < 5:
+        return False
+    
+    # PRIMEIRO: Verificar se já é uma tabela markdown válida
+    # Se a linha já tem pipes e está formatada como tabela, não processar
+    if '|' in line and line.count('|') >= 2:
+        return False
+    
+    # NOVO: Verificar se é uma lista numerada (padrão: número + ponto + espaço)
+    if re.match(r'^\s*\d+\.\s+', line.strip()):
+        return False
+    
+    # NOVO: Verificar se é uma lista com marcadores (-, *, +)
+    if re.match(r'^\s*[-*+]\s+', line.strip()):
+        return False
+    
+    # NOVO: Verificar se é uma lista com números entre parênteses
+    if re.match(r'^\s*\d+\)\s+', line.strip()):
+        return False
+    
+    # Padrões comuns de dados estruturados
+    patterns = [
+        r'^\s*\w+\s*:\s*.+',  # Campo: Valor
+        r'^\s*\w+\s*-\s*.+',  # Campo - Valor
+        r'^\s*\w+\s*=\s*.+',  # Campo = Valor
+    ]
+    
+    # Verificar se a linha tem um padrão de chave-valor claro
+    for pattern in patterns:
+        if re.match(pattern, line):
+            # Verificar se não é apenas uma lista ou título
+            if not line.strip().startswith(('-', '*', '#')):
+                return True
+    
+    return False
+
+def _is_numbered_list_sequence(lines: list) -> bool:
+    """Verifica se as linhas formam uma sequência de lista numerada."""
+    if len(lines) < 2:
+        return False
+    
+    # Verificar se pelo menos 70% das linhas são listas numeradas
+    numbered_count = 0
+    for line in lines:
+        if re.match(r'^\s*\d+\.\s+', line.strip()):
+            numbered_count += 1
+    
+    # Se a maioria das linhas são listas numeradas, é uma sequência de lista
+    return numbered_count >= len(lines) * 0.7
+
+def _format_tabular_data_as_table(table_lines: list) -> list:
+    """Formata dados tabulares como tabela markdown."""
+    if not table_lines or len(table_lines) < 2:
+        return table_lines  # Não é uma tabela válida
+    
+    # Primeiro, tentar detectar se é realmente uma tabela
+    if not _is_valid_table(table_lines):
+        return table_lines
+    
+    # Tentar diferentes métodos de divisão
+    result = _try_format_with_spaces(table_lines)
+    if result:
+        return result
+    
+    result = _try_format_with_words(table_lines)
+    if result:
+        return result
+    
+    # Se nada funcionou, retornar as linhas originais
+    return table_lines
+
+def _is_valid_table(table_lines: list) -> bool:
+    """Verifica se as linhas formam uma tabela válida."""
+    if len(table_lines) < 2:
+        return False
+    
+    # Verificar se todas as linhas têm um padrão similar
+    first_line_words = len(table_lines[0].split())
+    for line in table_lines[1:]:
+        if len(line.split()) < 2:
+            return False
+    
+    return True
+
+def _try_format_with_spaces(table_lines: list) -> list:
+    """Tenta formatar usando espaços múltiplos."""
+    # Encontrar posições de espaços múltiplos na primeira linha
+    first_line = table_lines[0]
+    space_positions = []
+    
+    for match in re.finditer(r'  +', first_line):
+        space_positions.append(match.start())
+    
+    if len(space_positions) < 1:
+        return None
+    
+    # Tentar dividir todas as linhas usando essas posições
+    formatted_lines = []
+    for i, line in enumerate(table_lines):
+        columns = _split_by_space_positions(line, space_positions)
+        if len(columns) >= 2:
+            formatted_line = "| " + " | ".join(columns) + " |"
+            formatted_lines.append(formatted_line)
+            
+            if i == 0:
+                separator = "|" + "---|" * len(columns)
+                formatted_lines.append(separator)
+        else:
+            return None  # Falhou
+    
+    return formatted_lines
+
+def _split_by_space_positions(line: str, positions: list) -> list:
+    """Divide uma linha usando posições de espaços."""
+    columns = []
+    last_pos = 0
+    
+    for pos in positions:
+        if pos > last_pos and pos <= len(line):
+            cell_content = line[last_pos:pos].strip()
+            if cell_content:
+                columns.append(cell_content)
+            last_pos = pos
+    
+    # Adicionar o resto da linha
+    if last_pos < len(line):
+        cell_content = line[last_pos:].strip()
+        if cell_content:
+            columns.append(cell_content)
+    
+    return columns
+
+def _try_format_with_words(table_lines: list) -> list:
+    """Tenta formatar dividindo por palavras."""
+    formatted_lines = []
+    
+    for i, line in enumerate(table_lines):
+        words = line.split()
+        if len(words) >= 2:
+            formatted_line = "| " + " | ".join(words) + " |"
+            formatted_lines.append(formatted_line)
+            
+            if i == 0:
+                separator = "|" + "---|" * len(words)
+                formatted_lines.append(separator)
+        else:
+            return None  # Falhou
+    
+    return formatted_lines
+
+
+def _format_structured_data_as_table(table_lines: list) -> list:
+    """Formata dados estruturados como tabela markdown."""
+    if not table_lines:
+        return []
+    
+    # Tentar extrair pares chave-valor
+    key_value_pairs = []
+    for line in table_lines:
+        # Tentar diferentes padrões de separação
+        for separator in [':', '-', '=']:
+            if separator in line:
+                parts = line.split(separator, 1)
+                if len(parts) == 2:
+                    key = parts[0].strip()
+                    value = parts[1].strip()
+                    key_value_pairs.append((key, value))
+                    break
+    
+    if len(key_value_pairs) < 2:
+        return table_lines  # Não é uma tabela válida
+    
+    # Formatar como tabela
+    formatted_lines = []
+    formatted_lines.append("| Campo | Valor |")
+    formatted_lines.append("|-------|-------|")
+    
+    for key, value in key_value_pairs:
+        formatted_lines.append(f"| {key} | {value} |")
+    
+    return formatted_lines
 
 class ConnectionManager:
     def __init__(self):
@@ -108,6 +414,10 @@ async def cleanup_temp_files(manifest_path: str):
 async def serve_frontend():
     return FileResponse("static/index.html", media_type="text/html")
 
+@app.get("/editor", response_class=HTMLResponse)
+async def serve_editor():
+    return FileResponse("static/editor.html", media_type="text/html")
+
 
 @app.websocket("/ws/progress")
 async def websocket_endpoint(websocket: WebSocket):
@@ -121,6 +431,53 @@ async def websocket_endpoint(websocket: WebSocket):
     except Exception as e:
         print(f"Erro no WebSocket: {e}")
 
+
+@app.post("/api/normalize-text")
+async def normalize_text(request_data: dict):
+    """
+    Normaliza texto usando a função de normalização.
+    """
+    try:
+        text = request_data.get('text', '')
+        if not text:
+            raise HTTPException(status_code=400, detail="Texto não fornecido")
+        
+        normalized_text = normalize_to_markdown(text)
+        
+        return {
+            "normalized_text": normalized_text,
+            "status": "success"
+        }
+    except Exception as e:
+        print(f"Erro na normalização: {e}")
+        raise HTTPException(status_code=500, detail="Erro interno na normalização do texto")
+
+@app.post("/api/save-structured-summary")
+async def save_structured_summary(request_data: dict):
+    """Salva o resumo estruturado com formatação HTML completa."""
+    try:
+        markdown_content = request_data.get('markdown', '')
+        html_content = request_data.get('html', '')
+        
+        # Salvar o Markdown (como antes)
+        markdown_path = os.path.join(UPLOAD_DIR, "resumo_notebooklm_normalized.md")
+        with open(markdown_path, 'w', encoding='utf-8') as f:
+            f.write(markdown_content)
+        
+        # Salvar o HTML formatado
+        html_path = os.path.join(UPLOAD_DIR, "resumo_estruturado_formatado.html")
+        with open(html_path, 'w', encoding='utf-8') as f:
+            f.write(html_content)
+        
+        print(f"[TRACE] Resumo estruturado salvo:")
+        print(f"  - Markdown: {markdown_path}")
+        print(f"  - HTML: {html_path}")
+        
+        return {"status": "success", "message": "Resumo estruturado salvo com sucesso"}
+        
+    except Exception as e:
+        print(f"Erro ao salvar resumo estruturado: {e}")
+        raise HTTPException(status_code=500, detail="Erro interno ao salvar resumo estruturado")
 
 @app.post("/api/processamento-full")
 async def receive_files_and_text(
@@ -199,3 +556,173 @@ async def download_final_pdf(filename: str, background_tasks: BackgroundTasks):
     print(f"[DOWNLOAD] Download de {filename} iniciado. Limpeza de arquivos temporários agendada.")
     
     return response
+
+# --- NOVAS ROTAS PARA O EDITOR SEMÂNTICO ---
+
+@app.get("/api/get-preview-data")
+async def get_preview_data():
+    """Retorna os dados necessários para a interface de preview."""
+    try:
+        estrutura_path = os.path.join(UPLOAD_DIR, "estrutura_edicao.json")
+        if os.path.exists(estrutura_path):
+            with open(estrutura_path, 'r', encoding='utf-8') as f:
+                estrutura = json.load(f)
+            return {
+                "images": estrutura.get("images", []),
+                "resumo_text": estrutura.get("resumo_text", "")
+            }
+        # Fallback quando estrutura_edicao.json não existe
+        imagens_dir = os.path.join(UPLOAD_DIR, "imagens_extraidas")
+        imagens = []
+        if os.path.isdir(imagens_dir):
+            try:
+                imagens = [f for f in os.listdir(imagens_dir) if f.lower().endswith('.png')]
+            except Exception as e:
+                print(f"Erro ao listar imagens no fallback: {e}")
+                imagens = []
+        resumo_text = ""
+        resumo_html_path = os.path.join(UPLOAD_DIR, "resumo_estruturado_formatado.html")
+        resumo_md_path = os.path.join(UPLOAD_DIR, "resumo_notebooklm_normalized.md")
+        if os.path.exists(resumo_html_path):
+            with open(resumo_html_path, 'r', encoding='utf-8') as f:
+                resumo_text = f.read()
+        elif os.path.exists(resumo_md_path):
+            with open(resumo_md_path, 'r', encoding='utf-8') as f:
+                resumo_text = f.read()
+        return {
+            "images": imagens,
+            "resumo_text": resumo_text
+        }
+    except Exception as e:
+        print(f"Erro ao carregar dados de preview: {e}")
+        raise HTTPException(status_code=500, detail="Erro interno do servidor")
+
+@app.get("/api/get-editor-data")
+async def get_editor_data():
+    """Retorna os dados necessários para a interface de edição."""
+    try:
+        estrutura_path = os.path.join(UPLOAD_DIR, "estrutura_edicao.json")
+        estrutura = None
+        if os.path.exists(estrutura_path):
+            with open(estrutura_path, 'r', encoding='utf-8') as f:
+                estrutura = json.load(f)
+        else:
+            # Fallback quando estrutura_edicao.json não existe
+            estrutura = {
+                "images": [],
+                "resumo_text": "",
+                "upload_dir": UPLOAD_DIR
+            }
+            imagens_dir = os.path.join(UPLOAD_DIR, "imagens_extraidas")
+            if os.path.isdir(imagens_dir):
+                try:
+                    estrutura["images"] = [f for f in os.listdir(imagens_dir) if f.lower().endswith('.png')]
+                except Exception as e:
+                    print(f"Erro ao listar imagens no fallback: {e}")
+            # tentar descobrir um PDF no diretório para ajudar a UI
+            try:
+                pdfs = [f for f in os.listdir(UPLOAD_DIR) if f.lower().endswith('.pdf')]
+                if pdfs:
+                    estrutura["pdf_path"] = f"/{UPLOAD_DIR}/{pdfs[0]}"
+                    estrutura["pdf_name"] = pdfs[0]
+            except Exception:
+                pass
+
+        # Carregar o resumo estruturado com formatação HTML se existir
+        resumo_html_path = os.path.join(UPLOAD_DIR, "resumo_estruturado_formatado.html")
+        if os.path.exists(resumo_html_path):
+            with open(resumo_html_path, 'r', encoding='utf-8') as f:
+                resumo_html = f.read()
+            estrutura['resumo_text'] = resumo_html
+            estrutura['resumo_formatado'] = True  # Flag para indicar que é HTML
+        else:
+            # Fallback para o Markdown se o HTML não existir
+            resumo_estruturado_path = os.path.join(UPLOAD_DIR, "resumo_notebooklm_normalized.md")
+            if os.path.exists(resumo_estruturado_path):
+                with open(resumo_estruturado_path, 'r', encoding='utf-8') as f:
+                    resumo_estruturado = f.read()
+                estrutura['resumo_text'] = resumo_estruturado
+                estrutura['resumo_formatado'] = False  # Flag para indicar que é Markdown
+
+        return estrutura
+    except Exception as e:
+        print(f"Erro ao carregar dados de edição: {e}")
+        raise HTTPException(status_code=500, detail="Erro interno do servidor")
+
+@app.get("/api/config-viewer")
+async def config_viewer():
+    """Retorna configurações do visualizador (Adobe Client ID)."""
+    client_id = os.getenv("ADOBE_CLIENT_ID", "b06000c70bd143a0adc54a2f6d394b2a")
+    return {"adobe_client_id": client_id}
+
+@app.post("/api/generate-final-pdf")
+async def generate_final_pdf(request_data: dict):
+    """Gera o PDF final com base na estrutura editada pelo usuário."""
+    try:
+        from gerador_pdf_final import executar_fase_final
+        
+        # Extrair dados da requisição
+        resumo_html = request_data.get('resumo_text', '')
+        imagens_posicionadas = request_data.get('imagens_posicionadas', [])
+        upload_dir = request_data.get('upload_dir', UPLOAD_DIR)
+        
+        # Criar arquivo temporário com o resumo editado
+        resumo_editado_path = os.path.join(upload_dir, "resumo_editado_final.txt")
+        with open(resumo_editado_path, 'w', encoding='utf-8') as f:
+            f.write(resumo_html)
+        
+        # Caminho do PDF final
+        pdf_final_path = os.path.join(upload_dir, "Resumo_Final_Com_Prints.pdf")
+        
+        # Executar geração do PDF
+        executar_fase_final(
+            resumo_editado_path,
+            pdf_final_path,
+            "imagens_extraidas"
+        )
+        
+        # Retornar o PDF como resposta
+        if os.path.exists(pdf_final_path):
+            return FileResponse(
+                path=pdf_final_path,
+                filename="Resumo_Final_Com_Prints.pdf",
+                media_type='application/pdf'
+            )
+        else:
+            raise HTTPException(status_code=500, detail="Erro ao gerar PDF final")
+            
+    except Exception as e:
+        print(f"Erro ao gerar PDF final: {e}")
+        raise HTTPException(status_code=500, detail=f"Erro interno: {str(e)}")
+
+@app.post("/api/upload-pdf")
+async def upload_pdf(originalPdf: UploadFile = File(...)):
+    safe_pdf_filename = originalPdf.filename.replace('\\', '_').replace('/', '_')
+    base_name, ext = os.path.splitext(safe_pdf_filename)
+    candidate_name = safe_pdf_filename
+    pdf_path = os.path.join(UPLOAD_DIR, candidate_name)
+
+    # Se já existir, gera um nome único para evitar conflito/lock de arquivo no Windows
+    if os.path.exists(pdf_path):
+        idx = 1
+        while True:
+            candidate_name = f"{base_name} ({idx}){ext}"
+            pdf_path = os.path.join(UPLOAD_DIR, candidate_name)
+            if not os.path.exists(pdf_path):
+                break
+            idx += 1
+
+    try:
+        # Garante que o ponteiro do arquivo esteja no início
+        try:
+            originalPdf.file.seek(0)
+        except Exception:
+            pass
+
+        with open(pdf_path, "wb") as buffer:
+            shutil.copyfileobj(originalPdf.file, buffer)
+        print(f"[TRACE] PDF recebido e salvo em: {pdf_path}")
+        return {"status": "success", "filename": candidate_name, "path": f"/temp_uploads/{candidate_name}"}
+    except Exception as e:
+        print(f"[ERRO] upload-pdf: {e}")
+        raise HTTPException(status_code=500, detail="Erro ao salvar o arquivo PDF.")

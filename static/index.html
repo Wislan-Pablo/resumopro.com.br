@@ -7,6 +7,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ResumeFull.AI - Potencialize seus Resumos</title>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked@9.1.6/marked.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <style>
         /* --- ESTILOS GLOBAIS --- */
         body {
@@ -84,10 +86,6 @@
             gap: 20px;
         }
 
-        .input-group {
-            margin-bottom: 15px;
-        }
-
         label {
             display: block;
             margin-bottom: 8px;
@@ -107,7 +105,7 @@
 
         textarea {
             width: 100%;
-            min-height: 550px;
+            min-height: 650px;
             padding: 15px;
             border: 1px solid #ccc;
             border-radius: 6px;
@@ -118,7 +116,7 @@
 
         /* --- BOTÃO DE SUBMISSÃO --- */
         #submitButton {
-            background-color: #28a745;
+            background-color: #007bff;
             color: white;
             padding: 15px 30px;
             border: none;
@@ -127,11 +125,10 @@
             font-weight: 700;
             cursor: pointer;
             transition: background-color 0.3s;
-            margin-top: 20px;
         }
 
         #submitButton:hover {
-            background-color: #218838;
+            background-color: #0056b3;
         }
 
         #submitButton:disabled {
@@ -139,58 +136,10 @@
             cursor: not-allowed;
         }
 
-        /* --- COMPONENTE DE PROGRESSO --- */
-        #processingArea {
+        /* --- ÁREA DE LOADING --- */
+        #loadingArea {
             margin-top: 30px;
             text-align: center;
-            border: 1px dashed #007bff;
-            padding: 20px;
-            border-radius: 8px;
-            display: none;
-            /* Inicialmente oculto */
-        }
-
-        .progress-bar-container {
-            background-color: #e9ecef;
-            border-radius: 10px;
-            margin: 10px 0 20px;
-            height: 20px;
-            overflow: hidden;
-        }
-
-        .progress-bar {
-            height: 100%;
-            width: 0;
-            background-color: #007bff;
-            border-radius: 10px;
-            transition: width 0.4s ease;
-            text-align: center;
-            line-height: 20px;
-            color: white;
-            font-weight: bold;
-        }
-
-        .progress-bar.animated {
-            background-image: linear-gradient(45deg,
-                    rgba(255, 255, 255, 0.15) 25%,
-                    transparent 25%,
-                    transparent 50%,
-                    rgba(255, 255, 255, 0.15) 50%,
-                    rgba(255, 255, 255, 0.15) 75%,
-                    transparent 75%,
-                    transparent);
-            background-size: 40px 40px;
-            animation: progress-bar-stripes 2s linear infinite;
-        }
-
-        @keyframes progress-bar-stripes {
-            from {
-                background-position: 40px 0;
-            }
-
-            to {
-                background-position: 0 0;
-            }
         }
 
         #successMessage {
@@ -248,6 +197,363 @@
             color: #28a745;
             /* Verde para palavras 500 ou mais */
         }
+
+        /* --- ESTILOS PARA PREVIEW DO PDF --- */
+        .pdf-preview-section {
+            display: none;
+            padding: 20px;
+            border: 2px dashed #007bff;
+            border-radius: 8px;
+            background-color: #f8f9fa;
+            text-align: center;
+        }
+
+        .pdf-preview-container {
+            max-height: 400px;
+            overflow-y: auto;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background-color: white;
+            position: relative;
+        }
+
+        .pdf-preview-title {
+            font-size: 1.2em;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .pdf-preview-info {
+            font-size: 0.9em;
+            color: #666;
+            margin-bottom: 15px;
+        }
+
+
+        /* Páginas do PDF */
+        .pdf-page {
+            margin: 0 auto 30px auto;
+            border: 1px solid #ddd;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            background-color: white;
+            position: relative;
+        }
+
+        .pdf-page canvas {
+            display: block;
+            margin: 0 auto;
+        }
+
+        .pdf-page-number {
+            position: absolute;
+            top: 5px;
+            right: 10px;
+            background-color: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 2px 8px;
+            border-radius: 3px;
+            font-size: 0.8em;
+        }
+
+        .pdf-loading {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+
+        .pdf-loading-spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #007bff;
+            border-radius: 50%;
+            width: 60px;
+            height: 60px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        .pdf-error {
+            color: #dc3545;
+            text-align: center;
+            padding: 20px;
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+
+        .formatted-summary {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid #ddd;
+            margin-bottom: 20px;
+            margin-top: 30px;
+            height: 600px;
+            overflow-y: auto;
+            box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Estilização da barra de rolagem para o preview do resumo */
+        .formatted-summary::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .formatted-summary::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 4px;
+        }
+
+        .formatted-summary::-webkit-scrollbar-thumb {
+            background: #007bff;
+            border-radius: 4px;
+        }
+
+        .formatted-summary::-webkit-scrollbar-thumb:hover {
+            background: #0056b3;
+        }
+
+        @keyframes fadeInOut {
+            0% {
+                opacity: 0;
+            }
+
+            20% {
+                opacity: 1;
+            }
+
+            80% {
+                opacity: 1;
+            }
+
+            100% {
+                opacity: 0;
+            }
+        }
+
+        /* Animação de carregamento circular para o textarea */
+        .textarea-loading-container {
+            position: relative;
+            display: block;
+        }
+
+        .textarea-loading-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(255, 255, 255, 0.9);
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            border-radius: 8px;
+        }
+
+        .textarea-loading-spinner {
+            width: 100px;
+            height: 100px;
+            border: 6px solid #f3f3f3;
+            border-top: 6px solid #007bff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 20% auto 5% auto;
+        }
+
+        .textarea-loading-text {
+            color: #007bff;
+            font-size: 1.3em;
+            font-weight: 600;
+            text-align: center;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        .formatted-summary h1 {
+            color: #333;
+            font-size: 1em;
+            font-weight: normal;
+            margin-bottom: 15px;
+            border-bottom: 2px solid #007bff;
+            padding-bottom: 10px;
+        }
+
+        .formatted-summary h2 {
+            color: #333;
+            font-size: 1em;
+            font-weight: normal;
+            margin: 0;
+        }
+
+        .formatted-summary h3 {
+            color: #333;
+            font-size: 1em;
+            font-weight: normal;
+            margin-top: 15px;
+            margin-bottom: 8px;
+        }
+
+        .formatted-summary p {
+            line-height: 1.6;
+            margin: 0;
+            text-align: justify;
+        }
+
+        .formatted-summary ul {
+            margin: 0;
+            padding-left: 50px;
+        }
+
+        .formatted-summary ol {
+            padding-left: 20px;
+            margin: 0;
+        }
+
+        .formatted-summary li {
+            margin-bottom: 5px;
+        }
+
+        /* Estilos para tópicos numerados */
+        .formatted-summary ol li {
+            font-size: 1em;
+            font-weight: normal;
+            line-height: 1.4;
+        }
+
+        /* Estilos para subtópicos (listas não ordenadas dentro de listas ordenadas) */
+        .formatted-summary ol ul {
+            margin-left: 30px;
+            margin-top: 5px;
+            margin-bottom: 10px;
+        }
+
+        .formatted-summary ol ul li {
+            font-size: 1em;
+            font-weight: normal;
+            margin-bottom: 4px;
+            list-style-type: disc;
+        }
+
+        /* Estilos para listas aninhadas mais profundas */
+        .formatted-summary ol ul ul {
+            margin-left: 25px;
+        }
+
+        .formatted-summary ol ul ul li {
+            list-style-type: circle;
+        }
+
+        /* Estilos específicos para Marked.js */
+        .formatted-summary blockquote {
+            border-left: 4px solid #007bff;
+            margin: 20px 0;
+            padding: 10px 20px;
+            background-color: #f8f9fa;
+            font-style: italic;
+        }
+
+        .formatted-summary code {
+            background-color: #f1f3f4;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+        }
+
+        .formatted-summary pre {
+            background-color: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 6px;
+            padding: 15px;
+            overflow-x: auto;
+            margin: 15px 0;
+        }
+
+        .formatted-summary pre code {
+            background-color: transparent;
+            padding: 0;
+            border-radius: 0;
+        }
+
+        .formatted-summary table {
+            border-collapse: collapse;
+            width: 100%;
+            margin: 5px 0;
+        }
+
+        .formatted-summary th,
+        .formatted-summary td {
+            border: 1px solid #ddd;
+            padding: 8px 12px;
+            text-align: left;
+        }
+
+        .formatted-summary th {
+            background-color: #f8f9fa;
+            font-weight: normal;
+        }
+
+        .formatted-summary hr {
+            border: none;
+            border-top: 2px solid #e9ecef;
+            margin: 20px 0;
+        }
+
+        .confirmation-section {
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        #confirmButton {
+            background-color: #28a745;
+            color: white;
+            padding: 15px 30px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1.1em;
+            font-weight: 700;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        #confirmButton:hover {
+            background-color: #218838;
+        }
+
+        .gallery-title {
+            font-size: 1.3em;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 15px;
+        }
+
+        .summary-title {
+            font-size: 1.3em;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 15px;
+        }
     </style>
 </head>
 
@@ -257,57 +563,72 @@
         <header class="header-section">
             <div class="header-title-wrapper">
                 <img src="/images/Logo-ResumeFull.AI.png" alt="ResumeFull.AI Logo" class="header-logo">
-                <h1>Potencialize seus Resumos de PDFs gerados de IAs — Integre textos e elementos gráficos
-                    vetoriais de forma coerente em um só PDF com a <strong>ResumeFull.AI</strong>
+                <h1>Potencialize seus Resumos de IA — Estruture e organize seu conteúdo de forma profissional
+                    com a <strong>ResumeFull.AI</strong>
                 </h1>
             </div>
-            </br>
-            <h2>
-                Não perca mais nem um ponto importante do seu PDF original na geração do seu resumo:
-            </h2>
-            <p>
-                <b>Adicione também as imagens contextualizadas</b> do PDF original de forma automática,
-                <b>e ganhe mais fidelidade e robustez para o seu resumo, refletindo em muito mais qualidade para o seu
-                    aprendizado!</b>
-            </p>
         </header>
         <form id="uploadForm">
             <div class="input-section">
 
                 <div class="input-group">
-                    <label for="originalPdf">Selecione seu arquivo PDF com o texto original completo:</label>
-                    <input type="file" id="originalPdf" name="originalPdf" accept=".pdf" required>
+                    <label for="originalPdf">ENVIE SEU ARQUIVO PDF</label>
+                    <input type="file" id="originalPdf" name="originalPdf" accept=".pdf">
+                </div>
+
+                <!-- SEÇÃO DE PREVIEW DO PDF -->
+                <div id="pdfPreviewSection" class="pdf-preview-section">
+                    <div class="pdf-preview-title" id="pdfPreviewTitle">Prévia do PDF Selecionado</div>
+                    <div class="pdf-preview-info">Visualize todas as páginas do seu arquivo PDF</div>
+
+
+                    <div id="pdfPreviewContainer" class="pdf-preview-container">
+                        <!-- Páginas do PDF serão inseridas aqui dinamicamente -->
+                    </div>
                 </div>
 
                 <div class="input-group">
-                    <label for="iaSummaryText">Cole aqui o texto de resumo copiado da inteligência artificial. Seu texto
-                        deve ter no mínimo 1000 palavras:</label>
-                    <textarea id="iaSummaryText" name="iaSummaryText" required
-                        placeholder="Cole o resumo gerado pelo NotebookLM ou outra IA aqui..."></textarea>
+                    <label for="iaSummaryText">Cole no campo abaixo o texto de resumo copiado da inteligência
+                        artificial. O texto
+                        deve ter no mínimo 600 palavras.</label>
+                    <div class="textarea-loading-container" id="textareaLoadingContainer">
+                        <textarea id="iaSummaryText" name="iaSummaryText" required
+                            placeholder="Cole o resumo gerado pelo NotebookLM ou outra IA aqui..."></textarea>
+                        <div class="textarea-loading-overlay" id="textareaLoadingOverlay">
+                            <div class="textarea-loading-spinner"></div>
+                            <div class="textarea-loading-text">Estruturando seu resumo...</div>
+                        </div>
+                    </div>
                     <div id="wordCountDisplay" style="text-align: right; margin-top: 10px; font-weight: 600;"></div>
                 </div>
 
-                <button type="submit" id="submitButton">GERAR RESUMO FULL INTEGRADO COM IMAGENS</button>
+                <!-- Área de loading para o resumo estruturado -->
+                <div id="loadingArea" style="display: none;">
+                    <div class="formatted-summary">
+                        <div class="pdf-loading">
+                            <div class="pdf-loading-spinner"></div>
+                            <p>Estruturando seu resumo...</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Área de resultado com resumo estruturado -->
+                <div id="resultArea" style="display: none;">
+                    <div id="successMessage" class="success-message"
+                        style=" color: #28a745; font-size: 1.2em; margin-bottom: 20px; font-weight: 600; text-align: center;">
+                        ✅ Resumo estruturado com sucesso. <br> Antes de inserir as imagens, visualize como ficará o
+                        texto do seu resumo gerado pela IA:
+                    </div>
+                    <div id="structuredSummary" class="formatted-summary">
+                        <!-- O resumo estruturado será inserido aqui -->
+                    </div>
+                </div>
+
+                <button type="submit" id="submitButton">ESTRUTURAR RESUMO</button>
 
             </div>
         </form>
-        <div id="processingArea">
-            <div id="processingStatus">Aguarde, processando a correlação de dados...</div>
 
-            <div class="progress-bar-container">
-                <div class="progress-bar" id="progressBar">0%</div>
-            </div>
-
-            <div id="resultArea" style="display: none;">
-                <div id="successMessage">
-                    Processamento concluído com sucesso - Aqui está o seu novo arquivo PDF com o seu resumo completo
-                    gerado por IA + as imagens do seu PDF original, semanticamente integrados - com cada imagem
-                    relacionada ao seu próprio contexto.
-                </div>
-                <button id="downloadButton" onclick="window.location.href='/download-final-pdf'">Baixar Resumo Full
-                </button>
-            </div>
-        </div>
         <footer>
             <p>Software version: <i>[DEMO]</i></p>
             <p>By: <b>Pablo Souza</b></p>
@@ -319,19 +640,18 @@
         $(document).ready(function () {
             const $form = $('#uploadForm');
             const $submitButton = $('#submitButton');
-            const $processingArea = $('#processingArea');
-            const $progressBar = $('#progressBar');
-            const $processingStatus = $('#processingStatus');
+            const $loadingArea = $('#loadingArea');
             const $resultArea = $('#resultArea');
+            const $structuredSummary = $('#structuredSummary');
             const $wordCountDisplay = $('#wordCountDisplay'); // Novo elemento para o contador de palavras
             const $iaSummaryText = $('#iaSummaryText'); // Referência ao textarea
+            const $pdfPreviewSection = $('#pdfPreviewSection'); // Seção de preview do PDF
+            const $pdfPreviewContainer = $('#pdfPreviewContainer'); // Container do preview do PDF
+            const $textareaLoadingContainer = $('#textareaLoadingContainer'); // Container de loading do textarea
+            const $textareaLoadingOverlay = $('#textareaLoadingOverlay'); // Overlay de loading do textarea
 
             const originalSubmitButtonText = $submitButton.text(); // Armazena o texto original do botão
-
-            function updateProgressBar(progress, statusText) {
-                $progressBar.css('width', progress + '%').text(progress + '%');
-                $processingStatus.text(statusText);
-            }
+            const newButtonText = "TIRAR PRINTS E POSICIONAR IMAGENS USANDO O EDITOR";
 
             // Função para atualizar o contador de palavras
             function updateWordCountDisplay() {
@@ -346,75 +666,230 @@
             // Adiciona um listener para atualizar o contador de palavras em tempo real
             $iaSummaryText.on('input', updateWordCountDisplay);
 
-            let ws;
-
-            function connectWebSocket() {
-                ws = new WebSocket(`ws://${window.location.host}/ws/progress`);
-
-                ws.onopen = function (event) {
-                    console.log("WebSocket conectado.");
-                    updateProgressBar(5, 'Conectado ao servidor, aguardando início do processamento...');
-                    $progressBar.addClass('animated'); // Inicia a animação
-                };
-
-                ws.onmessage = function (event) {
-                    const data = JSON.parse(event.data);
-                    console.log("Mensagem WebSocket recebida:", data);
-
-                    if (data.progress === -1) {
-                        // Erro
-                        $processingStatus.text(`Erro: ${data.status}`);
-                        $progressBar.css('background-color', '#dc3545'); // Cor de erro
-                        alert(data.status); // Exibe o erro
-                        $submitButton.prop('disabled', false).text(originalSubmitButtonText); // Volta ao texto original
-                        $processingArea.hide(); // Oculta a área de processamento em caso de erro
-                        $progressBar.removeClass('animated'); // Para a animação em caso de erro
-                    } else {
-                        updateProgressBar(data.progress, data.status);
-                        if (data.progress === 100) {
-                            // Processamento concluído com sucesso
-                            $progressBar.removeClass('animated'); // Para a animação ao concluir
-                            setTimeout(() => {
-                                $processingStatus.hide();
-                                $resultArea.show();
-                                // Configura o botão de download
-                                const finalPdfFilename = "Resumo_Final_Com_Prints.pdf"; // Este nome deve vir do backend ou ser um padrão
-                                $('#downloadButton').off('click').on('click', function (e) {
-                                    e.preventDefault(); // Impede a ação padrão do link/botão por um instante
-                                    const $thisButton = $(this);
-                                    $thisButton.prop('disabled', true).text('Baixando...'); // Desabilita e muda o texto
-                                    window.location.href = `/download-final-pdf/${finalPdfFilename}`;
-                                    // Nota: o botão permanece desabilitado e com texto alterado após o início do download.
-                                });
-
-                                // Modifica o botão de submissão para reiniciar a página
-                                $submitButton.prop('disabled', false).text('REINICIAR E GERAR UM NOVO RESUMO FULL');
-                                // Remove o manipulador de clique anterior e adiciona um novo para recarregar a página
-                                $submitButton.off('click').on('click', function (e) {
-                                    e.preventDefault();
-                                    window.location.reload();
-                                });
-
-                            }, 1000); // Pequeno atraso para a animação da barra de progresso
-                        }
+            // Função para enviar o PDF ao backend e persistir em temp_uploads
+            function uploadPdf(file) {
+                const formData = new FormData();
+                formData.append('originalPdf', file);
+                return fetch('/api/upload-pdf', {
+                    method: 'POST',
+                    body: formData
+                }).then(resp => {
+                    if (!resp.ok) throw new Error('Falha no upload do PDF');
+                    return resp.json();
+                }).then(data => {
+                    // Atualiza selectedPdfName com o nome salvo no servidor
+                    if (data && data.filename) {
+                        try { localStorage.setItem('selectedPdfName', data.filename); } catch (err) {}
                     }
+                    return data;
+                }).catch(err => {
+                    console.error('Erro no upload do PDF:', err);
+                });
+            }
+
+            // Função para mostrar preview do PDF quando arquivo for selecionado
+            $('#originalPdf').on('change', function (e) {
+                const file = e.target.files[0];
+                if (file && file.type === 'application/pdf') {
+                    try { localStorage.setItem('selectedPdfName', file.name); } catch (err) {}
+                    // Envia para o backend para persistir em temp_uploads com o mesmo nome
+                    uploadPdf(file);
+                    showPdfPreview(file);
+                } else {
+                    hidePdfPreview();
+                }
+            });
+
+            // Variáveis globais para controle do PDF
+            let pdfDoc = null;
+            let totalPages = 0;
+            let isRendering = false;
+
+            // Função para mostrar preview do PDF
+            function showPdfPreview(file) {
+                // Atualiza o título com o nome do arquivo
+                $('#pdfPreviewTitle').text(`Prévia do PDF: ${file.name}`);
+
+                $pdfPreviewSection.show();
+                $pdfPreviewContainer.html(`
+                    <div class="pdf-loading">
+                        <div class="pdf-loading-spinner"></div>
+                        <p>Carregando PDF...</p>
+                    </div>
+                `);
+
+                // Configurar PDF.js
+                pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+                const fileReader = new FileReader();
+                fileReader.onload = function (e) {
+                    const typedArray = new Uint8Array(e.target.result);
+
+                    pdfjsLib.getDocument(typedArray).promise.then(function (pdf) {
+                        pdfDoc = pdf;
+                        totalPages = pdf.numPages;
+
+                        renderAllPages();
+                    }).catch(function (error) {
+                        console.error('Erro ao carregar PDF:', error);
+                        $pdfPreviewContainer.html(`
+                            <div class="pdf-error">
+                                <p>Erro ao carregar o PDF: ${error.message}</p>
+                                <p>Verifique se o arquivo é um PDF válido.</p>
+                            </div>
+                        `);
+                    });
                 };
 
-                ws.onclose = function (event) {
-                    console.log("WebSocket desconectado.");
-                    $progressBar.removeClass('animated'); // Para a animação ao desconectar
-                    // Opcional: tentar reconectar ou mostrar uma mensagem de erro
-                };
+                fileReader.readAsArrayBuffer(file);
+            }
 
-                ws.onerror = function (error) {
-                    console.error("Erro no WebSocket:", error);
-                    $processingStatus.text('Erro na conexão com o servidor. Tente novamente.');
-                    $progressBar.css('background-color', '#dc3545'); // Cor de erro
-                    alert('Erro na conexão com o servidor. Por favor, tente novamente.');
-                    $submitButton.prop('disabled', false).text(originalSubmitButtonText); // Volta ao texto original
-                    $processingArea.hide(); // Oculta a área de processamento em caso de erro
-                    $progressBar.removeClass('animated'); // Para a animação em caso de erro
-                };
+            // Função para renderizar todas as páginas
+            function renderAllPages() {
+                if (isRendering) return;
+                isRendering = true;
+
+                $pdfPreviewContainer.html(`
+                    <div class="pdf-loading">
+                        <div class="pdf-loading-spinner"></div>
+                        <p style="color: #007bff; font-weight: 600; font-size: 1em;">Renderizando páginas...</p>
+                        </div>
+                    `);
+
+                // Adiciona delay de 3 segundos para mostrar o spinner por mais tempo
+                setTimeout(() => {
+
+                    const renderPromises = [];
+
+                    for (let pageNum = 1; pageNum <= totalPages; pageNum++) {
+                        renderPromises.push(renderPage(pageNum));
+                    }
+
+                    Promise.all(renderPromises).then((pageResults) => {
+                        const container = document.getElementById('pdfPreviewContainer');
+                        if (container) {
+                            container.innerHTML = '';
+                            // Garante ordem numérica crescente
+                            pageResults
+                                .sort((a, b) => a.pageNum - b.pageNum)
+                                .forEach(({ pageDiv }) => {
+                                    container.appendChild(pageDiv);
+                                });
+                        }
+                        isRendering = false;
+                    }).catch(error => {
+                        console.error('Erro ao renderizar páginas:', error);
+                        $pdfPreviewContainer.html(`
+                        <div class="pdf-error">
+                            <p>Erro ao renderizar as páginas do PDF.</p>
+                        </div>
+                    `);
+                        isRendering = false;
+                    });
+                }, 3000); // 3 segundos de delay
+            }
+
+            // Função para renderizar uma página específica
+            function renderPage(pageNum) {
+                return pdfDoc.getPage(pageNum).then(function (page) {
+                    const viewport = page.getViewport({ scale: 1.0 });
+
+                    const canvas = document.createElement('canvas');
+                    const context = canvas.getContext('2d');
+                    canvas.height = viewport.height;
+                    canvas.width = viewport.width;
+                    canvas.className = 'pdf-page-canvas';
+
+                    const pageDiv = document.createElement('div');
+                    pageDiv.className = 'pdf-page';
+                    pageDiv.id = `pdf-page-${pageNum}`;
+
+                    const pageNumberDiv = document.createElement('div');
+                    pageNumberDiv.className = 'pdf-page-number';
+                    pageNumberDiv.textContent = `Página ${pageNum}`;
+
+                    pageDiv.appendChild(canvas);
+                    pageDiv.appendChild(pageNumberDiv);
+
+                    const renderContext = {
+                        canvasContext: context,
+                        viewport: viewport
+                    };
+
+                    return page.render(renderContext).promise.then(() => {
+                        // Retorna dados para montagem ordenada posterior
+                        return { pageNum, pageDiv };
+                    });
+                });
+            }
+
+
+            // Função para esconder preview do PDF
+            function hidePdfPreview() {
+                // Reseta o título para o padrão
+                $('#pdfPreviewTitle').text('Prévia do PDF Selecionado');
+                $pdfPreviewSection.hide();
+            }
+
+
+
+            // Função para estruturar o resumo (usando API real)
+            function structureSummary(summaryText) {
+                return new Promise((resolve, reject) => {
+                    // Enviar o texto para o backend para normalização
+                    fetch('/api/normalize-text', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ text: summaryText })
+                    })
+                        .then(response => {
+                            if (!response.ok) {
+                                throw new Error('Erro na normalização do texto');
+                            }
+                            return response.json();
+                        })
+                        .then(data => {
+                            // O backend retorna o texto normalizado
+                            resolve(data.normalized_text);
+                        })
+                        .catch(error => {
+                            console.error('Erro ao normalizar texto:', error);
+                            // Fallback: usar o texto original se a API falhar
+                            resolve(summaryText);
+                        });
+                });
+            }
+
+            // Função para salvar o resumo estruturado com formatação HTML
+            function saveStructuredSummary(markdownContent, htmlContent) {
+                return new Promise((resolve, reject) => {
+                    fetch('/api/save-structured-summary', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            markdown: markdownContent,
+                            html: htmlContent
+                        })
+                    })
+                        .then(response => {
+                            if (!response.ok) {
+                                throw new Error('Erro ao salvar resumo estruturado');
+                            }
+                            return response.json();
+                        })
+                        .then(data => {
+                            console.log('Resumo estruturado salvo com sucesso');
+                            resolve(data);
+                        })
+                        .catch(error => {
+                            console.error('Erro ao salvar resumo estruturado:', error);
+                            reject(error);
+                        });
+                });
             }
 
             // Remove o manipulador de submit do formulário, o botão agora controlará a submissão.
@@ -427,69 +902,90 @@
                 if ($submitButton.text() === originalSubmitButtonText) {
                     const iaSummaryText = $('#iaSummaryText').val();
                     const wordCount = iaSummaryText.split(/\s+/).filter(word => word.length > 0).length;
-                    $wordCountDisplay.text(`Palavras: ${wordCount}`).removeClass('word-count-red').removeClass('word-count-green');
+                    $wordCountDisplay.text(`Palavras inseridas: ${wordCount}`).removeClass('word-count-red').removeClass('word-count-green');
 
-                    if (wordCount < 1000) {
+                    if (wordCount < 600) {
                         $wordCountDisplay.addClass('word-count-red');
-                        alert(`A quantidade de palavras do resumo deve ser maior que 1000.\nQuantidade atual: ${wordCount} palavras.`);
+                        alert(`A quantidade de palavras do resumo deve ser maior que 600.\nQuantidade atual: ${wordCount} palavras.`);
                         return; // Impede a submissão do formulário
                     } else {
                         $wordCountDisplay.addClass('word-count-green');
                     }
 
-                    // 1. Desabilita o botão e mostra a área de processamento
-                    $submitButton.prop('disabled', true).text('PROCESSANDO...');
-                    $processingArea.show();
-                    $resultArea.hide();
-                    $progressBar.css('background-color', '#007bff'); // Reseta a cor da barra de progresso
-                    updateProgressBar(0, 'Iniciando...'); // Reinicia o progresso visualmente
-                    $progressBar.addClass('animated'); // Inicia a animação ao submeter o formulário
+                    // 1. Mostra animação de carregamento no textarea por 4 segundos
+                    $textareaLoadingContainer.css('display', 'block');
+                    $textareaLoadingOverlay.show();
+                    $submitButton.prop('disabled', true).text('ESTRUTURANDO...');
 
-                    // Conectar WebSocket antes de enviar o formulário
-                    connectWebSocket();
+                    // 2. Aguarda 4 segundos antes de processar o resumo
+                    setTimeout(() => {
+                        // Esconde o overlay de loading do textarea
+                        $textareaLoadingOverlay.hide();
+                        $textareaLoadingContainer.css('display', 'none');
 
-                    // 2. Coleta os dados do formulário (incluindo o arquivo PDF)
-                    const formData = new FormData($form[0]); // Passa o elemento DOM nativo
+                        // Esconde o textarea e mostra a área de loading
+                        $iaSummaryText.hide();
+                        $loadingArea.show();
+                        $resultArea.hide();
 
-                    // --- CHAMADA AJAX REAL PARA O FASTAPI ---
-                    $.ajax({
-                        url: '/api/processamento-full', // Rota do seu FastAPI
-                        type: 'POST',
-                        data: formData,
-                        // CRUCIAIS para enviar arquivos
-                        processData: false,
-                        contentType: false,
+                        // 3. Processa o resumo
+                        structureSummary(iaSummaryText).then((structuredMarkdown) => {
+                            // 4. Converte Markdown para HTML usando Marked.js com configuração para tabelas
+                            const htmlContent = marked.parse(structuredMarkdown, {
+                                breaks: true,
+                                gfm: true,
+                                tables: true,
+                                pedantic: false,
+                                sanitize: false,
+                                smartLists: true,
+                                smartypants: false
+                            });
 
-                        xhr: function () {
-                            // Opcional: Adicionar um listener para o progresso do upload do arquivo
-                            var xhr = new window.XMLHttpRequest();
-                            xhr.upload.addEventListener("progress", function (evt) {
-                                if (evt.lengthComputable) {
-                                    var percentComplete = evt.loaded / evt.total;
-                                    // Apenas atualiza o status de envio do arquivo, o progresso principal vem do WS
-                                    $processingStatus.text(`Enviando arquivo: ${Math.round(percentComplete * 100)}%`);
-                                }
-                            }, false);
-                            return xhr;
-                        },
+                            // 5. Salva o resumo estruturado com formatação HTML
+                            saveStructuredSummary(structuredMarkdown, htmlContent).then(() => {
+                                // 6. Mostra o resultado
+                                $loadingArea.hide();
+                                $structuredSummary.html(htmlContent);
+                                $resultArea.show();
 
-                        success: function (response) {
-                            console.log("Upload de arquivo bem-sucedido, aguardando progresso via WebSocket...");
-                            // Não atualiza a barra de progresso aqui, isso será feito pelo WebSocket
-                            // A mensagem de 'Iniciando processamento...' será enviada pelo backend via WS
-                        },
-                        error: function (xhr, status, error) {
-                            // Lógica de tratamento de erro no frontend
-                            console.error("Erro no processamento AJAX:", status, error);
-                            $processingStatus.text('Erro ao enviar arquivos. Tente novamente.');
-                            $progressBar.css('background-color', '#dc3545'); // Cor de erro
-                            alert("Erro ao processar. Verifique o console do navegador e do servidor.");
-                            $processingArea.hide();
-                            $submitButton.prop('disabled', false).text(originalSubmitButtonText); // Volta ao texto original
-                            if (ws) ws.close(); // Fechar WebSocket em caso de erro AJAX
-                            $progressBar.removeClass('animated'); // Para a animação em caso de erro AJAX
-                        }
-                    });
+                                // 7. Atualiza o botão
+                                $submitButton.prop('disabled', false).text(newButtonText);
+
+                                // 8. Adiciona evento de clique para iniciar processamento completo e redirecionar ao editor
+                                $submitButton.off('click').on('click', function (e) {
+                                    e.preventDefault();
+                                    const originalPdfInput = document.getElementById('originalPdf');
+                                    const originalPdfFile = originalPdfInput && originalPdfInput.files && originalPdfInput.files[0];
+                                    if (originalPdfFile) {
+                                        const fd = new FormData();
+                                        fd.append('originalPdf', originalPdfFile);
+                                        // Enviar o texto original para normalização no backend
+                                        fd.append('iaSummaryText', iaSummaryText);
+                                        fetch('/api/processamento-full', { method: 'POST', body: fd })
+                                            .catch(() => { /* Ignorar falhas e seguir com redirecionamento */ })
+                                            .finally(() => {
+                                                window.location.href = '/static/editor.html';
+                                            });
+                                    } else {
+                                        window.location.href = '/static/editor.html';
+                                    }
+                                });
+                            }).catch((error) => {
+                                console.error('Erro ao salvar resumo estruturado:', error);
+                                // Mesmo com erro, mostra o resultado
+                                $loadingArea.hide();
+                                $structuredSummary.html(htmlContent);
+                                $resultArea.show();
+                                $submitButton.prop('disabled', false).text(newButtonText);
+                            });
+                        }).catch((error) => {
+                            console.error('Erro ao estruturar resumo:', error);
+                            alert('Erro ao estruturar o resumo. Tente novamente.');
+                            $loadingArea.hide();
+                            $iaSummaryText.show();
+                            $submitButton.prop('disabled', false).text(originalSubmitButtonText);
+                        });
+                    }, 4000); // 4 segundos de delay
                 }
             });
         });
