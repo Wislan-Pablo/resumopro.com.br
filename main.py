@@ -8,6 +8,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 from typing import List, Optional
+import time
 
 # Carregar variáveis do arquivo .env (se existir)
 load_dotenv(os.path.join(os.path.dirname(__file__), '.env'))
@@ -21,12 +22,16 @@ app.add_middleware(
         "http://127.0.0.1:8000",
         "http://localhost:8001",
         "http://127.0.0.1:8001",
+        "http://localhost:8002",
+        "http://127.0.0.1:8002",
         "http://resumefull.com.br",
         "https://resumefull.com.br",
         "http://resumefull.com.br:8001",
+        "http://resumefull.com.br:8002",
         "http://www.resumefull.com.br",
         "https://www.resumefull.com.br",
-        "http://www.resumefull.com.br:8001"
+        "http://www.resumefull.com.br:8001",
+        "http://www.resumefull.com.br:8002"
     ],
     allow_credentials=True,
     allow_methods=["*"],
@@ -567,9 +572,19 @@ async def get_preview_data():
         if os.path.exists(estrutura_path):
             with open(estrutura_path, 'r', encoding='utf-8') as f:
                 estrutura = json.load(f)
+            
+            # Carregar informações das imagens se disponível
+            imagens_dir = os.path.join(UPLOAD_DIR, "imagens_extraidas")
+            info_file_path = os.path.join(imagens_dir, 'imagens_info.json')
+            if os.path.exists(info_file_path):
+                with open(info_file_path, 'r', encoding='utf-8') as f:
+                    estrutura["imagens_info"] = json.load(f)
+            else:
+                estrutura["imagens_info"] = {}
             return {
                 "images": estrutura.get("images", []),
-                "resumo_text": estrutura.get("resumo_text", "")
+                "resumo_text": estrutura.get("resumo_text", ""),
+                "imagens_info": estrutura.get("imagens_info", {})
             }
         # Fallback quando estrutura_edicao.json não existe
         imagens_dir = os.path.join(UPLOAD_DIR, "imagens_extraidas")
@@ -606,6 +621,19 @@ async def get_editor_data():
         if os.path.exists(estrutura_path):
             with open(estrutura_path, 'r', encoding='utf-8') as f:
                 estrutura = json.load(f)
+            # Garantir que imagens_info seja incluído mesmo quando estrutura_edicao.json existe
+            imagens_dir = os.path.join(UPLOAD_DIR, "imagens_extraidas")
+            info_file_path = os.path.join(imagens_dir, 'imagens_info.json')
+            try:
+                if "imagens_info" not in estrutura or not isinstance(estrutura.get("imagens_info"), dict):
+                    if os.path.exists(info_file_path):
+                        with open(info_file_path, 'r', encoding='utf-8') as f:
+                            estrutura["imagens_info"] = json.load(f)
+                    else:
+                        estrutura["imagens_info"] = {}
+            except Exception as e:
+                print(f"Erro ao carregar imagens_info quando estrutura_edicao.json existe: {e}")
+                estrutura["imagens_info"] = estrutura.get("imagens_info", {})
         else:
             # Fallback quando estrutura_edicao.json não existe
             estrutura = {
@@ -617,6 +645,20 @@ async def get_editor_data():
             if os.path.isdir(imagens_dir):
                 try:
                     estrutura["images"] = [f for f in os.listdir(imagens_dir) if f.lower().endswith('.png')]
+                    
+                    # Carregar informações das imagens se disponível
+                    info_file_path = os.path.join(imagens_dir, 'imagens_info.json')
+                    print(f"Debug: Verificando arquivo de informações das imagens: {info_file_path}")
+                    print(f"Debug: Arquivo existe? {os.path.exists(info_file_path)}")
+                    if os.path.exists(info_file_path):
+                        with open(info_file_path, 'r', encoding='utf-8') as f:
+                            estrutura["imagens_info"] = json.load(f)
+                        print(f"Debug: Informações das imagens carregadas: {len(estrutura['imagens_info'])} imagens")
+                        print(f"Debug: Primeiras 3 chaves: {list(estrutura['imagens_info'].keys())[:3]}")
+                    else:
+                        estrutura["imagens_info"] = {}
+                        print("Debug: Arquivo imagens_info.json não encontrado, usando dicionário vazio")
+                        
                 except Exception as e:
                     print(f"Erro ao listar imagens no fallback: {e}")
             # tentar descobrir um PDF no diretório para ajudar a UI
@@ -726,3 +768,42 @@ async def upload_pdf(originalPdf: UploadFile = File(...)):
     except Exception as e:
         print(f"[ERRO] upload-pdf: {e}")
         raise HTTPException(status_code=500, detail="Erro ao salvar o arquivo PDF.")
+
+# --- ROTA: Upload de imagem capturada (captura livre) ---
+@app.post("/api/upload-captured-image")
+async def upload_captured_image(file: UploadFile = File(...), filename: Optional[str] = Form(None)):
+    try:
+        dest_dir = os.path.join(UPLOAD_DIR, "imagens_extraidas")
+        os.makedirs(dest_dir, exist_ok=True)
+        base_name = filename or f"img_capture_{int(time.time()*1000)}.png"
+        if not base_name.lower().endswith('.png'):
+            base_name = base_name + ".png"
+        save_path = os.path.join(dest_dir, base_name)
+        data = await file.read()
+        with open(save_path, 'wb') as f:
+            f.write(data)
+
+        # Atualizar estrutura_edicao.json
+        estrutura_path = os.path.join(UPLOAD_DIR, "estrutura_edicao.json")
+        estrutura = {}
+        if os.path.exists(estrutura_path):
+            try:
+                with open(estrutura_path, 'r', encoding='utf-8') as f:
+                    estrutura = json.load(f)
+            except Exception:
+                estrutura = {}
+        images = estrutura.get("images", [])
+        if base_name not in images:
+            images.append(base_name)
+            estrutura["images"] = images
+        if "upload_dir" not in estrutura:
+            estrutura["upload_dir"] = UPLOAD_DIR
+        try:
+            with open(estrutura_path, 'w', encoding='utf-8') as f:
+                json.dump(estrutura, f, ensure_ascii=False, indent=2)
+        except Exception as e:
+            print(f"Erro ao salvar estrutura_edicao.json: {e}")
+        return {"filename": base_name}
+    except Exception as e:
+        print(f"Erro no upload de captura: {e}")
+        raise HTTPException(status_code=500, detail="Falha ao salvar imagem capturada")

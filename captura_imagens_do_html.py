@@ -13,6 +13,7 @@ def capturar_imagens_do_corpo_html(caminho_html: str, caminho_imagens_destino: s
     """
     Filtra o corpo da página HTML e captura todas as imagens, 
     ignorando duplicatas baseadas no conteúdo (hash binário).
+    Retorna um dicionário com informações das imagens incluindo página de origem.
     """
     print("\n--- FASE B & C: Filtragem do Corpo e Captura de Imagens ---")
     
@@ -28,6 +29,7 @@ def capturar_imagens_do_corpo_html(caminho_html: str, caminho_imagens_destino: s
 
     soup = BeautifulSoup(html_content, 'html.parser')
     imagens_salvas = []
+    imagens_info = {}  # Dicionário para armazenar informações das imagens
     
     # --- NOVO: CONJUNTO PARA ARMAZENAR HASHES DE IMAGENS JÁ VISTAS ---
     hashes_salvos = set()
@@ -44,6 +46,7 @@ def capturar_imagens_do_corpo_html(caminho_html: str, caminho_imagens_destino: s
     # 1. Iterar sobre todas as tags de imagem
     for i, img in enumerate(body.find_all('img')):
         src = img.get('src')
+        page_number = img.get('data-page-number', 'Desconhecida')  # Extrair número da página
         if not src:
             continue
         
@@ -100,10 +103,25 @@ def capturar_imagens_do_corpo_html(caminho_html: str, caminho_imagens_destino: s
             with open(caminho_saida, 'wb') as f:
                 f.write(img_data)
             
+            # 7. Armazenar informações da imagem incluindo página
+            imagens_info[nome_arquivo] = {
+                'caminho': caminho_saida,
+                'pagina': page_number,
+                'hash': img_hash
+            }
+            
             imagens_salvas.append(caminho_saida)
-            print(f"   ✅ Imagem única salva como: {nome_arquivo}")
+            print(f"   ✅ Imagem única salva como: {nome_arquivo} (Página {page_number})")
 
     print(f"✅ Captura concluída. {len(imagens_salvas)} imagens únicas salvas em {caminho_imagens_destino}")
     print(f"   Foram encontradas e descartadas {total_imagens_encontradas - len(imagens_salvas)} imagens repetidas (incluindo a primeira cópia).")
+    
+    # Salvar informações das imagens em um arquivo JSON
+    import json
+    info_file_path = os.path.join(caminho_imagens_destino, 'imagens_info.json')
+    with open(info_file_path, 'w', encoding='utf-8') as f:
+        json.dump(imagens_info, f, ensure_ascii=False, indent=2)
+    
+    print(f"   📄 Informações das imagens salvas em: {info_file_path}")
     
     return True

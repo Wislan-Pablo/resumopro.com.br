@@ -23,8 +23,30 @@
 
         .container {
             display: flex;
-            height: 100vh;
-            overflow: hidden;
+            min-height: 100vh;
+            height: auto;
+            overflow: visible;
+            position: relative;
+            padding-left: 300px;
+            transition: all 0.3s ease;
+        }
+        .container.sidebar-collapsed {
+            padding-left: 60px;
+        }
+        .container.sidebar-collapsed .editor-header {
+            left: 60px;
+        }
+        
+        /* Modo Tela Cheia */
+        .container.fullscreen-mode .editor-header {
+            display: none;
+        }
+        .container.fullscreen-mode .main-editor {
+            padding-top: 0;
+        }
+        .container.fullscreen-mode .pdf-viewer-toolbar {
+            top: 0;
+            margin-top: 0;
         }
 
         /* Painel Lateral - Imagens */
@@ -33,9 +55,14 @@
             background: #e0e0e0;
             border-right: 1px solid #bbb;
             padding: 15px 20px 15px 20px;
+            height: 100vh;
             overflow-y: auto;
             transition: all 0.3s ease;
             flex-shrink: 0;
+            position: fixed;
+            top: 0;
+            left: 0;
+            z-index: 100;
         }
 
         .main-editor {
@@ -54,9 +81,10 @@
         }
         .sidebar-header {
             display: flex;
+            border-radius: 5px;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 20px;
+            margin-bottom:  15px;
         }
         .sidebar-toggle {
             background: transparent;
@@ -72,8 +100,9 @@
         }
         .sidebar.collapsed {
             width: 60px;
-            padding: 15px 0 15px 0;
-            overflow: visible;
+            padding: 13px 0 15px 0;
+            height: 100vh;
+            overflow-y: auto;
         }
         .sidebar.collapsed .sidebar-header { justify-content: center; }
         .sidebar.collapsed .sidebar-header h2 { display: none; }
@@ -144,7 +173,7 @@
         }
 
         .image-item .image-name {
-            font-size: 0.9em;
+            font-size: 1em;
             color: #666;
             text-align: center;
             font-weight: 600;
@@ -201,7 +230,7 @@
         }
         .modal-overlay.active { display: flex; }
         .modal-content {
-            background: #fff;
+            background: #ccc;
             border-radius: 10px;
             max-width: 80vw;
             max-height: 80vh;
@@ -284,10 +313,15 @@
             display: flex;
             flex-direction: column;
             background: #fff;
+            min-width: 0;
+            padding-top: 85px;
         }
 
         .editor-header {
-            position: relative;
+            position: fixed;
+            top: 0;
+            left: 300px;
+            right: 0;
             height: 80px;
             background: #e0e0e0;
             color: white;
@@ -296,6 +330,7 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
+            z-index: 200;
         }
 
         .editor-header h1 {
@@ -303,8 +338,8 @@
             font-weight: 600;
         }
         .page-title {
-            text-align: center;
-            font-size: 1.4em;
+            text-align: justify;
+            font-size: 1.05em;
             margin: 10px 40px 16px;
         }
 
@@ -316,7 +351,7 @@
         }
 
         .btn {
-            padding: 8px 16px;
+            padding: 6px 10px;
             border: none;
             border-radius: 6px;
             cursor: pointer;
@@ -337,7 +372,7 @@
         }
 
         .btn-secondary {
-            background: #6c757d;
+            background: #8d9092;
             color: white;
         }
 
@@ -349,7 +384,7 @@
         .content-area {
             flex: 1;
             display: flex;
-            overflow-y: auto;
+            overflow: visible;
             background-color: #f9f9f9;
         }
 
@@ -369,9 +404,37 @@
 
         /* Abas do Editor */
         .editor-tabs {
+            width: 600px;
             display: flex;
             gap: 10px;
             align-items: center;
+        }
+        .editor-tabs .tab-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 10px;
+            font-size: 16px;
+            font-weight: 500;
+            min-height: 32px;
+            border-radius: 6px;
+        }
+        .editor-tabs .tab-btn svg {
+            margin-right: 2px;
+        }
+        .btn-icon {
+            width: 28px;
+            height: 28px;
+            display: inline-block;
+            margin-right: 8px;
+            vertical-align: middle;
+        }
+        .editor-actions .btn {
+            padding: 6px 10px;
+            font-size: 16px;
+            font-weight: 500;
+            min-height: 32px;
+            border-radius: 6px;
         }
         .tab-btn.active {
             background: #007bff;
@@ -393,8 +456,8 @@
             border-radius: 4px 4px 0 0;
             background-color: #fff;
             position: sticky;
-            top: 0;
-            z-index: 5;
+            top: 80px;
+            z-index: 250;
         }
         .pdf-viewer-toolbar .toolbar-left,
         .pdf-viewer-toolbar .toolbar-right {
@@ -418,7 +481,7 @@
             text-align: center;
         }
         .pdf-capture-container {
-            height: 1000px;
+            height: auto;
             padding: 20px;
             border: 1px solid #ddd;
             border-radius: 0 0 4px 4px;
@@ -426,7 +489,7 @@
             margin: 0 20px 20px 20px;
         }
         #adobe-dc-view {
-            height: 1000px;
+            height: 100%;
             width: 100%;
             overflow: hidden;
         }
@@ -710,6 +773,7 @@
             }
 
             .content-area {
+                height: auto;
                 flex-direction: column;
             }
         }
@@ -756,13 +820,21 @@
         <div class="main-editor">
             <div class="editor-header">
                 <div class="editor-tabs">
-                    <button id="tabEditor" class="btn btn-secondary tab-btn active">Editor</button>
-                    <button id="btnCapture" class="btn btn-secondary tab-btn">Capturar Imagens no PDF</button>
+                    <button id="tabEditor" class="btn btn-secondary tab-btn active">
+                        <img src="../images/editor_resumo.svg" alt="Editor" class="btn-icon" />
+                        Editor
+                    </button>
+                    <button id="btnCapture" class="btn btn-secondary tab-btn">
+                        <img src="../images/view_pdf.svg" alt="Ver PDF" class="btn-icon" />
+                        Capturar Imagens no PDF
+                    </button>
                 </div>
                 <div class="editor-actions">
-                    <button class="btn btn-secondary" onclick="clearAllImages()">Mover todas as imagens do documento para a
-                        galeria</button>
-                    <button class="btn btn-primary" onclick="generateFinalPDF()">Gerar PDF Final</button>
+
+                    <button class="btn btn-primary" onclick="generateFinalPDF()">
+                        <img src="../images/download_document.svg" alt="Baixar PDF" class="btn-icon" />
+                        Baixar o Resumo Editado 
+                    </button>
                 </div>
             </div>
 
@@ -770,7 +842,7 @@
                 <!-- Painel de Texto -->
                 <div class="text-panel">
                     <div id="editorSection" class="editor-section">
-                        <h1 class="page-title">Selecione as imagens na galeria ou capture de qualquer parte do PDF (botão-menu: Capturar Imagens no PDF) e posicione em qualquer parte do seu resumo</h1>
+                        <h1 class="page-title">Selecione as imagens na galeria ou capture de qualquer parte do PDF no botão [Capturar Imagens no PDF] acima, e posicione em qualquer parte do seu resumo e edite para deixá-lo do seu jeito! :D</h1>
                         <h3>Seu resumo estruturado gerado pela IA:</h3>
                         <div id="structuredSummary" class="formatted-summary" contenteditable="true">
                             <div class="drop-zone">Solte a imagem aqui para inserir</div>
@@ -784,16 +856,18 @@
                              </div>
                              <div class="toolbar-right">
                                  <span id="adobeToolbarInfo"></span>
+                                 <button id="btnFullscreen" class="btn btn-secondary tab-btn" title="Modo tela cheia" aria-label="Modo tela cheia">
+                                     <img src="../images/zoom_out_map.svg" alt="Modo tela cheia" class="btn-icon" />
+                                     <span>MODO TELA CHEIA</span>
+                                 </button>
                                  <button id="btnCaptureImage" class="btn btn-secondary tab-btn" title="Capturar imagem" aria-label="Capturar imagem">
-                                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-fullscreen" viewBox="0 0 16 16">
-                                         <path d="M1.5 1a.5.5 0 0 0-.5.5v4a.5.5 0 0 1-1 0v-4A1.5 1.5 0 0 1 1.5 0h4a.5.5 0 0 1 0 1zM10 .5a.5.5 0 0 1 .5-.5h4A1.5 1.5 0 0 1 16 1.5v4a.5.5 0 0 1-1 0v-4a.5.5 0 0 0-.5-.5h-4a.5.5 0 0 1-.5-.5M.5 10a.5.5 0 0 1 .5.5v4a.5.5 0 0 0 .5.5h4a.5.5 0 0 1 0 1h-4A1.5 1.5 0 0 1 0 14.5v-4a.5.5 0 0 1 .5-.5m15 0a.5.5 0 0 1 .5.5v4a1.5 1.5 0 0 1-1.5 1.5h-4a.5.5 0 0 1 0-1h4a.5.5 0 0 0 .5-.5v-4a.5.5 0 0 1 .5-.5"/>
-                                     </svg>
-                                     <span style="margin-left: 10px;">CAPTURAR IMAGEM</span>
+                                     <img src="../images/screen_capture.svg" alt="Capturar imagem" class="btn-icon" />
+                                     <span>CAPTURAR IMAGEM</span>
                                  </button>
                              </div>
                          </div>
                          <div id="pdfCaptureContainer" class="pdf-capture-container">
-                            <div id="adobe-dc-view" style="height: 1000px; width: 100%;"></div>
+                            <div id="adobe-dc-view" style="height: 1255px; width: 100%;"></div>
                             <script src="https://acrobatservices.adobe.com/view-sdk/viewer.js"></script>
                             <script type="text/javascript">
                                 document.addEventListener("adobe_dc_view_sdk.ready", function(){
@@ -801,7 +875,12 @@
                                 adobeDCView.previewFile({
                                 content:{location: {url: "https://acrobatservices.adobe.com/view-sdk-demo/PDFs/Bodea Brochure.pdf"}},
                                 metaData : { fileName : "Bodea Brochure.pdf" } 
-                                }, { embedMode: "SIZED_CONTAINER"});
+                                }, { embedMode: "SIZED_CONTAINER", 
+                                    showAnnotationTools: false,
+                                    showLeftHandPanel: false,
+                                    showDownloadPDF: true,
+                                    showPrintPDF: true,
+                                    enableZoomControl: true});
                             });
                             </script>
                          </div>
@@ -920,7 +999,9 @@
                 document.getElementById('structuredSummary').innerHTML = htmlContent;
 
                 // Carregar imagens na galeria
-                loadImageGallery();
+            // Construir mapeamento robusto de informações das imagens
+            window.__imageInfoLookup = buildImagemInfoLookup(estruturaEdicao.imagens_info);
+            loadImageGallery();
 
                 updateStatus('Dados carregados com sucesso');
             } catch (error) {
@@ -931,6 +1012,30 @@
                 }
                 updateStatus('Erro ao carregar dados');
             }
+        }
+
+        // Utils de imagem para mapeamento robusto
+        function buildImagemInfoLookup(imagens_info) {
+            const lookup = {};
+            if (!imagens_info || typeof imagens_info !== 'object') return lookup;
+            for (const [key, info] of Object.entries(imagens_info)) {
+                const baseFromKey = String(key).split(/[\\\/]/).pop();
+                if (baseFromKey && !lookup[baseFromKey]) lookup[baseFromKey] = info;
+                if (info && typeof info === 'object' && info.caminho) {
+                    const baseFromPath = String(info.caminho).split(/[\\\/]/).pop();
+                    if (baseFromPath && !lookup[baseFromPath]) lookup[baseFromPath] = info;
+                }
+            }
+            return lookup;
+        }
+
+        function getImagePageInfo(imageName) {
+            let info = (estruturaEdicao && estruturaEdicao.imagens_info) ? estruturaEdicao.imagens_info[imageName] : undefined;
+            if (!info && window.__imageInfoLookup) {
+                info = window.__imageInfoLookup[imageName];
+            }
+            if (!info) return null;
+            return info.pagina != null ? info : null;
         }
 
         // Carregar galeria de imagens
@@ -953,6 +1058,10 @@
                 imageItem.draggable = true;
                 imageItem.dataset.imageName = imageName;
 
+                // Obter informação da página com mapeamento robusto
+                const info = getImagePageInfo(imageName);
+                const displayName = (info && info.pagina != null) ? `${imageName} - Página ${info.pagina}` : imageName;
+
                 imageItem.innerHTML = `
                     <img src="/temp_uploads/imagens_extraidas/${imageName}?v=${galleryCacheBust}" alt="${imageName}">
                     <button class="view-btn" title="Visualizar imagem" onclick="openImageModal('${imageName}')" onmousedown="event.stopPropagation()">
@@ -961,7 +1070,7 @@
                             <circle cx="12" cy="12" r="3"></circle>
                         </svg>
                     </button>
-                    <div class="image-name">${imageName}</div>
+                    <div class="image-name">${displayName}</div>
                     <button class="delete-btn" onclick="deleteGalleryImage('${imageName}')" title="Excluir esta imagem da galeria">X</button>
                 `;
 
@@ -1252,7 +1361,12 @@
             imgEl.src = `/temp_uploads/imagens_extraidas/${name}?v=${galleryCacheBust}`;
             imgEl.alt = name;
             const labelEl = document.getElementById('modalFilename');
-            if (labelEl) labelEl.textContent = name;
+            if (labelEl) {
+                // Obter informação da página com mapeamento robusto
+                const info = getImagePageInfo(name);
+                const displayName = (info && info.pagina != null) ? `${name} - Página ${info.pagina}` : name;
+                labelEl.textContent = displayName;
+            }
         }
 
         function nextModalImage() { modalCurrentIndex++; updateModalImage(); }
@@ -1342,7 +1456,21 @@
                 btnCapture.disabled = false;
                 btnCapture.title = 'Abrir Visualizar PDF';
                 btnCapture.style.cursor = '';
-                btnCapture.addEventListener('click', () => activate('pdf'));
+                btnCapture.addEventListener('click', () => {
+                    const sidebar = document.getElementById('sidebar');
+                    const toggleBtn = document.getElementById('sidebarToggle');
+                    const containerEl = document.querySelector('.container');
+                    if (sidebar && !sidebar.classList.contains('collapsed')) {
+                        sidebar.classList.add('collapsed');
+                        if (containerEl) containerEl.classList.add('sidebar-collapsed');
+                        if (toggleBtn) {
+                            toggleBtn.textContent = '☰';
+                            toggleBtn.title = 'Abrir Galeria';
+                            toggleBtn.setAttribute('aria-label', 'Abrir Galeria');
+                        }
+                    }
+                    activate('pdf');
+                });
             }
 
             // Estado inicial
@@ -1467,6 +1595,32 @@
 
 
 
+        // Função para alternar modo tela cheia
+        function toggleFullscreenMode() {
+            const container = document.querySelector('.container');
+            const btnFullscreen = document.getElementById('btnFullscreen');
+            const btnText = btnFullscreen.querySelector('span');
+            const btnIcon = btnFullscreen.querySelector('img');
+            
+            if (container.classList.contains('fullscreen-mode')) {
+                // Sair do modo tela cheia
+                container.classList.remove('fullscreen-mode');
+                btnText.textContent = 'MODO TELA CHEIA';
+                btnIcon.src = '../images/zoom_out_map.svg';
+                btnIcon.alt = 'Modo tela cheia';
+                btnFullscreen.title = 'Modo tela cheia';
+                btnFullscreen.setAttribute('aria-label', 'Modo tela cheia');
+            } else {
+                // Entrar no modo tela cheia
+                container.classList.add('fullscreen-mode');
+                btnText.textContent = 'SAIR DO MODO TELA CHEIA';
+                btnIcon.src = '../images/zoom_in_map.svg';
+                btnIcon.alt = 'Sair do modo tela cheia';
+                btnFullscreen.title = 'Sair do modo tela cheia';
+                btnFullscreen.setAttribute('aria-label', 'Sair do modo tela cheia');
+            }
+        }
+
         // Inicializar editor e abas
         document.addEventListener('DOMContentLoaded', function () {
             const closeBtn = document.getElementById('galleryInfoClose');
@@ -1492,6 +1646,7 @@
             // Toggle de retração/expansão da galeria
             const sidebar = document.getElementById('sidebar');
             const toggleBtn = document.getElementById('sidebarToggle');
+            const containerEl = document.querySelector('.container');
             function setToggleState(collapsed) {
                 if (!toggleBtn || !sidebar) return;
                 if (collapsed) {
@@ -1509,6 +1664,9 @@
                 toggleBtn.addEventListener('click', () => {
                     const isCollapsed = sidebar.classList.toggle('collapsed');
                     setToggleState(isCollapsed);
+                    if (containerEl) {
+                        containerEl.classList.toggle('sidebar-collapsed', isCollapsed);
+                    }
                 });
             }
 
@@ -1516,16 +1674,30 @@
              setupDropZones();
              initEditorTabs();
 
-             const btnCaptureImage = document.getElementById('btnCaptureImage');
-             if (btnCaptureImage) {
-                 btnCaptureImage.addEventListener('mousedown', function () { btnCaptureImage.classList.add('active'); });
-                 function removeActive() { btnCaptureImage.classList.remove('active'); }
-                 btnCaptureImage.addEventListener('mouseup', removeActive);
-                 btnCaptureImage.addEventListener('mouseleave', removeActive);
-                 btnCaptureImage.addEventListener('blur', removeActive);
+             // Event listener para o botão de modo tela cheia
+             const btnFullscreen = document.getElementById('btnFullscreen');
+             if (btnFullscreen) {
+                 btnFullscreen.addEventListener('click', toggleFullscreenMode);
              }
+
+             const btnCaptureImage = document.getElementById('btnCaptureImage');
+            if (btnCaptureImage) {
+                btnCaptureImage.addEventListener('click', function () {
+                    try {
+                        const a = document.createElement('a');
+                        a.href = 'ms-screenclip:';
+                        a.style.display = 'none';
+                        document.body.appendChild(a);
+                        a.click();
+                        document.body.removeChild(a);
+                    } catch (e) {
+                        console.warn('Screen Snip não pôde ser iniciado:', e);
+                    }
+                });
+            }
         });
     </script>
 </body>
 
 </html>
+

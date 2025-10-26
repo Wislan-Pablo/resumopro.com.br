@@ -26,7 +26,17 @@ def converter_pdf_para_html_simples(caminho_pdf: str, caminho_html_saida: str):
         html_content = ""
         for page_num in range(doc.page_count):
             page = doc.load_page(page_num)
-            html_content += page.get_text("xhtml")
+            page_xhtml = page.get_text("xhtml")
+            
+            # Adicionar atributo data-page-number às imagens desta página
+            import re
+            page_xhtml = re.sub(
+                r'(<img[^>]*)(>)',
+                rf'\1 data-page-number="{page_num + 1}"\2',
+                page_xhtml
+            )
+            
+            html_content += page_xhtml
 
         # Envolver o conteúdo XHTML com tags HTML e BODY para formar um documento HTML completo
         full_html_document = f"""
