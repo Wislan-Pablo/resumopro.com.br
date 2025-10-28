@@ -7,6 +7,8 @@
     <title>Editor Semântico - ResumeFull.AI</title>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked@9.1.6/marked.min.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/summernote@0.8.18/dist/summernote-lite.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/summernote@0.8.18/dist/summernote-lite.min.js"></script>
     <script src="https://documentcloud.adobe.com/view-sdk/main.js"></script>
     <style>
         * {
@@ -31,10 +33,10 @@
             transition: all 0.3s ease;
         }
         .container.sidebar-collapsed {
-            padding-left: 60px;
+            padding-left: 70px;
         }
         .container.sidebar-collapsed .editor-header {
-            left: 60px;
+            left: 70px;
         }
         
         /* Modo Tela Cheia */
@@ -49,12 +51,32 @@
             margin-top: 0;
         }
 
+        /* Botão Ir para o Topo (Editor em modo tela cheia) */
+        .go-to-top-btn {
+            position: fixed;
+            right: 30px;
+            bottom: 100px;
+            display: none;
+            z-index: 1000;
+            background: transparent;
+            border: none;
+            padding: 0;
+            cursor: pointer;
+        }
+        .go-to-top-btn img {
+             width: 52px;
+             height: 52px;
+             display: block;
+             border-radius: 8px;
+             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18);
+         }
+
         /* Painel Lateral - Imagens */
         .sidebar {
             width: 300px;
             background: #e0e0e0;
             border-right: 1px solid #bbb;
-            padding: 15px 20px 15px 20px;
+            padding: 10px 15px;
             height: 100vh;
             overflow-y: auto;
             transition: all 0.3s ease;
@@ -77,31 +99,42 @@
 
         .sidebar h2 {
             color: #007bff;
-            font-size: 1.4em;
+            font-size: 1.6em;
+            line-height: 1;
+            display: flex;
+            align-items: center;
         }
         .sidebar-header {
             display: flex;
             border-radius: 5px;
             justify-content: space-between;
             align-items: center;
-            margin-bottom:  15px;
+            margin-bottom: 5px;
         }
         .sidebar-toggle {
             background: transparent;
             border: none;
             cursor: pointer;
-            font-size: 2.2em;
-            font-weight: 600;
             color: #007bff;
             border-radius: 6px;
             display: inline-flex;
             align-items: center;
             justify-content: center;
+            line-height: 1;
+            padding: 0;
+            transition: 0.2s ease;
+        }
+        .sidebar-toggle:hover {
+            transform: scale(1.1);
+        }
+        .sidebar-toggle svg, .sidebar-toggle img {
+            display: block;
         }
         .sidebar.collapsed {
-            width: 60px;
-            padding: 13px 0 15px 0;
+            width: 70px;
+            padding: 6px 0 15px 0;
             height: 100vh;
+            vertical-align: center;           
             overflow-y: auto;
         }
         .sidebar.collapsed .sidebar-header { justify-content: center; }
@@ -113,7 +146,6 @@
 
         .sidebar h3 {
             color: #666;
-            margin-bottom: 15px;
             font-size: 0.9em;
             line-height: 1.4;
             text-align: justify;
@@ -125,19 +157,25 @@
             border: 1px solid #cfe0ff;
             color: #334;
             border-radius: 6px;
-            padding: 10px 36px 10px 12px;
+            padding: 10px 30px 10px 10px;
             margin-bottom: 15px;
         }
         .info-close {
             position: absolute;
             right: 8px;
-            top: 8px;
+            top: 2px;
             border: none;
             background: transparent;
-            color: #666;
-            font-size: 16px;
+            color: #007bff;
+            font-size: 28px;
+            font-weight: 400;
             cursor: pointer;
+            transition: 0.2s ease;
         }
+        .info-close:hover {
+            transform: scale(1.3);
+        }
+
 
         .image-gallery {
             display: flex;
@@ -176,14 +214,14 @@
             font-size: 1em;
             color: #666;
             text-align: center;
-            font-weight: 600;
+            font-weight: bold;
         }
 
         .image-item .delete-btn {
             position: absolute;
-            top: 5px;
-            right: 5px;
-            background: #dc3545;
+            top: 10px;
+            right: 6px;
+            background: transparent;
             color: white;
             border: none;
             border-radius: 50%;
@@ -193,10 +231,56 @@
             font-size: 12px;
             display: none;
             z-index: 10;
+            align-items: center;
+            justify-content: center;
+            padding: 0;
+        }
+        .image-item .delete-btn img {
+            width: 32px;
+            height: 32px;
+            display: block;
+            transform-origin: center;
+            transition: transform 0.2s ease;
+        }
+        .image-item .delete-btn:hover img {
+            transform: scale(1.2);
         }
 
         .image-item:hover .delete-btn {
+            display: flex;
+        }
+
+        /* Botão copiar imagem (canto superior esquerdo do item da galeria) */
+        .image-item .copy-btn {
+            position: absolute;
+            top: 10px;
+            left: 6px;
+            background: transparent;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            cursor: pointer;
+            font-size: 12px;
+            display: none;
+            z-index: 10;
+            align-items: center;
+            justify-content: center;
+            padding: 0;
+        }
+        .image-item .copy-btn img {
+            width: 42px;
+            height: 42px;
             display: block;
+            transform-origin: center;
+            transition: transform 0.2s ease;
+        }
+        .image-item .copy-btn:hover img {
+            transform: scale(1.2);
+        }
+        .image-item:hover .copy-btn {
+            display: flex;
         }
 
         .image-item .view-btn {
@@ -208,16 +292,59 @@
             color: #fff;
             border: none;
             border-radius: 50%;
-            width: 42px;
-            height: 42px;
+            width: 56px;
+            height: 56px;
             display: none;
             align-items: center;
             justify-content: center;
             cursor: pointer;
             z-index: 9;
         }
-        .image-item:hover .view-btn { display: flex; }
-        .image-item .view-btn:hover { background: rgba(0,0,0,0.75); }
+        .image-item:hover .view-btn { display: flex; align-items: center;}
+        .image-item .view-btn:hover { background: rgba(0,0,0,0.75);}
+        /* Efeito de escala suave no ícone do botão de visualizar */
+        .image-item .view-btn svg {
+            transition: transform 0.2s ease;
+            transform-origin: center;
+        }
+        .image-item .view-btn:hover svg {
+            transform: scale(1.2);
+        }
+
+        /* Overlay de feedback de cópia de imagem */
+        .image-item .copy-feedback {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.75);
+            color: #fff;
+            border-radius: 8px;
+            padding: 8px 12px;
+            display: none;
+            align-items: center;
+            gap: 8px;
+            z-index: 12;
+            pointer-events: none;
+            font-size: 14px;
+            font-weight: 500;
+            text-align: center;
+        }
+        .image-item .copy-feedback img {
+            width: 20px;
+            height: 20px;
+            display: block;
+        }
+        .image-item .copy-feedback.show {
+            display: flex;
+            animation: fadeCopyFeedback 3s ease;
+        }
+        @keyframes fadeCopyFeedback {
+            0% { opacity: 0; transform: translate(-50%, -50%) scale(0.95); }
+            10% { opacity: 1; transform: translate(-50%, -50%) scale(1.0); }
+            90% { opacity: 1; transform: translate(-50%, -50%) scale(1.0); }
+            100% { opacity: 0; transform: translate(-50%, -50%) scale(0.98); }
+        }
 
         .modal-overlay {
             position: fixed;
@@ -297,6 +424,19 @@
             gap: 10px;
         }
 
+        .gallery-source {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 4px;
+            border-radius: 4px;
+            font-size: 0.85em;
+            text-align: center;
+            color: #444;
+            background-color: #ccc;
+            margin-bottom: 15px;
+        }
+
         .btn-danger {
             margin: 0 auto;
             background: #777;
@@ -314,7 +454,7 @@
             flex-direction: column;
             background: #fff;
             min-width: 0;
-            padding-top: 85px;
+            padding-top: 92px;
         }
 
         .editor-header {
@@ -322,7 +462,7 @@
             top: 0;
             left: 300px;
             right: 0;
-            height: 80px;
+            height: auto;
             background: #e0e0e0;
             color: white;
             padding: 15px 20px;
@@ -343,6 +483,50 @@
             margin: 10px 40px 16px;
         }
 
+        /* Mensagem informativa do editor */
+        .page-info-banner {
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+            gap: 12px;
+            margin: 0 20px 10px 20px;
+            padding: 10px 40px 10px 16px;
+            border: 1px solid #cfe0ff;
+            background-color: #e9f2ff;
+            color: #0a3d62;
+            border-radius: 6px;
+        }
+        .page-info-banner .page-info-text {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            text-align: justify;
+            font-size: 1.02em;
+            line-height: 1.35;
+        }
+        .page-info-banner .page-info-close {
+            position: absolute;
+            top: 0;
+            right: 0;
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 6px;
+            padding: 4px;
+        }
+        .page-info-banner .page-info-close img {
+            display: block;
+            width: 32px;
+            height: 32px;
+        }
+        .page-info-banner .page-info-close:hover {
+            background-color: rgba(10, 61, 98, 0.08);
+        }
+
         .editor-actions {
             width: 600px;
             display: flex;
@@ -351,7 +535,7 @@
         }
 
         .btn {
-            padding: 6px 10px;
+            padding: 4px 8px;
             border: none;
             border-radius: 6px;
             cursor: pointer;
@@ -363,12 +547,24 @@
         }
 
         .btn-primary {
+            padding: 10px 15px;
             background: #28a745;
             color: white;
         }
 
         .btn-primary:hover {
             background: #218838;
+        }
+
+        /* Estado desabilitado: bloquear hover e interação */
+        .btn[disabled], .btn:disabled {
+            pointer-events: none;
+            opacity: 0.6;
+            cursor: not-allowed;
+            filter: grayscale(10%);
+        }
+        .btn-primary[disabled]:hover, .btn-primary:disabled:hover {
+            background: #28a745; /* mantém cor original sem efeito de hover */
         }
 
         .btn-secondary {
@@ -395,16 +591,14 @@
         }
 
         .text-panel h3 {
-            color: #007bff;
-            margin-top: 15px;
-            margin-left: 40px;
+            color: #8d9092;
             margin-right: 40px;
             font-size: 1.3em;
         }
 
         /* Abas do Editor */
         .editor-tabs {
-            width: 600px;
+            width: 100%;
             display: flex;
             gap: 10px;
             align-items: center;
@@ -429,6 +623,13 @@
             margin-right: 8px;
             vertical-align: middle;
         }
+        .btn-icon-small {
+            width: 24px;
+            height: 24px;
+            display: inline-block;
+            margin-right: 8px;
+            vertical-align: middle;
+        }
         .editor-actions .btn {
             padding: 6px 10px;
             font-size: 16px;
@@ -449,14 +650,13 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            gap: 10px;
             padding: 10px 20px;
-            margin: 20px 20px 0 20px;
+            margin: 0 20px;
             border: 1px solid #ddd;
             border-radius: 4px 4px 0 0;
             background-color: #fff;
             position: sticky;
-            top: 80px;
+            top: 70px;
             z-index: 250;
         }
         .pdf-viewer-toolbar .toolbar-left,
@@ -480,6 +680,47 @@
             min-width: 52px;
             text-align: center;
         }
+
+        /* Toolbar do editor de resumo */
+        .editor-summary-toolbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 20px;
+            margin: 0 20px;
+            border: 1px solid #ddd;
+            border-bottom: none;
+            border-radius: 4px 4px 0 0;
+            background-color: #f5f5f5;
+        }
+        .editor-summary-toolbar .toolbar-left,
+        .editor-summary-toolbar .toolbar-right {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        /* Alinhar largura do Summernote com a toolbar do editor */
+        .note-editor.note-editor-lite {
+            margin-left: 20px;
+            margin-right: 20px;
+            border: 1px solid #5a6268;
+            border-radius: 0 0 4px 4px;
+            background-color: #fff;
+        }
+        .note-editor.note-frame {
+            margin-left: 20px !important;
+            margin-right: 20px !important;
+            padding-top: 0 !important;
+        }
+        /* Remover margens/bordas internas quando usando .formatted-summary no Summernote */
+        .note-editable .formatted-summary {
+            margin: 0 !important;
+            border: none;
+            background-color: transparent;
+        }
+
         .pdf-capture-container {
             height: auto;
             padding: 20px;
@@ -538,15 +779,12 @@
         /* Estilos para a div structuredSummary (mesma formatação do index.html) */
         .formatted-summary {
             background-color: #fff;
-            margin: 20px;
-            padding: 20px;
-            border: 1px solid #5a6268;
+            margin: 20px 20px 20px 20px;
+            padding: 10px;
+            border: none;
             flex: 1;
             overflow: visible;
         }
-
-
-
         .formatted-summary h1 {
             color: #333;
             font-size: 1em;
@@ -671,7 +909,7 @@
 
         .formatted-summary th {
             background-color: #f8f9fa;
-            font-weight: normal;
+            font-weight: bold;
         }
 
         .formatted-summary hr {
@@ -728,7 +966,6 @@
             border-radius: 4px;
             margin-bottom: 10px;
         }
-
         .image-placeholder .remove-btn {
             position: absolute;
             top: 5px;
@@ -783,7 +1020,73 @@
             transition: all 0.3s ease;
             flex: 1;
         }
-    </style>
+        /* Override: remover radius superior e inferior da barra do Summernote */
+         .note-editor.note-frame .note-toolbar {
+             border: 1px solid #e0e0e0;
+             border-bottom: 2px solid #ccc;
+             border-top-left-radius: 0 !important;
+             border-top-right-radius: 0 !important;
+             border-bottom-left-radius: 0 !important;
+             border-bottom-right-radius: 0 !important;
+         }
+         /* Posicionar botão de tela cheia à direita da note-toolbar */
+        .note-editor.note-frame .note-toolbar { position: sticky !important; top: var(--header-height, 0px) !important; z-index: 250 !important; background-color: #fff !important; }
+         .container.fullscreen-mode .note-editor.note-frame .note-toolbar { top: 0 !important; }
+        /* Agrupar ações à direita da toolbar para evitar sobreposição */
+        .note-editor.note-frame .note-toolbar .editor-actions-group {
+            position: absolute;
+            right: 5px;
+            top: 5px;
+            z-index: 2;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .note-editor.note-frame .note-toolbar .editor-fullscreen-btn {
+            position: static;
+            padding: 4px 8px;
+            z-index: 2;
+        }
+        .note-editor.note-frame .note-toolbar .editor-download-btn {
+            position: static;
+            padding: 4px 8px;
+            z-index: 2;
+        }
+    /* Altura fixa do conteúdo do editor Summernote */
+.note-editor.note-frame .note-editable {
+  min-height: 500 !important;
+  height: 500 !important;
+}
+/* Estado vazio da galeria */
+.gallery-empty-message {
+  margin-bottom: 20px;
+  padding: 10px 16px;
+  border: 1px solid #cfe0ff;
+  background-color: #F9DB78;
+  color: #0a3d62;
+  border-radius: 6px;
+  font-size: 0.98em;
+  line-height: 1.35;
+  text-align: justify;
+}
+.gallery-empty-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  align-items: stretch;
+  margin: 20px 0;
+}
+.gallery-empty-controls input[type="file"] {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+.gallery-empty-controls button {
+  width: 100%;
+}
+#galleryEmptyState { overflow-x: hidden; }
+</style>
 </head>
 
 <body>
@@ -793,22 +1096,31 @@
             <div class="sidebar-header">
                 <h2>Galeria</h2>
                 <button id="sidebarToggle" class="sidebar-toggle" aria-label="Retrair Galeria" title="Retrair Galeria">
-    <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" fill="currentColor" class="bi bi-x-lg" viewBox="0 0 16 16">
-        <path d="M2.146 2.854a.5.5 0 1 1 .708-.708L8 7.293l5.146-5.147a.5.5 0 0 1 .708.708L8.707 8l5.147 5.146a.5.5 0 0 1-.708.708L8 8.707l-5.146 5.147a.5.5 0 0 1-.708-.708L7.293 8z"/>
-    </svg>
+    <img src="../images/close_small.svg" alt="Retrair Galeria" width="48" height="48" style="transform: rotate(180deg);" />
 </button>
             </div>
             <div id="galleryLoading" class="pdf-loading">
                 <div class="pdf-loading-spinner"></div>
-                <p>Carregando imagens da galeria...</p>
+                <p>Carregando Galeria de Imagens...</p>
             </div>
             <div id="galleryContent" style="display: none;">
+                <div class="gallery-source" aria-live="polite">
+                    <strong id="currentPdfLabel">Nenhum PDF encontrado</strong>
+                </div>
                 <div class="info-message" id="galleryInfoMessage">
                     <h3 id="imageCountInfo">Identifiquei 0 imagens vetoriais no PDF</h3>
                     <button class="info-close" id="galleryInfoClose" title="Fechar" aria-label="Fechar">×</button>
                 </div>
                 <div class="gallery-actions">
                     <button class="btn btn-danger" onclick="deleteAllGalleryImages()">Excluir Todas as Imagens</button>
+                </div>
+                <div id="galleryEmptyState" style="display:none;">
+                    <div class="gallery-empty-message">
+                        Você não tem mais imagens do PDF na galeria. Capture novas imagens usando o painel de captura ou clique no botão abaixo para recapturar automaticamente as imagens iniciais do PDF.
+                    </div>
+                    <div class="gallery-empty-controls">
+                        <button class="btn btn-primary" id="btnRecoverInitialImages">Recuperar imagens iniciais do PDF</button>
+                    </div>
                 </div>
                 <div class="image-gallery" id="imageGallery">
                     <!-- Imagens serão carregadas dinamicamente -->
@@ -818,6 +1130,9 @@
 
         <!-- Área Principal -->
         <div class="main-editor">
+                <button id="goToTopBtn" class="go-to-top-btn" title="Ir para o topo" aria-label="Ir para o topo">
+                    <img src="../images/go_to_top.svg" alt="Ir para o topo" />
+                </button>
             <div class="editor-header">
                 <div class="editor-tabs">
                     <button id="tabEditor" class="btn btn-secondary tab-btn active">
@@ -828,22 +1143,28 @@
                         <img src="../images/view_pdf.svg" alt="Ver PDF" class="btn-icon" />
                         Capturar Imagens no PDF
                     </button>
+                    <button id="btnMyPdfs" class="btn btn-secondary tab-btn">
+                        <img src="../images/my_folder_pdfs.svg" alt="Meus PDFs" class="btn-icon" />
+                        Meus PDFs
+                    </button>
                 </div>
                 <div class="editor-actions">
-
-                    <button class="btn btn-primary" onclick="generateFinalPDF()">
-                        <img src="../images/download_document.svg" alt="Baixar PDF" class="btn-icon" />
-                        Baixar o Resumo Editado 
-                    </button>
+                    <!-- Botão de download movido para a toolbar do editor -->
                 </div>
             </div>
 
             <div class="content-area">
                 <!-- Painel de Texto -->
                 <div class="text-panel">
-                    <div id="editorSection" class="editor-section">
-                        <h1 class="page-title">Selecione as imagens na galeria ou capture de qualquer parte do PDF no botão [Capturar Imagens no PDF] acima, e posicione em qualquer parte do seu resumo e edite para deixá-lo do seu jeito! :D</h1>
-                        <h3>Seu resumo estruturado gerado pela IA:</h3>
+                    <div id="editorSection" class="editor-section" style="margin-top: 0;">
+                        <div id="pageInfo" class="page-info-banner" role="region" aria-label="Mensagem informativa">
+                            <div class="page-info-text">
+                                <span>Selecione e arraste as imagens da galeria ao lado, ou capture outra imagem de qualquer parte do PDF usando a seção de Captura - botão [Capturar Imagens no PDF] acima, e posicione-as em qualquer parte do resumo. Use os botões do Editor para redimencionar, centrarlizar, alinhar lateralemnte com o texto, e diversos outros recursos para <b>turbinar o seu resumo!</b> &#128512;</span>
+                            </div>
+                            <button id="pageInfoClose" class="page-info-close" title="Fechar mensagem" aria-label="Fechar mensagem">
+                                 <img src="../images/close_small.svg" alt="Fechar" />
+                             </button>
+                        </div>
                         <div id="structuredSummary" class="formatted-summary" contenteditable="true">
                             <div class="drop-zone">Solte a imagem aqui para inserir</div>
                             <!-- Conteúdo do resumo será carregado aqui -->
@@ -856,33 +1177,19 @@
                              </div>
                              <div class="toolbar-right">
                                  <span id="adobeToolbarInfo"></span>
-                                 <button id="btnFullscreen" class="btn btn-secondary tab-btn" title="Modo tela cheia" aria-label="Modo tela cheia">
-                                     <img src="../images/zoom_out_map.svg" alt="Modo tela cheia" class="btn-icon" />
-                                     <span>MODO TELA CHEIA</span>
-                                 </button>
                                  <button id="btnCaptureImage" class="btn btn-secondary tab-btn" title="Capturar imagem" aria-label="Capturar imagem">
-                                     <img src="../images/screen_capture.svg" alt="Capturar imagem" class="btn-icon" />
+                                     <img src="../images/screen_capture.svg" alt="Capturar imagem" class="btn-icon-small" />
                                      <span>CAPTURAR IMAGEM</span>
+                                 </button>
+                                 <button id="btnFullscreen" class="btn btn-secondary tab-btn" title="Modo tela cheia" aria-label="Modo tela cheia">
+                                     <img src="../images/zoom_out_map.svg" alt="Modo tela cheia" class="btn-icon-small" />
+                                     <span>MODO TELA CHEIA</span>
                                  </button>
                              </div>
                          </div>
                          <div id="pdfCaptureContainer" class="pdf-capture-container">
                             <div id="adobe-dc-view" style="height: 1255px; width: 100%;"></div>
                             <script src="https://acrobatservices.adobe.com/view-sdk/viewer.js"></script>
-                            <script type="text/javascript">
-                                document.addEventListener("adobe_dc_view_sdk.ready", function(){
-                                var adobeDCView = new AdobeDC.View({clientId: "<b06000c70bd143a0adc54a2f6d394b2a>", divId: "adobe-dc-view"});
-                                adobeDCView.previewFile({
-                                content:{location: {url: "https://acrobatservices.adobe.com/view-sdk-demo/PDFs/Bodea Brochure.pdf"}},
-                                metaData : { fileName : "Bodea Brochure.pdf" } 
-                                }, { embedMode: "SIZED_CONTAINER", 
-                                    showAnnotationTools: false,
-                                    showLeftHandPanel: false,
-                                    showDownloadPDF: true,
-                                    showPrintPDF: true,
-                                    enableZoomControl: true});
-                            });
-                            </script>
                          </div>
                      </div>
                 </div>
@@ -967,11 +1274,88 @@
 
 
 
+        // Atualizar rótulo do PDF em uso e disponibilidade do botão de recaptura
+        function setCurrentPdfLabel(name) {
+            const el = document.getElementById('currentPdfLabel');
+            if (!el) return;
+            el.textContent = (name && String(name).trim()) ? name : 'Nenhum PDF encontrado';
+        }
+
+        async function refreshPdfAvailability() {
+            try {
+                const btnRecover = document.getElementById('btnRecoverInitialImages');
+                const res = await fetch('/api/list-pdfs', { headers: { 'Accept': 'application/json' } });
+                if (!res.ok) throw new Error('Falha ao listar PDFs');
+                const data = await res.json();
+                const pdfs = Array.isArray(data.pdfs) ? data.pdfs : [];
+                const hasPdf = pdfs.length > 0;
+                if (btnRecover) {
+                    btnRecover.disabled = !hasPdf;
+                    btnRecover.title = hasPdf ? '' : 'Nenhum PDF disponível em temp_uploads para recaptura';
+                }
+                let selected = null;
+                try { selected = localStorage.getItem('selectedPdfName'); } catch (e) {}
+                if (!selected && hasPdf) {
+                    selected = pdfs[0];
+                    try { localStorage.setItem('selectedPdfName', selected); } catch (e) {}
+                }
+                setCurrentPdfLabel(selected);
+            } catch (e) {
+                console.warn('refreshPdfAvailability falhou:', e);
+                setCurrentPdfLabel(null);
+                const btnRecover = document.getElementById('btnRecoverInitialImages');
+                if (btnRecover) {
+                    btnRecover.disabled = true;
+                    btnRecover.title = 'Não foi possível verificar PDFs em temp_uploads';
+                }
+            }
+        }
+
         // Carregar dados da estrutura de edição
         async function loadEditorData() {
+            const tryFetchJSON = async (url) => {
+                const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
+                if (!res.ok) throw new Error('HTTP ' + res.status + ' ' + url);
+                const ct = (res.headers.get('content-type') || '').toLowerCase();
+                if (!ct.includes('json')) throw new Error('Conteúdo não JSON em ' + url + ' (' + ct + ')');
+                return res.json();
+            };
+            const tryFetchText = async (url) => {
+                const res = await fetch(url);
+                if (!res.ok) throw new Error('HTTP ' + res.status + ' ' + url);
+                return res.text();
+            };
+
             try {
-                const response = await fetch('/api/get-editor-data');
-                estruturaEdicao = await response.json();
+                // Tentar backend, depois fallback local
+                try {
+                    estruturaEdicao = await tryFetchJSON('/api/get-editor-data');
+                } catch (e1) {
+                    try {
+                        estruturaEdicao = await tryFetchJSON('/temp_uploads/estrutura_edicao.json');
+                    } catch (e2) {
+                        const [htmlText, imagensInfo] = await Promise.all([
+                            tryFetchText('/static/resumo_estruturado_formatado.html').catch(() => tryFetchText('/temp_uploads/temp_doc.html')),
+                            tryFetchJSON('/temp_uploads/imagens_extraidas/imagens_info.json').catch(() => null)
+                        ]);
+
+                        const images = imagensInfo ? Object.keys(imagensInfo) : [];
+                        estruturaEdicao = {
+                            pdf_name: (localStorage.getItem('selectedPdfName') || null),
+                            pdf_path: null,
+                            resumo_formatado: true,
+                            resumo_text: htmlText || '<p>Conteúdo indisponível.</p>',
+                            images,
+                            imagens_info: imagensInfo || {}
+                        };
+                    }
+                }
+
+                // Normalizar nomes das imagens para evitar paths completos
+                if (estruturaEdicao && Array.isArray(estruturaEdicao.images)) {
+                    estruturaEdicao.images = estruturaEdicao.images.map((n) => String(n).split(/[\\\/]/).pop());
+                }
+
                 galleryCacheBust = Date.now();
 
                 // Persistir nome do PDF para ser exibido corretamente na galeria
@@ -981,29 +1365,43 @@
                         if (pdfCandidate) localStorage.setItem('selectedPdfName', pdfCandidate);
                     }
                 } catch (e) {}
-
+                // Atualizar rótulo do PDF
+                try {
+                    const current = localStorage.getItem('selectedPdfName') || estruturaEdicao.pdf_name || (estruturaEdicao.pdf_path ? estruturaEdicao.pdf_path.split('/').pop() : null);
+                    setCurrentPdfLabel(current);
+                } catch (e) { setCurrentPdfLabel(estruturaEdicao.pdf_name); }
 
                 // Verificar se o resumo já está formatado como HTML
                 let htmlContent;
                 if (estruturaEdicao.resumo_formatado) {
-                    // Já é HTML formatado, usar diretamente
                     htmlContent = estruturaEdicao.resumo_text;
                     console.log('Carregando resumo com formatação HTML preservada');
                 } else {
-                    // É Markdown, converter para HTML
                     htmlContent = convertMarkdownToHtml(estruturaEdicao.resumo_text);
                     console.log('Convertendo resumo de Markdown para HTML');
                 }
 
-                // Carregar o conteúdo na div structuredSummary (mesma estrutura do index.html)
-                document.getElementById('structuredSummary').innerHTML = htmlContent;
+                // Carregar o conteúdo na div structuredSummary, compatível com Summernote
+                (function(){
+                    const el = document.getElementById('structuredSummary');
+                    try {
+                        if (window.jQuery && typeof window.jQuery(el).summernote === 'function' && window.jQuery(el).data('summernote')) {
+                            window.jQuery(el).summernote('code', htmlContent);
+                        } else {
+                            el.innerHTML = htmlContent;
+                        }
+                    } catch (e) {
+                        el.innerHTML = htmlContent;
+                    }
+                })();
 
                 // Carregar imagens na galeria
-            // Construir mapeamento robusto de informações das imagens
-            window.__imageInfoLookup = buildImagemInfoLookup(estruturaEdicao.imagens_info);
-            loadImageGallery();
+                window.__imageInfoLookup = buildImagemInfoLookup(estruturaEdicao.imagens_info);
+                loadImageGallery();
 
                 updateStatus('Dados carregados com sucesso');
+                // Atualizar disponibilidade de PDF para recaptura
+                refreshPdfAvailability();
             } catch (error) {
                 console.error('Erro ao carregar dados:', error);
                 const galleryEl = document.getElementById('imageGallery');
@@ -1011,6 +1409,7 @@
                     galleryEl.innerHTML = '<p>Não foi possível carregar a galeria.</p>';
                 }
                 updateStatus('Erro ao carregar dados');
+                refreshPdfAvailability();
             }
         }
 
@@ -1060,18 +1459,27 @@
 
                 // Obter informação da página com mapeamento robusto
                 const info = getImagePageInfo(imageName);
-                const displayName = (info && info.pagina != null) ? `${imageName} - Página ${info.pagina}` : imageName;
+                const displayName = (info && info.pagina != null) ? `${imageName} — Página ${info.pagina}</br> do PDF` : imageName;
 
                 imageItem.innerHTML = `
                     <img src="/temp_uploads/imagens_extraidas/${imageName}?v=${galleryCacheBust}" alt="${imageName}">
+                    <button class="copy-btn" title="Copiar imagem" onclick="copyGalleryImage('${imageName}')" onmousedown="event.stopPropagation()">
+                        <img src="../images/copy_image_gallery.svg" alt="Copiar" width="18" height="18" />
+                    </button>
                     <button class="view-btn" title="Visualizar imagem" onclick="openImageModal('${imageName}')" onmousedown="event.stopPropagation()">
-                        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7"></path>
                             <circle cx="12" cy="12" r="3"></circle>
                         </svg>
                     </button>
+                    <div class="copy-feedback" aria-live="polite">
+                        <img src="../images/copy_image_gallery.svg" alt="" width="20" height="20" />
+                        <span>Imagem foi copiada para a área de transferência</span>
+                    </div>
                     <div class="image-name">${displayName}</div>
-                    <button class="delete-btn" onclick="deleteGalleryImage('${imageName}')" title="Excluir esta imagem da galeria">X</button>
+                    <button class="delete-btn" onclick="deleteGalleryImage('${imageName}')" title="Excluir esta imagem da galeria">
+                        <img src="../images/delete_img_gallery.svg" alt="Excluir" width="18" height="18" />
+                    </button>
                 `;
 
                 // Event listeners para drag and drop
@@ -1083,6 +1491,17 @@
 
             // Atualizar o texto do h3 com informações das imagens
             updateImageCountInfo();
+
+            // Mostrar/ocultar estado vazio da galeria conforme quantidade de imagens
+            const actions = document.querySelector('.gallery-actions');
+            const emptyState = document.getElementById('galleryEmptyState');
+            if (sortedImages.length === 0) {
+                if (actions) actions.style.display = 'none';
+                if (emptyState) emptyState.style.display = '';
+            } else {
+                if (actions) actions.style.display = '';
+                if (emptyState) emptyState.style.display = 'none';
+            }
         }
 
         // Drag and Drop handlers
@@ -1213,6 +1632,45 @@
             updateStatus('Todas as imagens removidas');
         }
 
+        // Persistir HTML atual do editor (Summernote) no backend
+        async function saveCurrentSummaryHTML(origin) {
+            try {
+                const el = document.getElementById('structuredSummary');
+                let htmlContent = '';
+                try {
+                    if (window.jQuery && window.jQuery(el).data('summernote')) {
+                        htmlContent = window.jQuery(el).summernote('code');
+                    } else {
+                        htmlContent = el.innerHTML;
+                    }
+                } catch (e) {
+                    htmlContent = el.innerHTML;
+                }
+
+                await fetch('/api/save-structured-summary', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ markdown: '', html: htmlContent })
+                });
+                updateStatus('Resumo salvo');
+            } catch (err) {
+                console.error('Falha ao salvar resumo estruturado:', err);
+                updateStatus('Falha ao salvar resumo');
+            }
+        }
+
+        // Debounce utilitário simples
+        function debounce(fn, delay) {
+            let t;
+            return function () {
+                const ctx = this, args = arguments;
+                clearTimeout(t);
+                t = setTimeout(function () { fn.apply(ctx, args); }, delay);
+            };
+        }
+
+        const saveCurrentSummaryHTMLDebounced = debounce(function(){ saveCurrentSummaryHTML('change'); }, 800);
+
 
         // Gerar PDF final
         async function generateFinalPDF() {
@@ -1237,13 +1695,23 @@
                 if (response.ok) {
                     const blob = await response.blob();
                     const url = window.URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.href = url;
-                    a.download = 'Resumo_Final_Com_Prints.pdf';
-                    document.body.appendChild(a);
-                    a.click();
-                    window.URL.revokeObjectURL(url);
-                    document.body.removeChild(a);
+
+                    // Preferir visualizar em nova aba para evitar bloqueios de download do Chrome
+                    try {
+                        const opened = window.open(url, '_blank');
+                        if (!opened) {
+                            // Fallback: abrir via âncora sem atributo download
+                            const a = document.createElement('a');
+                            a.href = url;
+                            a.target = '_blank';
+                            document.body.appendChild(a);
+                            a.click();
+                            document.body.removeChild(a);
+                        }
+                    } finally {
+                        // Revogar URL após algum tempo para permitir leitura no viewer
+                        setTimeout(() => window.URL.revokeObjectURL(url), 60000);
+                    }
 
                     updateStatus('PDF gerado com sucesso!');
                 } else {
@@ -1286,6 +1754,7 @@
         // Atualizar informações do contador de imagens
         function updateImageCountInfo() {
             const imageCountInfo = document.getElementById('imageCountInfo');
+            const infoMessage = document.getElementById('galleryInfoMessage');
             if (imageCountInfo && estruturaEdicao) {
                 const imageCount = Array.isArray(estruturaEdicao.images) ? estruturaEdicao.images.length : 0;
                 const storedPdfName = (() => { try { return localStorage.getItem('selectedPdfName'); } catch (e) { return null; } })();
@@ -1297,7 +1766,18 @@
                 const candidateFromPath = fromPath(estruturaEdicao.pdf_path);
                 const pdfNameCandidate = storedPdfName || estruturaEdicao.pdf_name || candidateFromPath;
                 const pdfName = pdfNameCandidate || 'PDF selecionado';
-                imageCountInfo.textContent = `Identifiquei ${imageCount} imagens vetoriais no PDF [ ${pdfName} ]. Abaixo, exclua as que não são relevantes para o seu resumo, ou ainda, use o painel ao lado para capturar qualquer parte do PDF como uma nova imagem para a insersão.`;
+                imageCountInfo.innerHTML = `Identifiquei <strong>${imageCount} imagens</strong> vetoriais neste PDF. Use esta galeria para: arrastá-las e inserí-las no texto; incluir novas imagens de captura; visualizá-las em tamanho orginal; e excluir as que não são relevantes para o seu resumo.`;
+                const pdfNameSpan = document.getElementById('imageCountInfoPdfName');
+                if (pdfNameSpan) pdfNameSpan.textContent = pdfName;
+
+                // Alternar visibilidade da mensagem conforme a contagem
+                if (infoMessage) {
+                    if (imageCount > 0) {
+                        infoMessage.style.display = '';
+                    } else {
+                        infoMessage.style.display = 'none';
+                    }
+                }
             }
         }
 
@@ -1317,13 +1797,209 @@
             }
         }
 
-        // Deletar todas as imagens da galeria
-        function deleteAllGalleryImages() {
+        // Copiar imagem da galeria para área de transferência (prioriza copiar BINÁRIO da imagem)
+        async function copyGalleryImage(imageName) {
+            const baseUrl = window.location.origin;
+            const url = new URL(`/temp_uploads/imagens_extraidas/${imageName}?v=${galleryCacheBust}`, baseUrl).href;
+            const isLocalhost = ['localhost', '127.0.0.1'].includes(window.location.hostname);
+            const canWriteImages = (navigator.clipboard && 'write' in navigator.clipboard && window.ClipboardItem && (window.isSecureContext || isLocalhost));
+
+            try {
+                if (canWriteImages) {
+                    const resp = await fetch(url, { cache: 'no-store' });
+                    if (!resp.ok) throw new Error('Falha ao obter imagem para copiar');
+                    const blob = await resp.blob();
+                    const mime = blob.type || 'image/png';
+                    const item = new ClipboardItem({ [mime]: blob });
+
+                    // Solicitar permissão explícita se disponível
+                    try {
+                        if (navigator.permissions && navigator.permissions.query) {
+                            await navigator.permissions.query({ name: 'clipboard-write' }).catch(() => {});
+                        }
+                    } catch (_) {}
+
+                    await navigator.clipboard.write([item]);
+                    updateStatus(`Imagem ${imageName} copiada para a área de transferência`);
+                    showCopyFeedback(imageName);
+                    return;
+                }
+
+                // Fallback: tentar copiar via seleção (pode funcionar em alguns apps)
+                const success = await copyImageViaSelection(url);
+                if (success) {
+                    updateStatus(`Imagem ${imageName} copiada via seleção`);
+                    showCopyFeedback(imageName);
+                    return;
+                }
+
+                // Último recurso: copiar URL da imagem
+                await navigator.clipboard.writeText(url);
+                updateStatus(`Link da imagem ${imageName} copiado para a área de transferência`);
+            } catch (err) {
+                console.error('Erro ao copiar imagem:', err);
+                try {
+                    await navigator.clipboard.writeText(new URL(`/temp_uploads/imagens_extraidas/${imageName}`, window.location.origin).href);
+                    updateStatus(`Link da imagem ${imageName} copiado`);
+                } catch (e) {
+                    updateStatus(`Não foi possível copiar a imagem ${imageName}`);
+                }
+            }
+        }
+
+        function showCopyFeedback(imageName) {
+            try {
+                const selector = `.image-item[data-image-name="${CSS.escape(imageName)}"]`;
+                const item = document.querySelector(selector);
+                if (!item) return;
+                const fb = item.querySelector('.copy-feedback');
+                if (!fb) return;
+                fb.classList.add('show');
+                if (fb.__hideTimer) clearTimeout(fb.__hideTimer);
+                fb.__hideTimer = setTimeout(() => {
+                    fb.classList.remove('show');
+                }, 3000);
+            } catch (e) {
+                // silencioso
+            }
+        }
+
+        // Fallback: copiar imagem via seleção em um contenteditable offscreen
+        async function copyImageViaSelection(imgUrl) {
+            return new Promise((resolve) => {
+                try {
+                    const holder = document.createElement('div');
+                    holder.contentEditable = 'true';
+                    holder.style.position = 'fixed';
+                    holder.style.left = '-10000px';
+                    holder.style.top = '-10000px';
+                    const img = document.createElement('img');
+                    img.src = imgUrl;
+                    holder.appendChild(img);
+                    document.body.appendChild(holder);
+
+                    img.onload = () => {
+                        const range = document.createRange();
+                        range.selectNode(img);
+                        const sel = window.getSelection();
+                        sel.removeAllRanges();
+                        sel.addRange(range);
+                        const ok = document.execCommand('copy');
+                        sel.removeAllRanges();
+                        document.body.removeChild(holder);
+                        resolve(ok);
+                    };
+                    img.onerror = () => {
+                        document.body.removeChild(holder);
+                        resolve(false);
+                    };
+                } catch (e) {
+                    resolve(false);
+                }
+            });
+        }
+
+        // Deletar todas as imagens da galeria (inclui deleção física na pasta imagens_extraidas)
+        async function deleteAllGalleryImages() {
             if (confirm('Tem certeza que deseja excluir todas as imagens da galeria?')) {
+                try {
+                    updateStatus('Removendo todas as imagens da pasta...');
+                    const resp = await fetch('/api/delete-all-images', { method: 'POST' });
+                    if (!resp.ok) throw new Error('Falha ao deletar imagens no servidor');
+                } catch (err) {
+                    console.error(err);
+                }
                 estruturaEdicao.images = [];
+                window.__imageInfoLookup = {};
                 loadImageGallery();
                 updateImageCountInfo();
                 updateStatus('Todas as imagens removidas da galeria');
+                try { showGalleryEmptyState(); } catch (e) {}
+            }
+        }
+
+        // Estado vazio da galeria: mostrar/ocultar
+        function showGalleryEmptyState() {
+            const actions = document.querySelector('.gallery-actions');
+            const empty = document.getElementById('galleryEmptyState');
+            if (actions) actions.style.display = 'none';
+            if (empty) empty.style.display = '';
+        }
+
+        function hideGalleryEmptyState() {
+            const actions = document.querySelector('.gallery-actions');
+            const empty = document.getElementById('galleryEmptyState');
+            if (actions) actions.style.display = '';
+            if (empty) empty.style.display = 'none';
+        }
+
+        // Loader da galeria: mostrar/ocultar com mensagem
+        function setGalleryLoading(message, show) {
+            const galleryLoading = document.getElementById('galleryLoading');
+            const galleryContent = document.getElementById('galleryContent');
+            if (galleryLoading) {
+                const p = galleryLoading.querySelector('p');
+                if (p && typeof message === 'string' && message.trim()) {
+                    p.textContent = message;
+                }
+                galleryLoading.style.display = show ? '' : 'none';
+            }
+            if (galleryContent) {
+                galleryContent.style.display = show ? 'none' : '';
+            }
+        }
+
+        // Pequeno utilitário para tornar mensagens visíveis
+        const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+        // Recarregar imagens iniciais do PDF
+        async function reloadInitialPdfImages() {
+            try {
+                const res = await fetch('/temp_uploads/imagens_extraidas/imagens_info.json', { headers: { 'Accept': 'application/json' } });
+                if (!res.ok) throw new Error('Falha ao carregar imagens iniciais');
+                const data = await res.json();
+                estruturaEdicao.imagens_info = data || {};
+                const images = Object.keys(estruturaEdicao.imagens_info || {}).map(n => String(n).split(/[\\\/]/).pop());
+                estruturaEdicao.images = images;
+                window.__imageInfoLookup = buildImagemInfoLookup(estruturaEdicao.imagens_info);
+                galleryCacheBust = Date.now();
+                loadImageGallery();
+                updateImageCountInfo();
+                hideGalleryEmptyState();
+                updateStatus('Imagens iniciais do PDF recuperadas');
+                // Rótulo do PDF pode ter mudado
+                try { setCurrentPdfLabel(localStorage.getItem('selectedPdfName') || estruturaEdicao.pdf_name); } catch (e) {}
+                refreshPdfAvailability();
+            } catch (err) {
+                console.error(err);
+                updateStatus('Não foi possível recuperar as imagens iniciais (verifique o PDF)');
+            }
+        }
+
+        // Upload de PDF e recarregar imagens iniciais
+        async function uploadPdfAndReload(file) {
+            if (!file) return;
+            try {
+                const fd = new FormData();
+                fd.append('originalPdf', file);
+                const resp = await fetch('/api/upload-pdf', { method: 'POST', body: fd });
+                if (resp && resp.ok) {
+                    const json = await resp.json().catch(() => null);
+                    if (json && json.filename) {
+                        try { localStorage.setItem('selectedPdfName', json.filename); } catch (e) {}
+                    } else {
+                        try { localStorage.setItem('selectedPdfName', file.name); } catch (e) {}
+                    }
+                    await reloadInitialPdfImages();
+                } else {
+                    // Falha no backend: persistir apenas localmente e tentar recarregar
+                    try { localStorage.setItem('selectedPdfName', file.name); } catch (e) {}
+                    await reloadInitialPdfImages();
+                }
+            } catch (err) {
+                console.error('Erro no upload do PDF:', err);
+                try { localStorage.setItem('selectedPdfName', file.name); } catch (e) {}
+                await reloadInitialPdfImages();
             }
         }
 
@@ -1397,7 +2073,13 @@
         function initAdobeViewer(url, fileName) {
             const divId = 'adobe-dc-view';
             const containerDiv = document.getElementById(divId);
-            if (!containerDiv) return;
+            if (!containerDiv || !url || typeof url !== 'string') return;
+
+            const pdfSection = document.getElementById('pdfCaptureSection');
+            const isSectionVisible = pdfSection && pdfSection.style.display !== 'none';
+            if (!isSectionVisible) return;
+
+            if (adobeView || pdfLoadedForCapture) return;
 
             if (!window.AdobeDC || !AdobeDC.View) {
                 console.warn('AdobeDC View SDK não carregado.');
@@ -1413,7 +2095,7 @@
                     embedMode: 'SIZED_CONTAINER',
                     showDownloadPDF: true,
                     showPrintPDF: true,
-                    showFullScreen: true,
+                    showFullScreen: true
                 }).then(() => {
                     pdfLoadedForCapture = true;
                 }).catch((e) => {
@@ -1464,7 +2146,7 @@
                         sidebar.classList.add('collapsed');
                         if (containerEl) containerEl.classList.add('sidebar-collapsed');
                         if (toggleBtn) {
-                            toggleBtn.textContent = '☰';
+                            toggleBtn.innerHTML = '<img src="../images/view_sidebar_gallery.svg" alt="Abrir Galeria" width="58" height="58" style="transform: rotate(180deg);" />';
                             toggleBtn.title = 'Abrir Galeria';
                             toggleBtn.setAttribute('aria-label', 'Abrir Galeria');
                         }
@@ -1592,10 +2274,7 @@
             });
         }
 
-
-
-
-        // Função para alternar modo tela cheia
+        // Função para alternar modo tela cheia (PDF Viewer)
         function toggleFullscreenMode() {
             const container = document.querySelector('.container');
             const btnFullscreen = document.getElementById('btnFullscreen');
@@ -1613,12 +2292,127 @@
             } else {
                 // Entrar no modo tela cheia
                 container.classList.add('fullscreen-mode');
-                btnText.textContent = 'SAIR DO MODO TELA CHEIA';
+                btnText.textContent = 'TELA NORMAL';
                 btnIcon.src = '../images/zoom_in_map.svg';
                 btnIcon.alt = 'Sair do modo tela cheia';
                 btnFullscreen.title = 'Sair do modo tela cheia';
                 btnFullscreen.setAttribute('aria-label', 'Sair do modo tela cheia');
             }
+            if (typeof updateGoTopVisibility === 'function') updateGoTopVisibility();
+        }
+
+        // Função para alternar modo tela cheia (Editor de resumo)
+        function toggleEditorFullscreenMode() {
+            const container = document.querySelector('.container');
+            const btnFullscreen = document.getElementById('btnEditorFullscreen');
+            if (!btnFullscreen) return;
+            const btnText = btnFullscreen.querySelector('span');
+            const btnIcon = btnFullscreen.querySelector('img');
+            
+            if (container.classList.contains('fullscreen-mode')) {
+                // Sair do modo tela cheia
+                container.classList.remove('fullscreen-mode');
+                btnText.textContent = 'MODO TELA CHEIA';
+                btnIcon.src = '../images/zoom_out_map.svg';
+                btnIcon.alt = 'Modo tela cheia';
+                btnFullscreen.title = 'Modo tela cheia';
+                btnFullscreen.setAttribute('aria-label', 'Modo tela cheia');
+            } else {
+                // Entrar no modo tela cheia
+                container.classList.add('fullscreen-mode');
+                btnText.textContent = 'TELA NORMAL';
+                btnIcon.src = '../images/zoom_in_map.svg';
+                btnIcon.alt = 'Sair do modo tela cheia';
+                btnFullscreen.title = 'Sair do modo tela cheia';
+                btnFullscreen.setAttribute('aria-label', 'Sair do modo tela cheia');
+            }
+            if (typeof updateGoTopVisibility === 'function') updateGoTopVisibility();
+        }
+
+        // Inicializar Summernote no structuredSummary
+        function initSummernote() {
+            const el = window.jQuery ? window.jQuery('#structuredSummary') : null;
+            if (!el || !el.length) return;
+            if (el.data('summernote')) return; // evitar reinit
+            el.summernote({
+                placeholder: 'Edite seu resumo... (WYSIWYG)',
+                height: 500,
+                minHeight: 500,
+                disableResizeEditor: true,
+                toolbar: [
+                    ['style', ['style']],
+                    ['font', ['bold', 'italic', 'underline', 'clear']],
+                    ['para', ['ul', 'ol', 'paragraph']],
+                    ['insert', ['link', 'table']],
+                    ['view', ['codeview']]
+                ],
+                callbacks: {
+                    onInit: function () {
+                        try {
+                            const editable = document.querySelector('.note-editable');
+                            if (editable) editable.classList.add('formatted-summary');
+                        } catch (e) {}
+                        try {
+                            const toolbar = document.querySelector('.note-editor.note-frame .note-toolbar');
+                            if (toolbar) {
+                                // Criar grupo de ações à direita, se não existir
+                                let actionsGroup = document.getElementById('editorActionsGroup');
+                                if (!actionsGroup) {
+                                    actionsGroup = document.createElement('div');
+                                    actionsGroup.id = 'editorActionsGroup';
+                                    actionsGroup.className = 'editor-actions-group';
+                                    toolbar.appendChild(actionsGroup);
+                                }
+
+                                // Botão SALVAR (antes de baixar)
+                                if (!document.getElementById('btnSaveSummary')) {
+                                    const saveBtn = document.createElement('button');
+                                    saveBtn.id = 'btnSaveSummary';
+                                    saveBtn.className = 'btn btn-secondary tab-btn editor-save-btn';
+                                    saveBtn.title = 'Salvar resumo';
+                                    saveBtn.setAttribute('aria-label', 'Salvar resumo');
+                                    saveBtn.innerHTML = '<img src="/images/save.svg" alt="Salvar" class="btn-icon-small"><span>SALVAR</span>';
+                                    saveBtn.addEventListener('click', function(e){ e.preventDefault(); e.stopPropagation(); saveCurrentSummaryHTML('manual'); });
+                                    actionsGroup.appendChild(saveBtn);
+                                }
+
+                                // Botão BAIXAR RESUMO EDITADO (à esquerda do fullscreen)
+                                if (!document.getElementById('btnDownloadEdited')) {
+                                    const dlBtn = document.createElement('button');
+                                    dlBtn.id = 'btnDownloadEdited';
+                                    dlBtn.className = 'btn btn-secondary tab-btn editor-download-btn';
+                                    dlBtn.title = 'Baixar resumo editado';
+                                    dlBtn.setAttribute('aria-label', 'Baixar resumo editado');
+                                    dlBtn.innerHTML = '<img src="../images/download_document.svg" alt="Baixar resumo" class="btn-icon-small" /><span>BAIXAR EM PDF</span>';
+                                    dlBtn.addEventListener('click', function(e){ e.preventDefault(); e.stopPropagation(); try { generateFinalPDF(); } catch (err) {} });
+                                    actionsGroup.appendChild(dlBtn);
+                                }
+
+                                // Botão MODO TELA CHEIA
+                                if (!document.getElementById('btnEditorFullscreen')) {
+                                    const btn = document.createElement('button');
+                                    btn.id = 'btnEditorFullscreen';
+                                    btn.className = 'btn btn-secondary tab-btn editor-fullscreen-btn';
+                                    btn.title = 'Modo tela cheia';
+                                    btn.setAttribute('aria-label', 'Modo tela cheia');
+                                    btn.innerHTML = '<img src="../images/zoom_out_map.svg" alt="Modo tela cheia" class="btn-icon-small" /><span>MODO TELA CHEIA</span>';
+                                    btn.addEventListener('click', function(e){ e.preventDefault(); e.stopPropagation(); try { toggleEditorFullscreenMode(); } catch (err) {} });
+                                    actionsGroup.appendChild(btn);
+                                }
+                            }
+                        } catch (e) {}
+                    },
+                    onChange: function () {
+                        try { saveCurrentSummaryHTMLDebounced(); } catch (e) {}
+                    },
+                    onPaste: function () {
+                        try { saveCurrentSummaryHTMLDebounced(); } catch (e) {}
+                    },
+                    onBlur: function () {
+                        try { saveCurrentSummaryHTMLDebounced(); } catch (e) {}
+                    }
+                }
+            });
         }
 
         // Inicializar editor e abas
@@ -1628,6 +2422,20 @@
             if (closeBtn && infoMessage) {
                 closeBtn.addEventListener('click', function () {
                     infoMessage.style.display = 'none';
+                });
+            }
+
+            // Banner informativo do editor (fechar e persistir)
+            const pageInfo = document.getElementById('pageInfo');
+            const pageInfoClose = document.getElementById('pageInfoClose');
+            try {
+                const hidePageInfo = localStorage.getItem('hidePageInfo');
+                if (hidePageInfo === '1' && pageInfo) pageInfo.style.display = 'none';
+            } catch (e) {}
+            if (pageInfoClose && pageInfo) {
+                pageInfoClose.addEventListener('click', function () {
+                    pageInfo.style.display = 'none';
+                    try { localStorage.setItem('hidePageInfo', '1'); } catch (e) {}
                 });
             }
 
@@ -1650,11 +2458,11 @@
             function setToggleState(collapsed) {
                 if (!toggleBtn || !sidebar) return;
                 if (collapsed) {
-                    toggleBtn.textContent = '☰';
+                    toggleBtn.innerHTML = '<img src="../images/view_sidebar_gallery.svg" alt="Abrir Galeria" width="58" height="58" style="transform: rotate(180deg);" />';
                     toggleBtn.title = 'Abrir Galeria';
                     toggleBtn.setAttribute('aria-label', 'Abrir Galeria');
                 } else {
-                    toggleBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" fill="currentColor" class="bi bi-x-lg" viewBox="0 0 16 16"><path d="M2.146 2.854a.5.5 0 1 1 .708-.708L8 7.293l5.146-5.147a.5.5 0 0 1 .708.708L8.707 8l5.147 5.146a.5.5 0 0 1-.708.708L8 8.707l-5.146 5.147a.5.5 0 0 1-.708-.708L7.293 8z"/></svg>';
+                    toggleBtn.innerHTML = '<img src="../images/close_small.svg" alt="Retrair Galeria" width="48" height="48" style="transform: rotate(180deg);" />';
                     toggleBtn.title = 'Retrair Galeria';
                     toggleBtn.setAttribute('aria-label', 'Retrair Galeria');
                 }
@@ -1670,15 +2478,196 @@
                 });
             }
 
-            loadEditorData();
+            loadEditorData().finally(() => { try { initSummernote(); } catch (e) {} });
+            // Salvar ao sair da página (mantém formatação após reload)
+            window.addEventListener('beforeunload', function(){
+                try {
+                    const el = document.getElementById('structuredSummary');
+                    const htmlContent = (window.jQuery && window.jQuery(el).data('summernote')) ? window.jQuery(el).summernote('code') : el.innerHTML;
+                    fetch('/api/save-structured-summary', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ markdown: '', html: htmlContent }),
+                        keepalive: true
+                    });
+                } catch (e) {}
+            });
              setupDropZones();
              initEditorTabs();
 
-             // Event listener para o botão de modo tela cheia
+             // Event listener para o botão de modo tela cheia (PDF Viewer)
              const btnFullscreen = document.getElementById('btnFullscreen');
              if (btnFullscreen) {
                  btnFullscreen.addEventListener('click', toggleFullscreenMode);
              }
+
+             // Controle do estado vazio: botão para recapturar imagens iniciais
+             const btnRecoverInitialImages = document.getElementById('btnRecoverInitialImages');
+             if (btnRecoverInitialImages) {
+                 btnRecoverInitialImages.addEventListener('click', async function (e) {
+                     e.preventDefault();
+                     try {
+                         btnRecoverInitialImages.disabled = true;
+                         const pdfName = (() => {
+                             try {
+                                 const stored = localStorage.getItem('selectedPdfName');
+                                 if (stored) return stored;
+                             } catch (e) {}
+                             if (estruturaEdicao && estruturaEdicao.pdf_name) return estruturaEdicao.pdf_name;
+                             const p = estruturaEdicao && estruturaEdicao.pdf_path;
+                             if (p && typeof p === 'string') {
+                                 const base = p.split('/').pop();
+                                 if (base && base.toLowerCase().endsWith('.pdf')) return base;
+                             }
+                             return 'desconhecido';
+                         })();
+                         const loadingMsg = `Recuperando imagens do PDF [${pdfName}]...`;
+                         setGalleryLoading(loadingMsg, true);
+                         updateStatus(loadingMsg);
+                         const payload = { pdf_name: pdfName };
+                         const resp = await fetch('/api/recover-initial-images', {
+                             method: 'POST',
+                             headers: { 'Content-Type': 'application/json' },
+                             body: JSON.stringify(payload)
+                         });
+                         if (!resp.ok) throw new Error('Falha ao recapturar imagens iniciais');
+                         await reloadInitialPdfImages();
+                         hideGalleryEmptyState();
+                         setGalleryLoading('', false);
+                         updateStatus('Imagens iniciais recapturadas com sucesso');
+                         refreshPdfAvailability();
+                     } catch (err) {
+                         console.error(err);
+                         setGalleryLoading('', false);
+                         updateStatus('Não foi possível recapturar as imagens iniciais (verifique se há um PDF em temp_uploads)');
+                     } finally {
+                         btnRecoverInitialImages.disabled = false;
+                     }
+                 });
+             }
+
+             // Event listener para o botão de modo tela cheia (Editor de resumo)
+             const btnEditorFullscreen = document.getElementById('btnEditorFullscreen');
+             if (btnEditorFullscreen) {
+                 btnEditorFullscreen.addEventListener('click', toggleEditorFullscreenMode);
+             }
+
+             // Botão 'Ir para o topo' (Editor em modo tela cheia)
+             const goToTopBtn = document.getElementById('goToTopBtn');
+
+             function isEditorFullscreenActive() {
+                 const container = document.querySelector('.container');
+                 const editorSection = document.getElementById('editorSection');
+                 const editorVisible = !!editorSection && window.getComputedStyle(editorSection).display !== 'none';
+                 return container && container.classList.contains('fullscreen-mode') && editorVisible;
+             }
+
+             function updateGoTopVisibility() {
+                 if (!goToTopBtn) return;
+                 if (!isEditorFullscreenActive()) {
+                     goToTopBtn.style.display = 'none';
+                     return;
+                 }
+                 const scrollTop = window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop || 0;
+                 const docHeight = Math.max(document.body.scrollHeight, document.documentElement.scrollHeight, document.documentElement.offsetHeight);
+                 const winHeight = window.innerHeight || document.documentElement.clientHeight;
+                 const scrollable = docHeight - winHeight;
+                 const ratio = scrollable > 0 ? scrollTop / scrollable : 0;
+                 goToTopBtn.style.display = ratio > 0.1 ? 'block' : 'none';
+             }
+
+             if (goToTopBtn) {
+                 goToTopBtn.addEventListener('click', () => {
+                     window.scrollTo({ top: 0, behavior: 'auto' });
+                     goToTopBtn.style.display = 'none';
+                 });
+             }
+             window.addEventListener('scroll', updateGoTopVisibility);
+             updateGoTopVisibility();
+
+             // --- Sincronizar a altura do header com a toolbar sticky
+             function updateHeaderHeightVar() {
+                 const container = document.querySelector('.container');
+                 const isFullscreen = container && container.classList.contains('fullscreen-mode');
+                 const header = document.querySelector('.editor-header');
+                 const headerVisible = !isFullscreen && header && window.getComputedStyle(header).display !== 'none';
+                 const h = headerVisible ? header.offsetHeight : 0;
+                 document.documentElement.style.setProperty('--header-height', h + 'px');
+             }
+             window.addEventListener('resize', updateHeaderHeightVar);
+             // Inicializa logo após o carregamento
+             setTimeout(updateHeaderHeightVar, 0);
+
+
+             // Fallback para manter a note-toolbar fixa no topo durante rolagem (não fullscreen)
+             (function setupStickyToolbarFallback(){
+                 const container = document.querySelector('.container');
+                 function isFullscreen(){ return container && container.classList.contains('fullscreen-mode'); }
+                 function getEditorAndToolbar(){
+                     const toolbar = document.querySelector('.note-editor.note-frame .note-toolbar');
+                     const editor = toolbar ? toolbar.closest('.note-editor.note-frame') : null;
+                     return { toolbar, editor };
+                 }
+                 let placeholder = null;
+                 function applyFixed(toolbar, editor){
+                     const rect = editor.getBoundingClientRect();
+                     const headerHeightVar = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--header-height')) || 0;
+                     const vpW = document.documentElement.clientWidth;
+                     let left = Math.max(rect.left, 0);
+                     let right = Math.max(vpW - rect.right, 0);
+                     left = Math.floor(left);
+                     right = Math.floor(right);
+                     toolbar.style.position = 'fixed';
+                     toolbar.style.top = `${headerHeightVar}px`;
+                     toolbar.style.left = `${left}px`;
+                     toolbar.style.right = `${right}px`;
+                     toolbar.style.width = '';
+                     toolbar.style.zIndex = '1000';
+                     toolbar.style.boxSizing = 'border-box';
+                     toolbar.style.overflowX = 'clip';
+                     if (!placeholder) {
+                         placeholder = document.createElement('div');
+                         placeholder.style.height = `${toolbar.offsetHeight}px`;
+                         editor.insertBefore(placeholder, toolbar.nextSibling);
+                     } else {
+                         placeholder.style.height = `${toolbar.offsetHeight}px`;
+                     }
+                 }
+                 function removeFixed(toolbar){
+                     toolbar.style.position = 'sticky';
+                     toolbar.style.top = '';
+                     toolbar.style.left = '';
+                     toolbar.style.right = '';
+                     toolbar.style.width = '';
+                     toolbar.style.zIndex = '';
+                     toolbar.style.overflowX = '';
+                     if (placeholder && placeholder.parentNode) {
+                         placeholder.parentNode.removeChild(placeholder);
+                         placeholder = null;
+                     }
+                 }
+                 function onScrollResize(){
+                     const { toolbar, editor } = getEditorAndToolbar();
+                     if (!toolbar || !editor) return;
+                     if (isFullscreen()) { removeFixed(toolbar); return; }
+                     const header = document.querySelector('.editor-header');
+                     const headerVisible = header && window.getComputedStyle(header).display !== 'none';
+                     const headerBottom = headerVisible ? header.getBoundingClientRect().bottom : 0;
+                     const editorRect = editor.getBoundingClientRect();
+                     const toolbarRect = toolbar.getBoundingClientRect();
+                     const toolbarHeight = toolbar.offsetHeight || 0;
+                     const overlapsHeader = headerVisible && toolbarRect.top <= headerBottom;
+                     const hasSpaceBelow = editorRect.bottom >= (headerBottom + toolbarHeight);
+                     if (overlapsHeader && hasSpaceBelow) {
+                         applyFixed(toolbar, editor);
+                     } else {
+                         removeFixed(toolbar);
+                     }
+                 }
+                 window.addEventListener('scroll', onScrollResize);
+                 window.addEventListener('resize', onScrollResize);
+                 setTimeout(onScrollResize, 200);
+             })();
 
              const btnCaptureImage = document.getElementById('btnCaptureImage');
             if (btnCaptureImage) {
