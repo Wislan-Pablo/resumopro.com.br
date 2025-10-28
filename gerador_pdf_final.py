@@ -184,9 +184,22 @@ def montar_resumo_com_imagens(caminho_resumo_tags, caminho_html_saida, nome_subp
         print(f"❌ ERRO: Arquivo de resumo editado não encontrado em '{caminho_resumo_tags}'")
         return None
 
-    # 2. Processar HTML editado (já contém as imagens posicionadas)
-    # Aplicar correções de tabelas malformadas
-    resumo_montado_html = detectar_e_corrigir_tabelas_malformadas(resumo_html)
+    # 2. Processar conteúdo: se vier como HTML do editor, não aplicar heurísticas de Markdown
+    # Isso evita corromper negritos (<strong>/<b>) e inserir linhas de tabela "| Campo | Valor |" indevidas.
+    try:
+        contem_tags_html = bool(re.search(r"<[^>]+>", resumo_html))
+    except Exception:
+        contem_tags_html = True  # por segurança, assume HTML
+
+    if contem_tags_html:
+        # Já é HTML do Summernote/Editor: preservar exatamente como está
+        resumo_montado_html = resumo_html
+    else:
+        # Conteúdo puro (ex.: Markdown): aplicar correções de tabela e converter para HTML
+        texto_md_corrigido = limpar_e_reconstruir_tabelas(resumo_html)
+        texto_md_corrigido = detectar_e_corrigir_tabelas_malformadas(texto_md_corrigido)
+        md = MarkdownIt()
+        resumo_montado_html = md.render(texto_md_corrigido)
     
     # Define a estrutura HTML básica e estilos (com CSS de tabela)
     html_header = """
@@ -233,24 +246,20 @@ def montar_resumo_com_imagens(caminho_resumo_tags, caminho_html_saida, nome_subp
     html_footer = "</body></html>"
     
     # 3. Processar imagens já posicionadas no HTML
-    
-    # O HTML já contém as imagens posicionadas pelo usuário
-    # Apenas precisamos ajustar os caminhos das imagens para o formato correto
+    # Ajustar os caminhos de imagens para formato relativo e remover querystrings (ex.: ?v=123)
     pasta_prints_completa = os.path.join(os.path.dirname(caminho_html_saida), nome_subpasta_imagens_html)
-    
     if not os.path.exists(pasta_prints_completa):
         print(f"❌ ERRO: Pasta de imagens '{pasta_prints_completa}' não encontrada. Abortando montagem.")
         return None
 
-    # Listar imagens disponíveis para ajustar caminhos
-    imagens_disponiveis = [f for f in os.listdir(pasta_prints_completa) if f.endswith(".png")]
-    
-    # Ajustar caminhos das imagens no HTML
-    for nome_arquivo in imagens_disponiveis:
-        # Substituir caminhos relativos por caminhos corretos
-        old_path = f"/temp_uploads/{nome_subpasta_imagens_html}/{nome_arquivo}"
-        new_path = f"{nome_subpasta_imagens_html}/{nome_arquivo}"
-        resumo_montado_html = resumo_montado_html.replace(old_path, new_path)
+    # Normalizar todos os src que apontam para /temp_uploads/imagens_extraidas/<arquivo>[?...] -> imagens_extraidas/<arquivo>
+    try:
+        padrao_src = re.compile(
+            rf'(src\s*=\s*["\"])\/temp_uploads\/{re.escape(nome_subpasta_imagens_html)}\/([^"\']+?)(?:\?[^"\']*)?(["\"])'
+        )
+        resumo_montado_html = padrao_src.sub(r'\1' + nome_subpasta_imagens_html + r'/\2\3', resumo_montado_html)
+    except Exception as e:
+        print(f"Aviso: falha ao normalizar caminhos de imagens no HTML: {e}")
 
     # 4. Finalizar o arquivo HTML
     conteudo_final_html = html_header + resumo_montado_html + html_footer

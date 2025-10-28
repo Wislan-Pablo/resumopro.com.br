@@ -1,0 +1,9 @@
+{
+  "terminal.integrated.profiles.windows": {
+    "Git Bash (Python .venv)": {
+      "path": "C:\\Program Files\\Git\\bin\\bash.exe",
+      "args": ["--login", "-i", "-c", "source .venv/Scripts/activate && exec bash"]
+    }
+  },
+  "terminal.integrated.defaultProfile.windows": "Git Bash (Python .venv)"
+}

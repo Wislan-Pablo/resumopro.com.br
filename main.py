@@ -9,6 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 from typing import List, Optional
 import time
+from fastapi import Body
 
 # Carregar variáveis do arquivo .env (se existir)
 load_dotenv(os.path.join(os.path.dirname(__file__), '.env'))
@@ -725,10 +726,14 @@ async def generate_final_pdf(request_data: dict):
         
         # Retornar o PDF como resposta
         if os.path.exists(pdf_final_path):
+            # Preferir Content-Disposition inline para exibição no navegador
             return FileResponse(
                 path=pdf_final_path,
-                filename="Resumo_Final_Com_Prints.pdf",
-                media_type='application/pdf'
+                media_type='application/pdf',
+                headers={
+                    'Content-Disposition': 'inline; filename="Resumo_Final_Com_Prints.pdf"',
+                    'Cache-Control': 'no-store'
+                }
             )
         else:
             raise HTTPException(status_code=500, detail="Erro ao gerar PDF final")
@@ -807,3 +812,125 @@ async def upload_captured_image(file: UploadFile = File(...), filename: Optional
     except Exception as e:
         print(f"Erro no upload de captura: {e}")
         raise HTTPException(status_code=500, detail="Falha ao salvar imagem capturada")
+
+# --- ROTA: Reprocessar imagens iniciais do PDF (Somente Fase de Captura) ---
+@app.post("/api/recover-initial-images")
+async def recover_initial_images(request_data: dict = Body(default={})):  # aceita JSON com { pdf_name?: str }
+    try:
+        # Determinar PDF de origem
+        pdf_name = (request_data or {}).get("pdf_name")
+        pdf_path = None
+        if pdf_name:
+            cand = os.path.join(UPLOAD_DIR, pdf_name)
+            if os.path.exists(cand):
+                pdf_path = cand
+        if not pdf_path:
+            # fallback: primeiro PDF encontrado na pasta de uploads
+            pdfs = [f for f in os.listdir(UPLOAD_DIR) if f.lower().endswith('.pdf')]
+            if pdfs:
+                pdf_path = os.path.join(UPLOAD_DIR, pdfs[0])
+        if not pdf_path:
+            raise HTTPException(status_code=400, detail="Nenhum PDF disponível em temp_uploads para recuperar imagens")
+
+        # Preparar diretórios/arquivos
+        imagens_dir = os.path.join(UPLOAD_DIR, "imagens_extraidas")
+        os.makedirs(imagens_dir, exist_ok=True)
+        # Limpar imagens anteriores para evitar conflitos de nomes
+        try:
+            for f in os.listdir(imagens_dir):
+                if f.lower().endswith('.png') or f == 'imagens_info.json':
+                    try:
+                        os.remove(os.path.join(imagens_dir, f))
+                    except Exception:
+                        pass
+        except Exception as e:
+            print(f"Falha ao limpar imagens anteriores: {e}")
+
+        # Converter PDF -> HTML temporário
+        from pdf_for_html import converter_pdf_para_html_simples
+        temp_html_path = os.path.join(UPLOAD_DIR, "temp_doc.html")
+        resultado = converter_pdf_para_html_simples(pdf_path, temp_html_path)
+        if not resultado or not resultado[0]:
+            raise HTTPException(status_code=500, detail="Falha na conversão do PDF para HTML")
+
+        # Capturar imagens do HTML
+        from captura_imagens_do_html import capturar_imagens_do_corpo_html
+        ok = capturar_imagens_do_corpo_html(temp_html_path, imagens_dir)
+        if not ok:
+            raise HTTPException(status_code=500, detail="Falha na captura das imagens do HTML")
+
+        # Atualizar estrutura_edicao.json (opcional, para consistência)
+        estrutura_path = os.path.join(UPLOAD_DIR, "estrutura_edicao.json")
+        estrutura = {}
+        try:
+            if os.path.exists(estrutura_path):
+                with open(estrutura_path, 'r', encoding='utf-8') as f:
+                    estrutura = json.load(f)
+        except Exception:
+            estrutura = {}
+        try:
+            imagens = [f for f in os.listdir(imagens_dir) if f.lower().endswith('.png')]
+            estrutura["images"] = imagens
+            estrutura["upload_dir"] = UPLOAD_DIR
+            info_file_path = os.path.join(imagens_dir, 'imagens_info.json')
+            if os.path.exists(info_file_path):
+                with open(info_file_path, 'r', encoding='utf-8') as f:
+                    estrutura["imagens_info"] = json.load(f)
+            with open(estrutura_path, 'w', encoding='utf-8') as f:
+                json.dump(estrutura, f, ensure_ascii=False, indent=2)
+        except Exception as e:
+            print(f"Aviso: não foi possível atualizar estrutura_edicao.json: {e}")
+
+        # Responder com resumo
+        return {
+            "status": "ok",
+            "pdf_name": os.path.basename(pdf_path),
+            "images_count": len([f for f in os.listdir(imagens_dir) if f.lower().endswith('.png')])
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Erro em recover-initial-images: {e}")
+        raise HTTPException(status_code=500, detail="Erro interno ao recuperar imagens iniciais")
+
+# --- ROTA: Deletar TODAS as imagens físicas da pasta imagens_extraidas ---
+@app.post("/api/delete-all-images")
+async def api_delete_all_images():
+    try:
+        imagens_dir = os.path.join(UPLOAD_DIR, "imagens_extraidas")
+        if os.path.isdir(imagens_dir):
+            for f in os.listdir(imagens_dir):
+                try:
+                    os.remove(os.path.join(imagens_dir, f))
+                except Exception:
+                    pass
+        else:
+            os.makedirs(imagens_dir, exist_ok=True)
+
+        # Atualizar estrutura_edicao.json
+        estrutura_path = os.path.join(UPLOAD_DIR, "estrutura_edicao.json")
+        try:
+            estrutura = {}
+            if os.path.exists(estrutura_path):
+                with open(estrutura_path, 'r', encoding='utf-8') as f:
+                    estrutura = json.load(f)
+            estrutura["images"] = []
+            estrutura["imagens_info"] = {}
+            with open(estrutura_path, 'w', encoding='utf-8') as f:
+                json.dump(estrutura, f, ensure_ascii=False, indent=2)
+        except Exception as e:
+            print(f"Aviso: falha ao atualizar estrutura_edicao.json na deleção: {e}")
+
+        return {"status": "ok", "deleted_all": True}
+    except Exception as e:
+        print(f"Erro ao deletar todas as imagens: {e}")
+        raise HTTPException(status_code=500, detail="Erro interno ao deletar imagens")
+# --- ROTA: Listar PDFs disponíveis em temp_uploads ---
+@app.get("/api/list-pdfs")
+async def list_pdfs():
+    try:
+        pdfs = [f for f in os.listdir(UPLOAD_DIR) if f.lower().endswith('.pdf')]
+        return {"pdfs": pdfs, "count": len(pdfs)}
+    except Exception as e:
+        print(f"Erro ao listar PDFs: {e}")
+        raise HTTPException(status_code=500, detail="Erro ao listar PDFs")
