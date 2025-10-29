@@ -11,6 +11,10 @@
     <link href="https://cdn.jsdelivr.net/npm/summernote@0.8.18/dist/summernote-lite.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/summernote@0.8.18/dist/summernote-lite.min.js"></script>
     <script src="https://documentcloud.adobe.com/view-sdk/main.js"></script>
+    <!-- Fonte Noto Sans -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;700&display=swap" rel="stylesheet">
     <style>
         * {
             margin: 0;
@@ -77,15 +81,17 @@
             width: 300px;
             background: #e0e0e0;
             border-right: 1px solid #bbb;
-            padding: 10px 15px;
+            padding: 7px 15px;
             height: 100vh;
             overflow-y: auto;
+            overflow-x: hidden; /* evita transbordo horizontal dentro da sidebar */
             transition: all 0.3s ease;
             flex-shrink: 0;
             position: fixed;
             top: 0;
             left: 0;
             z-index: 100;
+            box-sizing: border-box; /* largura total inclui padding, mantendo 300px reais */
         }
 
         .main-editor {
@@ -425,22 +431,48 @@
             gap: 10px;
         }
 
+        /* Botão 'Excluir Todas as Imagens' com ícone */
+        .delete-all-btn {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .delete-all-btn .btn-icon-24,
+        .btn-icon-24 {
+            width: 24px;
+            height: 24px;
+            margin-right: 6px;
+            flex-shrink: 0;
+        }
+
         .gallery-source {
             display: flex;
             justify-content: center;
             align-items: center;
-            padding: 4px;
+            padding: 4px 8px;
             border-radius: 4px;
             font-size: 0.85em;
             text-align: center;
             color: #444;
             background-color: #ccc;
             margin-bottom: 15px;
+            user-select: none; /* texto não selecionável */
+            cursor: default; /* cursor seta padrão */
+        }
+
+        .gallery-source * { user-select: none; }
+
+        .gallery-source .gallery-source-icon {
+            width: 24px;
+            height: 24px;
+            margin-right: 6px;
+            flex-shrink: 0;
         }
 
         .btn-danger {
             margin: 0 auto;
-            background: #777;
+            background: #8d9092;
             color: white;
         }
 
@@ -581,6 +613,7 @@
             flex: 1;
             display: flex;
             overflow: visible;
+            min-width: 0; /* permite que conteúdo flex encolha sem causar overflow-x */
             background-color: #f9f9f9;
         }
 
@@ -588,6 +621,7 @@
             flex: 1;
             padding: 0;
             overflow-y: visible;
+            min-width: 0; /* evita que filhos forcem largura maior que o container */
         }
 
         .text-panel h3 {
@@ -713,6 +747,8 @@
             margin-left: 20px !important;
             margin-right: 20px !important;
             padding-top: 0 !important;
+            box-sizing: border-box; /* garante cálculo correto de largura com margens */
+            max-width: calc(100% - 40px); /* evita exceder a largura disponível considerando margens */
         }
         /* Remover margens/bordas internas quando usando .formatted-summary no Summernote */
         .note-editable .formatted-summary {
@@ -899,14 +935,6 @@
             width: 100%;
             margin: 15px 0;
         }
-
-        .formatted-summary th,
-        .formatted-summary td {
-            border: 1px solid #333;
-            padding: 8px 12px;
-            text-align: left;
-        }
-
         .formatted-summary th {
             background-color: #f8f9fa;
             font-weight: bold;
@@ -1040,7 +1068,7 @@
             z-index: 2;
             display: flex;
             align-items: center;
-            gap: 12px;
+            gap: 8px;
         }
         .note-editor.note-frame .note-toolbar .editor-fullscreen-btn {
             position: static;
@@ -1056,6 +1084,47 @@
 .note-editor.note-frame .note-editable {
   min-height: 500 !important;
   height: 500 !important;
+}
+/* Cor padrão do texto dentro do editor */
+.note-editor.note-frame .note-editable,
+.note-editor.note-editor-lite .note-editable {
+  color: #222 !important;
+  font-family: 'Noto Sans', Arial, sans-serif !important;
+}
+/* Forçar links a usarem a mesma cor do texto */
+.note-editor.note-frame .note-editable a,
+.note-editor.note-editor-lite .note-editable a {
+  color: #222 !important;
+}
+/* Tornar imagens responsivas dentro do editor para evitar overflow horizontal */
+.note-editor.note-frame .note-editable img,
+.note-editor.note-editor-lite .note-editable img {
+  max-width: 100% !important;
+  height: auto !important;
+}
+.note-editor.note-frame .note-editable h1,
+.note-editor.note-editor-lite .note-editable h1 {
+  font-size: 1.4em !important;
+}
+.note-editor.note-frame .note-editable h2,
+.note-editor.note-editor-lite .note-editable h2 {
+  font-size: 1.2em !important;
+}
+.note-editor.note-frame .note-editable h3,
+.note-editor.note-editor-lite .note-editable h3 {
+  font-size: 1.1em !important;
+}
+/* Bordas das tabelas dentro do editor Summernote */
+.note-editor.note-frame .note-editable table,
+.note-editor.note-editor-lite .note-editable table {
+  border-collapse: collapse;
+}
+.note-editor.note-frame .note-editable table th,
+.note-editor.note-editor-lite .note-editable table th,
+.note-editor.note-frame .note-editable table td,
+.note-editor.note-editor-lite .note-editable table td {
+  border: 1px solid #444 !important;
+  text-align: center !important;
 }
 /* Estado vazio da galeria */
 .gallery-empty-message {
@@ -1096,7 +1165,7 @@
             <div class="sidebar-header">
                 <h2>Galeria</h2>
                 <button id="sidebarToggle" class="sidebar-toggle" aria-label="Retrair Galeria" title="Retrair Galeria">
-    <img src="../images/close_small.svg" alt="Retrair Galeria" width="48" height="48" style="transform: rotate(180deg);" />
+    <img src="../images/close_small.svg" alt="Retrair Galeria" width="56" height="56" style="transform: rotate(180deg);" />
 </button>
             </div>
             <div id="galleryLoading" class="pdf-loading">
@@ -1105,6 +1174,7 @@
             </div>
             <div id="galleryContent" style="display: none;">
                 <div class="gallery-source" aria-live="polite">
+                    <img src="../images/icon_pdf_name_gallery.svg" alt="Ícone PDF" class="gallery-source-icon" />
                     <strong id="currentPdfLabel">Nenhum PDF encontrado</strong>
                 </div>
                 <div class="info-message" id="galleryInfoMessage">
@@ -1112,7 +1182,10 @@
                     <button class="info-close" id="galleryInfoClose" title="Fechar" aria-label="Fechar">×</button>
                 </div>
                 <div class="gallery-actions">
-                    <button class="btn btn-danger" onclick="deleteAllGalleryImages()">Excluir Todas as Imagens</button>
+                    <button class="btn btn-danger delete-all-btn" onclick="deleteAllGalleryImages()" title="Excluir todas as imagens" aria-label="Excluir todas as imagens">
+                        <img src="../images/delete_all_items.svg" alt="Excluir todas" class="btn-icon-24" />
+                        <span>Excluir Todas as Imagens</span>
+                    </button>
                 </div>
                 <div id="galleryEmptyState" style="display:none;">
                     <div class="gallery-empty-message">
@@ -2334,17 +2407,50 @@
             const el = window.jQuery ? window.jQuery('#structuredSummary') : null;
             if (!el || !el.length) return;
             if (el.data('summernote')) return; // evitar reinit
+            // Forçar idioma pt-BR na toolbar do Summernote
+            try {
+                if (window.jQuery && window.jQuery.summernote) {
+                    const sn = window.jQuery.summernote;
+                    sn.lang = sn.lang || {};
+                    sn.lang['pt-BR'] = Object.assign({
+                        font: {
+                            bold: 'Negrito',
+                            italic: 'Itálico',
+                            underline: 'Sublinhado',
+                            clear: 'Limpar formatação'
+                        },
+                        paragraph: {
+                            paragraph: 'Parágrafo',
+                            unordered: 'Lista com marcadores',
+                            ordered: 'Lista numerada'
+                        },
+                        insert: {
+                            link: 'Inserir link',
+                            table: 'Inserir tabela'
+                        },
+                        style: {
+                            style: 'Estilos'
+                        },
+                        view: {
+                            fullscreen: 'Tela cheia',
+                            codeview: 'Ver código',
+                            help: 'Ajuda'
+                        }
+                    }, sn.lang['pt-BR'] || {});
+                }
+            } catch (e) {}
             el.summernote({
                 placeholder: 'Edite seu resumo... (WYSIWYG)',
                 height: 500,
                 minHeight: 500,
                 disableResizeEditor: true,
+                lang: 'pt-BR',
                 toolbar: [
                     ['style', ['style']],
                     ['font', ['bold', 'italic', 'underline', 'clear']],
                     ['para', ['ul', 'ol', 'paragraph']],
                     ['insert', ['link', 'table']],
-                    ['view', ['codeview']]
+                    
                 ],
                 callbacks: {
                     onInit: function () {
@@ -2462,7 +2568,7 @@
                     toggleBtn.title = 'Abrir Galeria';
                     toggleBtn.setAttribute('aria-label', 'Abrir Galeria');
                 } else {
-                    toggleBtn.innerHTML = '<img src="../images/close_small.svg" alt="Retrair Galeria" width="48" height="48" style="transform: rotate(180deg);" />';
+                    toggleBtn.innerHTML = '<img src="../images/close_small.svg" alt="Retrair Galeria" width="56" height="56" style="transform: rotate(180deg);" />';
                     toggleBtn.title = 'Retrair Galeria';
                     toggleBtn.setAttribute('aria-label', 'Retrair Galeria');
                 }

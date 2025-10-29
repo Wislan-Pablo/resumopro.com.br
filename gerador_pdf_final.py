@@ -209,7 +209,9 @@ def montar_resumo_com_imagens(caminho_resumo_tags, caminho_html_saida, nome_subp
     <meta charset="UTF-8">
     <title>Resumo Final com Imagens IA</title>
     <style>
-        body { text-align: justify; font-family: Arial, sans-serif; margin: 50px; line-height: 1.6; }
+        /* Margem estreita para o PDF */
+        @page { size: A4; margin: 12mm; }
+        body { text-align: justify; font-family: Arial, sans-serif; margin: 12mm; line-height: 1.6; }
         h1, h2, h3 { 
             border-bottom: 1px solid #ddd; 
             padding-bottom: 5px; 
