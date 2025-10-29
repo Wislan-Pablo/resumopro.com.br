@@ -8,8 +8,8 @@
     <title>Editor Semântico - ResumeFull.AI</title>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked@9.1.6/marked.min.js"></script>
-    <link href="https://cdn.jsdelivr.net/npm/summernote@0.8.18/dist/summernote-lite.min.css" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/summernote@0.8.18/dist/summernote-lite.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/jodit@3.24.5/build/jodit.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/jodit@3.24.5/build/jodit.min.js"></script>
     <script src="https://documentcloud.adobe.com/view-sdk/main.js"></script>
     <!-- Fonte Noto Sans -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -429,11 +429,13 @@
             margin-bottom: 15px;
             display: flex;
             gap: 10px;
+            justify-content: flex-start;
         }
 
         /* Botão 'Excluir Todas as Imagens' com ícone */
         .delete-all-btn {
             width: 100%;
+            margin-top: 15px !important;
             display: flex;
             align-items: center;
             justify-content: space-between;
@@ -648,13 +650,11 @@
             border-radius: 6px;
         }
         .editor-tabs .tab-btn svg {
-            margin-right: 2px;
         }
         .btn-icon {
             width: 28px;
             height: 28px;
             display: inline-block;
-            margin-right: 8px;
             vertical-align: middle;
         }
         .btn-icon-small {
@@ -735,27 +735,18 @@
             align-items: center;
         }
 
-        /* Alinhar largura do Summernote com a toolbar do editor */
-        .note-editor.note-editor-lite {
-            margin-left: 20px;
-            margin-right: 20px;
-            border: 1px solid #5a6268;
-            border-radius: 0 0 4px 4px;
-            background-color: #fff;
+        /* Remover margens do contêiner Jodit para não deslocar em fullsize */
+        .jodit-container {
+            margin-left: 0;
+            margin-right: 0;
         }
-        .note-editor.note-frame {
-            margin-left: 20px !important;
-            margin-right: 20px !important;
-            padding-top: 0 !important;
-            box-sizing: border-box; /* garante cálculo correto de largura com margens */
-            max-width: calc(100% - 40px); /* evita exceder a largura disponível considerando margens */
+
+        /* Aplicar espaçamento lateral na seção do editor (modo normal) */
+        .editor-section {
+            padding: 0 20px;
         }
-        /* Remover margens/bordas internas quando usando .formatted-summary no Summernote */
-        .note-editable .formatted-summary {
-            margin: 0 !important;
-            border: none;
-            background-color: transparent;
-        }
+
+        /* CSS específico do Summernote removido após migração para Jodit */
 
         .pdf-capture-container {
             height: auto;
@@ -1048,84 +1039,7 @@
             transition: all 0.3s ease;
             flex: 1;
         }
-        /* Override: remover radius superior e inferior da barra do Summernote */
-         .note-editor.note-frame .note-toolbar {
-             border: 1px solid #e0e0e0;
-             border-bottom: 2px solid #ccc;
-             border-top-left-radius: 0 !important;
-             border-top-right-radius: 0 !important;
-             border-bottom-left-radius: 0 !important;
-             border-bottom-right-radius: 0 !important;
-         }
-         /* Posicionar botão de tela cheia à direita da note-toolbar */
-        .note-editor.note-frame .note-toolbar { position: sticky !important; top: var(--header-height, 0px) !important; z-index: 250 !important; background-color: #fff !important; }
-         .container.fullscreen-mode .note-editor.note-frame .note-toolbar { top: 0 !important; }
-        /* Agrupar ações à direita da toolbar para evitar sobreposição */
-        .note-editor.note-frame .note-toolbar .editor-actions-group {
-            position: absolute;
-            right: 5px;
-            top: 5px;
-            z-index: 2;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        .note-editor.note-frame .note-toolbar .editor-fullscreen-btn {
-            position: static;
-            padding: 4px 8px;
-            z-index: 2;
-        }
-        .note-editor.note-frame .note-toolbar .editor-download-btn {
-            position: static;
-            padding: 4px 8px;
-            z-index: 2;
-        }
-    /* Altura fixa do conteúdo do editor Summernote */
-.note-editor.note-frame .note-editable {
-  min-height: 500 !important;
-  height: 500 !important;
-}
-/* Cor padrão do texto dentro do editor */
-.note-editor.note-frame .note-editable,
-.note-editor.note-editor-lite .note-editable {
-  color: #222 !important;
-  font-family: 'Noto Sans', Arial, sans-serif !important;
-}
-/* Forçar links a usarem a mesma cor do texto */
-.note-editor.note-frame .note-editable a,
-.note-editor.note-editor-lite .note-editable a {
-  color: #222 !important;
-}
-/* Tornar imagens responsivas dentro do editor para evitar overflow horizontal */
-.note-editor.note-frame .note-editable img,
-.note-editor.note-editor-lite .note-editable img {
-  max-width: 100% !important;
-  height: auto !important;
-}
-.note-editor.note-frame .note-editable h1,
-.note-editor.note-editor-lite .note-editable h1 {
-  font-size: 1.4em !important;
-}
-.note-editor.note-frame .note-editable h2,
-.note-editor.note-editor-lite .note-editable h2 {
-  font-size: 1.2em !important;
-}
-.note-editor.note-frame .note-editable h3,
-.note-editor.note-editor-lite .note-editable h3 {
-  font-size: 1.1em !important;
-}
-/* Bordas das tabelas dentro do editor Summernote */
-.note-editor.note-frame .note-editable table,
-.note-editor.note-editor-lite .note-editable table {
-  border-collapse: collapse;
-}
-.note-editor.note-frame .note-editable table th,
-.note-editor.note-editor-lite .note-editable table th,
-.note-editor.note-frame .note-editable table td,
-.note-editor.note-editor-lite .note-editable table td {
-  border: 1px solid #444 !important;
-  text-align: center !important;
-}
+        /* Removidas regras específicas do Summernote; Jodit gerencia sua própria toolbar */
 /* Estado vazio da galeria */
 .gallery-empty-message {
   margin-bottom: 20px;
@@ -1181,12 +1095,6 @@
                     <h3 id="imageCountInfo">Identifiquei 0 imagens vetoriais no PDF</h3>
                     <button class="info-close" id="galleryInfoClose" title="Fechar" aria-label="Fechar">×</button>
                 </div>
-                <div class="gallery-actions">
-                    <button class="btn btn-danger delete-all-btn" onclick="deleteAllGalleryImages()" title="Excluir todas as imagens" aria-label="Excluir todas as imagens">
-                        <img src="../images/delete_all_items.svg" alt="Excluir todas" class="btn-icon-24" />
-                        <span>Excluir Todas as Imagens</span>
-                    </button>
-                </div>
                 <div id="galleryEmptyState" style="display:none;">
                     <div class="gallery-empty-message">
                         Você não tem mais imagens do PDF na galeria. Capture novas imagens usando o painel de captura ou clique no botão abaixo para recapturar automaticamente as imagens iniciais do PDF.
@@ -1197,6 +1105,12 @@
                 </div>
                 <div class="image-gallery" id="imageGallery">
                     <!-- Imagens serão carregadas dinamicamente -->
+                </div>
+                <div class="gallery-actions">
+                    <button class="btn btn-danger delete-all-btn" onclick="deleteAllGalleryImages()" title="Excluir todas as imagens" aria-label="Excluir todas as imagens">
+                        <img src="../images/delete_all_items.svg" alt="Excluir todas" class="btn-icon-24" />
+                        <span>Excluir Todas as Imagens</span>
+                    </button>
                 </div>
             </div>
         </div>
@@ -1216,13 +1130,10 @@
                         <img src="../images/view_pdf.svg" alt="Ver PDF" class="btn-icon" />
                         Capturar Imagens no PDF
                     </button>
-                    <button id="btnMyPdfs" class="btn btn-secondary tab-btn">
-                        <img src="../images/my_folder_pdfs.svg" alt="Meus PDFs" class="btn-icon" />
-                        Meus PDFs
+                    <button id="upload_file" class="btn btn-secondary tab-btn">
+                        <img src="../images/upload_file.svg" alt="Carregar PDF" class="btn-icon" />
+                        Novo Arquivo
                     </button>
-                </div>
-                <div class="editor-actions">
-                    <!-- Botão de download movido para a toolbar do editor -->
                 </div>
             </div>
 
@@ -1238,7 +1149,7 @@
                                  <img src="../images/close_small.svg" alt="Fechar" />
                              </button>
                         </div>
-                        <div id="structuredSummary" class="formatted-summary" contenteditable="true">
+                        <div id="structuredSummary" class="formatted-summary">
                             <div class="drop-zone">Solte a imagem aqui para inserir</div>
                             <!-- Conteúdo do resumo será carregado aqui -->
                         </div>
@@ -1454,19 +1365,9 @@
                     console.log('Convertendo resumo de Markdown para HTML');
                 }
 
-                // Carregar o conteúdo na div structuredSummary, compatível com Summernote
-                (function(){
-                    const el = document.getElementById('structuredSummary');
-                    try {
-                        if (window.jQuery && typeof window.jQuery(el).summernote === 'function' && window.jQuery(el).data('summernote')) {
-                            window.jQuery(el).summernote('code', htmlContent);
-                        } else {
-                            el.innerHTML = htmlContent;
-                        }
-                    } catch (e) {
-                        el.innerHTML = htmlContent;
-                    }
-                })();
+                // Carregar o conteúdo na div structuredSummary (Jodit será inicializado depois)
+                const el = document.getElementById('structuredSummary');
+                el.innerHTML = htmlContent;
 
                 // Carregar imagens na galeria
                 window.__imageInfoLookup = buildImagemInfoLookup(estruturaEdicao.imagens_info);
@@ -1705,18 +1606,14 @@
             updateStatus('Todas as imagens removidas');
         }
 
-        // Persistir HTML atual do editor (Summernote) no backend
+        // Persistir HTML atual do editor (Jodit) no backend
         async function saveCurrentSummaryHTML(origin) {
             try {
                 const el = document.getElementById('structuredSummary');
                 let htmlContent = '';
-                try {
-                    if (window.jQuery && window.jQuery(el).data('summernote')) {
-                        htmlContent = window.jQuery(el).summernote('code');
-                    } else {
-                        htmlContent = el.innerHTML;
-                    }
-                } catch (e) {
+                if (joditEditor && joditEditor.editorDocument && joditEditor.editorDocument.body) {
+                    htmlContent = joditEditor.editorDocument.body.innerHTML;
+                } else {
                     htmlContent = el.innerHTML;
                 }
 
@@ -1752,7 +1649,7 @@
 
                 // Coletar estrutura final
                 const finalStructure = {
-                    resumo_text: document.getElementById('structuredSummary').innerHTML,
+                    resumo_text: (joditEditor && joditEditor.editorDocument && joditEditor.editorDocument.body) ? joditEditor.editorDocument.body.innerHTML : document.getElementById('structuredSummary').innerHTML,
                     imagens_posicionadas: imagensPosicionadas,
                     upload_dir: estruturaEdicao.upload_dir
                 };
@@ -2374,149 +2271,57 @@
             if (typeof updateGoTopVisibility === 'function') updateGoTopVisibility();
         }
 
-        // Função para alternar modo tela cheia (Editor de resumo)
-        function toggleEditorFullscreenMode() {
-            const container = document.querySelector('.container');
-            const btnFullscreen = document.getElementById('btnEditorFullscreen');
-            if (!btnFullscreen) return;
-            const btnText = btnFullscreen.querySelector('span');
-            const btnIcon = btnFullscreen.querySelector('img');
-            
-            if (container.classList.contains('fullscreen-mode')) {
-                // Sair do modo tela cheia
-                container.classList.remove('fullscreen-mode');
-                btnText.textContent = 'MODO TELA CHEIA';
-                btnIcon.src = '../images/zoom_out_map.svg';
-                btnIcon.alt = 'Modo tela cheia';
-                btnFullscreen.title = 'Modo tela cheia';
-                btnFullscreen.setAttribute('aria-label', 'Modo tela cheia');
-            } else {
-                // Entrar no modo tela cheia
-                container.classList.add('fullscreen-mode');
-                btnText.textContent = 'TELA NORMAL';
-                btnIcon.src = '../images/zoom_in_map.svg';
-                btnIcon.alt = 'Sair do modo tela cheia';
-                btnFullscreen.title = 'Sair do modo tela cheia';
-                btnFullscreen.setAttribute('aria-label', 'Sair do modo tela cheia');
-            }
-            if (typeof updateGoTopVisibility === 'function') updateGoTopVisibility();
-        }
+        
 
-        // Inicializar Summernote no structuredSummary
-        function initSummernote() {
-            const el = window.jQuery ? window.jQuery('#structuredSummary') : null;
-            if (!el || !el.length) return;
-            if (el.data('summernote')) return; // evitar reinit
-            // Forçar idioma pt-BR na toolbar do Summernote
-            try {
-                if (window.jQuery && window.jQuery.summernote) {
-                    const sn = window.jQuery.summernote;
-                    sn.lang = sn.lang || {};
-                    sn.lang['pt-BR'] = Object.assign({
-                        font: {
-                            bold: 'Negrito',
-                            italic: 'Itálico',
-                            underline: 'Sublinhado',
-                            clear: 'Limpar formatação'
-                        },
-                        paragraph: {
-                            paragraph: 'Parágrafo',
-                            unordered: 'Lista com marcadores',
-                            ordered: 'Lista numerada'
-                        },
-                        insert: {
-                            link: 'Inserir link',
-                            table: 'Inserir tabela'
-                        },
-                        style: {
-                            style: 'Estilos'
-                        },
-                        view: {
-                            fullscreen: 'Tela cheia',
-                            codeview: 'Ver código',
-                            help: 'Ajuda'
-                        }
-                    }, sn.lang['pt-BR'] || {});
-                }
-            } catch (e) {}
-            el.summernote({
-                placeholder: 'Edite seu resumo... (WYSIWYG)',
+        // Inicializar Jodit (Document Mode) no structuredSummary
+        let joditEditor = null;
+        function initJoditDocumentMode() {
+            const el = document.getElementById('structuredSummary');
+            if (!el) return;
+            if (joditEditor) return;
+
+            joditEditor = Jodit.make('#structuredSummary', {
+                iframe: true,
                 height: 500,
-                minHeight: 500,
-                disableResizeEditor: true,
-                lang: 'pt-BR',
-                toolbar: [
-                    ['style', ['style']],
-                    ['font', ['bold', 'italic', 'underline', 'clear']],
-                    ['para', ['ul', 'ol', 'paragraph']],
-                    ['insert', ['link', 'table']],
-                    
+                toolbarButtonSize: 'small',
+                iframeCSSLinks: [
+                    'https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;700&display=swap'
                 ],
-                callbacks: {
-                    onInit: function () {
+                iframeStyle: `
+                    body.jodit-wysiwyg { font-family: 'Noto Sans', Arial, sans-serif; color:#222; line-height:1.5; }
+                    img { max-width: 100%; height: auto; }
+                    h1 { font-size: 1.4em; }
+                    h2 { font-size: 1.2em; }
+                    h3 { font-size: 1.1em; }
+                    table { border-collapse: collapse; }
+                    th, td { border: 1px solid #444; text-align: center; }
+                    thead tr, th { background-color: #cfe0ff; }
+                `,
+                events: {
+                    afterInit: function(editor){
                         try {
-                            const editable = document.querySelector('.note-editable');
-                            if (editable) editable.classList.add('formatted-summary');
-                        } catch (e) {}
-                        try {
-                            const toolbar = document.querySelector('.note-editor.note-frame .note-toolbar');
-                            if (toolbar) {
-                                // Criar grupo de ações à direita, se não existir
-                                let actionsGroup = document.getElementById('editorActionsGroup');
-                                if (!actionsGroup) {
-                                    actionsGroup = document.createElement('div');
-                                    actionsGroup.id = 'editorActionsGroup';
-                                    actionsGroup.className = 'editor-actions-group';
-                                    toolbar.appendChild(actionsGroup);
-                                }
-
-                                // Botão SALVAR (antes de baixar)
-                                if (!document.getElementById('btnSaveSummary')) {
-                                    const saveBtn = document.createElement('button');
-                                    saveBtn.id = 'btnSaveSummary';
-                                    saveBtn.className = 'btn btn-secondary tab-btn editor-save-btn';
-                                    saveBtn.title = 'Salvar resumo';
-                                    saveBtn.setAttribute('aria-label', 'Salvar resumo');
-                                    saveBtn.innerHTML = '<img src="/images/save.svg" alt="Salvar" class="btn-icon-small"><span>SALVAR</span>';
-                                    saveBtn.addEventListener('click', function(e){ e.preventDefault(); e.stopPropagation(); saveCurrentSummaryHTML('manual'); });
-                                    actionsGroup.appendChild(saveBtn);
-                                }
-
-                                // Botão BAIXAR RESUMO EDITADO (à esquerda do fullscreen)
-                                if (!document.getElementById('btnDownloadEdited')) {
-                                    const dlBtn = document.createElement('button');
-                                    dlBtn.id = 'btnDownloadEdited';
-                                    dlBtn.className = 'btn btn-secondary tab-btn editor-download-btn';
-                                    dlBtn.title = 'Baixar resumo editado';
-                                    dlBtn.setAttribute('aria-label', 'Baixar resumo editado');
-                                    dlBtn.innerHTML = '<img src="../images/download_document.svg" alt="Baixar resumo" class="btn-icon-small" /><span>BAIXAR EM PDF</span>';
-                                    dlBtn.addEventListener('click', function(e){ e.preventDefault(); e.stopPropagation(); try { generateFinalPDF(); } catch (err) {} });
-                                    actionsGroup.appendChild(dlBtn);
-                                }
-
-                                // Botão MODO TELA CHEIA
-                                if (!document.getElementById('btnEditorFullscreen')) {
-                                    const btn = document.createElement('button');
-                                    btn.id = 'btnEditorFullscreen';
-                                    btn.className = 'btn btn-secondary tab-btn editor-fullscreen-btn';
-                                    btn.title = 'Modo tela cheia';
-                                    btn.setAttribute('aria-label', 'Modo tela cheia');
-                                    btn.innerHTML = '<img src="../images/zoom_out_map.svg" alt="Modo tela cheia" class="btn-icon-small" /><span>MODO TELA CHEIA</span>';
-                                    btn.addEventListener('click', function(e){ e.preventDefault(); e.stopPropagation(); try { toggleEditorFullscreenMode(); } catch (err) {} });
-                                    actionsGroup.appendChild(btn);
-                                }
+                            const doc = editor.editorDocument;
+                            if (doc && doc.body) {
+                                doc.body.addEventListener('dragover', function(e){ e.preventDefault(); });
+                                doc.body.addEventListener('drop', function(e){
+                                    e.preventDefault();
+                                    const imageName = e.dataTransfer && e.dataTransfer.getData('text/plain');
+                                    if (imageName) {
+                                        const ph = createImagePlaceholder(imageName);
+                                        const html = ph.outerHTML + '<br />';
+                                        editor.selection.focus();
+                                        editor.selection.insertHTML(html);
+                                        imagensPosicionadas.push(imageName);
+                                        updateImageCount();
+                                        updateStatus(`Imagem ${imageName} inserida`);
+                                    }
+                                });
                             }
                         } catch (e) {}
                     },
-                    onChange: function () {
-                        try { saveCurrentSummaryHTMLDebounced(); } catch (e) {}
-                    },
-                    onPaste: function () {
-                        try { saveCurrentSummaryHTMLDebounced(); } catch (e) {}
-                    },
-                    onBlur: function () {
-                        try { saveCurrentSummaryHTMLDebounced(); } catch (e) {}
-                    }
+                    change: function(){ try { saveCurrentSummaryHTMLDebounced(); } catch (e) {} },
+                    paste: function(){ try { saveCurrentSummaryHTMLDebounced(); } catch (e) {} },
+                    blur: function(){ try { saveCurrentSummaryHTMLDebounced(); } catch (e) {} }
                 }
             });
         }
@@ -2584,12 +2389,17 @@
                 });
             }
 
-            loadEditorData().finally(() => { try { initSummernote(); } catch (e) {} });
+            loadEditorData().finally(() => { try { initJoditDocumentMode(); } catch (e) {} });
             // Salvar ao sair da página (mantém formatação após reload)
             window.addEventListener('beforeunload', function(){
                 try {
                     const el = document.getElementById('structuredSummary');
-                    const htmlContent = (window.jQuery && window.jQuery(el).data('summernote')) ? window.jQuery(el).summernote('code') : el.innerHTML;
+                    let htmlContent = '';
+                    if (joditEditor && joditEditor.editorDocument && joditEditor.editorDocument.body) {
+                        htmlContent = joditEditor.editorDocument.body.innerHTML;
+                    } else {
+                        htmlContent = el.innerHTML;
+                    }
                     fetch('/api/save-structured-summary', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
@@ -2598,6 +2408,8 @@
                     });
                 } catch (e) {}
             });
+
+            // Removidos handlers dos botões SALVAR e BAIXAR EM PDF (não são mais necessários)
              setupDropZones();
              initEditorTabs();
 
@@ -2652,11 +2464,7 @@
                  });
              }
 
-             // Event listener para o botão de modo tela cheia (Editor de resumo)
-             const btnEditorFullscreen = document.getElementById('btnEditorFullscreen');
-             if (btnEditorFullscreen) {
-                 btnEditorFullscreen.addEventListener('click', toggleEditorFullscreenMode);
-             }
+             // Removido: botão de modo tela cheia do Editor e seu listener
 
              // Botão 'Ir para o topo' (Editor em modo tela cheia)
              const goToTopBtn = document.getElementById('goToTopBtn');
@@ -2705,75 +2513,7 @@
              setTimeout(updateHeaderHeightVar, 0);
 
 
-             // Fallback para manter a note-toolbar fixa no topo durante rolagem (não fullscreen)
-             (function setupStickyToolbarFallback(){
-                 const container = document.querySelector('.container');
-                 function isFullscreen(){ return container && container.classList.contains('fullscreen-mode'); }
-                 function getEditorAndToolbar(){
-                     const toolbar = document.querySelector('.note-editor.note-frame .note-toolbar');
-                     const editor = toolbar ? toolbar.closest('.note-editor.note-frame') : null;
-                     return { toolbar, editor };
-                 }
-                 let placeholder = null;
-                 function applyFixed(toolbar, editor){
-                     const rect = editor.getBoundingClientRect();
-                     const headerHeightVar = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--header-height')) || 0;
-                     const vpW = document.documentElement.clientWidth;
-                     let left = Math.max(rect.left, 0);
-                     let right = Math.max(vpW - rect.right, 0);
-                     left = Math.floor(left);
-                     right = Math.floor(right);
-                     toolbar.style.position = 'fixed';
-                     toolbar.style.top = `${headerHeightVar}px`;
-                     toolbar.style.left = `${left}px`;
-                     toolbar.style.right = `${right}px`;
-                     toolbar.style.width = '';
-                     toolbar.style.zIndex = '1000';
-                     toolbar.style.boxSizing = 'border-box';
-                     toolbar.style.overflowX = 'clip';
-                     if (!placeholder) {
-                         placeholder = document.createElement('div');
-                         placeholder.style.height = `${toolbar.offsetHeight}px`;
-                         editor.insertBefore(placeholder, toolbar.nextSibling);
-                     } else {
-                         placeholder.style.height = `${toolbar.offsetHeight}px`;
-                     }
-                 }
-                 function removeFixed(toolbar){
-                     toolbar.style.position = 'sticky';
-                     toolbar.style.top = '';
-                     toolbar.style.left = '';
-                     toolbar.style.right = '';
-                     toolbar.style.width = '';
-                     toolbar.style.zIndex = '';
-                     toolbar.style.overflowX = '';
-                     if (placeholder && placeholder.parentNode) {
-                         placeholder.parentNode.removeChild(placeholder);
-                         placeholder = null;
-                     }
-                 }
-                 function onScrollResize(){
-                     const { toolbar, editor } = getEditorAndToolbar();
-                     if (!toolbar || !editor) return;
-                     if (isFullscreen()) { removeFixed(toolbar); return; }
-                     const header = document.querySelector('.editor-header');
-                     const headerVisible = header && window.getComputedStyle(header).display !== 'none';
-                     const headerBottom = headerVisible ? header.getBoundingClientRect().bottom : 0;
-                     const editorRect = editor.getBoundingClientRect();
-                     const toolbarRect = toolbar.getBoundingClientRect();
-                     const toolbarHeight = toolbar.offsetHeight || 0;
-                     const overlapsHeader = headerVisible && toolbarRect.top <= headerBottom;
-                     const hasSpaceBelow = editorRect.bottom >= (headerBottom + toolbarHeight);
-                     if (overlapsHeader && hasSpaceBelow) {
-                         applyFixed(toolbar, editor);
-                     } else {
-                         removeFixed(toolbar);
-                     }
-                 }
-                 window.addEventListener('scroll', onScrollResize);
-                 window.addEventListener('resize', onScrollResize);
-                 setTimeout(onScrollResize, 200);
-             })();
+             // Sticky toolbar fallback removido (era específico do Summernote). Jodit gerencia sua própria toolbar.
 
              const btnCaptureImage = document.getElementById('btnCaptureImage');
             if (btnCaptureImage) {
