@@ -2,131 +2,36 @@
   "img_1.png": {
     "caminho": "temp_uploads\\imagens_extraidas\\img_1.png",
     "pagina": "1",
-    "hash": "9ad2c1415156751c99c1217c280df9f87080270662134036d62cba7b5079bcbf"
+    "hash": "4affbe8cb8db288e1b34fb5f4139082d498758ce8192bd2dc6b17c2b0bef388b"
   },
   "img_2.png": {
     "caminho": "temp_uploads\\imagens_extraidas\\img_2.png",
-    "pagina": "1",
-    "hash": "51efdeee5301f566b05c7abb09aa480e20fe2f42dbdb11cde2790b72e3b675bc"
+    "pagina": "4",
+    "hash": "2f50c0a1a8dfd2e3fc547970d964bf11b4367fb1c5b7f67d9aa29fe271712f41"
   },
   "img_3.png": {
     "caminho": "temp_uploads\\imagens_extraidas\\img_3.png",
-    "pagina": "2",
-    "hash": "fd5fa2dd526fb09d1b4c86c4f871f47289f2b886e28b3ef5849bda60d01885d9"
+    "pagina": "4",
+    "hash": "0c75639056f49e444c8e96a829941c1a33e3cb68e943fa1d40866fa87bce005b"
   },
   "img_4.png": {
     "caminho": "temp_uploads\\imagens_extraidas\\img_4.png",
-    "pagina": "3",
-    "hash": "72a2b831072a48946b68b51302e8f15e1a07c7192ab86f87c91259c482c2a630"
+    "pagina": "4",
+    "hash": "077ab18500758cf612e31ed9709abab409cf1f161b55150c1b4f58742e044154"
   },
   "img_5.png": {
     "caminho": "temp_uploads\\imagens_extraidas\\img_5.png",
-    "pagina": "3",
-    "hash": "fab1644d65b779918a5546fd1aec87b7c6db26c3a25aa5842cc656580424c784"
+    "pagina": "5",
+    "hash": "fd015c6b27c9f4416677df7ed8658d553fb69026f19e4b0575cbb8ea6894a8e3"
   },
   "img_6.png": {
     "caminho": "temp_uploads\\imagens_extraidas\\img_6.png",
-    "pagina": "8",
-    "hash": "644001565d9829991cb3868d3bfec690df9d84799613d78ae336719a911290f8"
+    "pagina": "5",
+    "hash": "15ac11655660524b05bb5a13b7e35c321a3b692ddbeb34213345bf2053c2e908"
   },
   "img_7.png": {
     "caminho": "temp_uploads\\imagens_extraidas\\img_7.png",
-    "pagina": "10",
-    "hash": "d5418b6b2f2a0afb9d6137226f8cd800d86a056f6e631c3934a19ee42b595357"
-  },
-  "img_8.png": {
-    "caminho": "temp_uploads\\imagens_extraidas\\img_8.png",
-    "pagina": "10",
-    "hash": "ffeffff29bcd2605fe0fe40b3ae5457887f43829da62902b01cbe5b35db60073"
-  },
-  "img_9.png": {
-    "caminho": "temp_uploads\\imagens_extraidas\\img_9.png",
-    "pagina": "17",
-    "hash": "4200b387622ef7f4d70ee863e67d957086d7c6a1ff6a21abdabbc51018bfdabf"
-  },
-  "img_10.png": {
-    "caminho": "temp_uploads\\imagens_extraidas\\img_10.png",
-    "pagina": "20",
-    "hash": "8779145f6a1b88693d25a994ed53951088f9303954341887fa018712599c2b85"
-  },
-  "img_11.png": {
-    "caminho": "temp_uploads\\imagens_extraidas\\img_11.png",
-    "pagina": "23",
-    "hash": "e26a3d0b70c76a6a79c6dd7bc3bf044daa3d385349d48483f768ce146cab406e"
-  },
-  "img_12.png": {
-    "caminho": "temp_uploads\\imagens_extraidas\\img_12.png",
-    "pagina": "23",
-    "hash": "1cfabe15ec9b0d6e89a94c4c731fee40b10ff2f88bc5a6d2bb1dba4956a60c69"
-  },
-  "img_13.png": {
-    "caminho": "temp_uploads\\imagens_extraidas\\img_13.png",
-    "pagina": "23",
-    "hash": "bf0462ea74e01dc2846daab2885bdbb587045b962181f99b035676c293a08b8d"
-  },
-  "img_14.png": {
-    "caminho": "temp_uploads\\imagens_extraidas\\img_14.png",
-    "pagina": "25",
-    "hash": "bfd444a69825446f7f63b2c4c94860603154c7a870f2170284edcb88dfd3b9b3"
-  },
-  "img_15.png": {
-    "caminho": "temp_uploads\\imagens_extraidas\\img_15.png",
-    "pagina": "25",
-    "hash": "1fb8159a3d92c147c573318a060b637e9225eb5ed08b1e761007261b1198c69e"
-  },
-  "img_16.png": {
-    "caminho": "temp_uploads\\imagens_extraidas\\img_16.png",
-    "pagina": "25",
-    "hash": "1db78c0c65671761baef441446cddcc0e1680a1117095ef0911c2146b34082dd"
-  },
-  "img_17.png": {
-    "caminho": "temp_uploads\\imagens_extraidas\\img_17.png",
-    "pagina": "25",
-    "hash": "6fd3426cefc868e6253381fa84907e36c130cfdd7f843389e822b0f80b8e4018"
-  },
-  "img_18.png": {
-    "caminho": "temp_uploads\\imagens_extraidas\\img_18.png",
-    "pagina": "25",
-    "hash": "a658651cf5251003efd25096343284b913332963ffa1873834cbbc16f598ebf9"
-  },
-  "img_19.png": {
-    "caminho": "temp_uploads\\imagens_extraidas\\img_19.png",
-    "pagina": "26",
-    "hash": "e4b6eed5925ece03b1b5447485ae6ffc2cbd0767c47cf2ca7111b1a8920c3783"
-  },
-  "img_20.png": {
-    "caminho": "temp_uploads\\imagens_extraidas\\img_20.png",
-    "pagina": "30",
-    "hash": "d6ed41c8c0c20b368084edbdbd68b8acffd404178bfc134ad0d773b42d238b58"
-  },
-  "img_21.png": {
-    "caminho": "temp_uploads\\imagens_extraidas\\img_21.png",
-    "pagina": "30",
-    "hash": "964b080cf5e4235f9595742c413ecb7d887a9be52be26dd9bae18b96af0860cf"
-  },
-  "img_22.png": {
-    "caminho": "temp_uploads\\imagens_extraidas\\img_22.png",
-    "pagina": "30",
-    "hash": "26eaa0a078d021d80bb9eafa195423b17a9e909a2283ed631f999ef936bf276f"
-  },
-  "img_23.png": {
-    "caminho": "temp_uploads\\imagens_extraidas\\img_23.png",
-    "pagina": "30",
-    "hash": "d589771314a58dbd650ad0f86f4ba5956b580684d20863a33912fde953f86c61"
-  },
-  "img_24.png": {
-    "caminho": "temp_uploads\\imagens_extraidas\\img_24.png",
-    "pagina": "32",
-    "hash": "a1aab47ea063ddbafe74eae0a11143193d97c39b8c2754d7bf774f24f767194d"
-  },
-  "img_25.png": {
-    "caminho": "temp_uploads\\imagens_extraidas\\img_25.png",
-    "pagina": "33",
-    "hash": "ebecf96954f7007d390faf49ff47bcdcb23ca8467aa9998c02fd96df66502ec0"
-  },
-  "img_26.png": {
-    "caminho": "temp_uploads\\imagens_extraidas\\img_26.png",
-    "pagina": "35",
-    "hash": "9f99cbe83d35d5831583ba30426502a7b6d4dc328efbbf7b6a2ad08ad92afc77"
+    "pagina": "6",
+    "hash": "a488f2e6f42afbed78475c861c837a2139336f476288af73b1897fb924d28767"
   }
 }

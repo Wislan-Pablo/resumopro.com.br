@@ -1,0 +1,240 @@
+import { openImageModal, closeImageModal, updateModalImage, nextModalImage, prevModalImage, deleteCurrentModalImage } from './modal.js';
+import {
+  deleteGalleryImage,
+  copyGalleryImage,
+  removeImage,
+  setGalleryMode,
+  initGallerySwitch,
+  loadImageGallery,
+  loadCaptureGallery,
+  openCaptureModal,
+  closeCaptureModal,
+  deleteCaptureImage,
+  copyCaptureImage,
+  setupDropZones,
+  deleteAllGalleryImages
+} from './gallery.js';
+import {
+  openProjectSaveModal,
+  closeProjectSaveModal,
+  openSavedStatesModal,
+  closeSavedStatesModal,
+  showSuccessModal,
+  closeSuccessModal,
+  saveProjectState,
+  saveProjectStateImmediate,
+  loadSavedStates,
+  renderSavedStates,
+  continueEditingState,
+  deleteSavedState,
+  getCurrentProject
+} from './projects.js';
+import { initEditorTabs, loadPdfForCapture, initAdobeViewer, toggleFullscreenMode, resetAdobeViewer } from './tabs.js';
+import { initJoditDocumentMode, saveCurrentSummaryHTMLDebounced, saveCurrentSummaryHTML } from './jodit.js';
+import { setEstruturaEdicao, state } from './state.js';
+import { refreshPdfAvailability, reloadInitialPdfImages, uploadPdfAndReload, recoverInitialImages } from './pdf-source.js';
+import { initCaptureButton, initPasteCaptureListener } from './captures.js';
+import { initGoToTop, initHeaderHeightSync, updateGoTopVisibility, updateHeaderHeightVar } from './ui.js';
+import { generateFinalPDF } from './pdf.js';
+import { loadEditorData } from './data.js';
+
+// Expor funções para compatibilidade com atributos onclick existentes
+window.openImageModal = openImageModal;
+window.closeImageModal = closeImageModal;
+window.updateModalImage = updateModalImage;
+window.nextModalImage = nextModalImage;
+window.prevModalImage = prevModalImage;
+window.deleteCurrentModalImage = () => deleteCurrentModalImage(deleteGalleryImage);
+
+window.deleteGalleryImage = deleteGalleryImage;
+window.copyGalleryImage = copyGalleryImage;
+window.removeImage = removeImage;
+window.openCaptureModal = openCaptureModal;
+window.closeCaptureModal = closeCaptureModal;
+window.deleteCaptureImage = deleteCaptureImage;
+window.copyCaptureImage = copyCaptureImage;
+window.deleteAllGalleryImages = deleteAllGalleryImages;
+
+window.setGalleryMode = setGalleryMode;
+window.initGallerySwitch = initGallerySwitch;
+window.loadImageGallery = loadImageGallery;
+window.loadCaptureGallery = loadCaptureGallery;
+window.setupDropZones = setupDropZones;
+
+// Abas e Jodit
+window.initEditorTabs = initEditorTabs;
+window.loadPdfForCapture = loadPdfForCapture;
+window.initAdobeViewer = initAdobeViewer;
+window.resetAdobeViewer = resetAdobeViewer;
+window.toggleFullscreenMode = toggleFullscreenMode;
+window.initJoditDocumentMode = initJoditDocumentMode;
+window.setEstruturaEdicao = setEstruturaEdicao;
+window.saveCurrentSummaryHTML = saveCurrentSummaryHTML;
+window.generateFinalPDF = generateFinalPDF;
+
+// Compatibilidade: permitir que código inline acesse joditEditor diretamente
+try {
+  Object.defineProperty(window, 'joditEditor', {
+    get: () => state.joditEditor
+  });
+} catch (_) {}
+
+window.openProjectSaveModal = openProjectSaveModal;
+window.closeProjectSaveModal = closeProjectSaveModal;
+window.openSavedStatesModal = openSavedStatesModal;
+window.closeSavedStatesModal = closeSavedStatesModal;
+window.showSuccessModal = showSuccessModal;
+window.closeSuccessModal = closeSuccessModal;
+window.saveProjectState = saveProjectState;
+window.saveProjectStateImmediate = saveProjectStateImmediate;
+window.loadSavedStates = loadSavedStates;
+window.renderSavedStates = renderSavedStates;
+window.continueEditingState = continueEditingState;
+window.deleteSavedState = deleteSavedState;
+
+// Rewire de listeners para garantir uso das funções modularizadas
+document.addEventListener('DOMContentLoaded', () => {
+  // Botão: salvar estado de projeto
+  const btnSaveProjectState = document.getElementById('btnSaveProjectState');
+  if (btnSaveProjectState) {
+    const clone = btnSaveProjectState.cloneNode(true);
+    btnSaveProjectState.replaceWith(clone);
+    clone.addEventListener('click', () => {
+      const current = getCurrentProject();
+      if (current && current.slug) {
+        saveProjectStateImmediate(current);
+      } else {
+        openProjectSaveModal();
+      }
+    });
+  }
+
+  // Botão: abrir estados salvos
+  const btnSavedStates = document.getElementById('btnSavedStates');
+  if (btnSavedStates) {
+    const clone = btnSavedStates.cloneNode(true);
+    btnSavedStates.replaceWith(clone);
+    clone.addEventListener('click', openSavedStatesModal);
+  }
+
+  // Botão: confirmar salvar projeto na modal
+  const confirmSaveProjectBtn = document.getElementById('confirmSaveProjectBtn');
+  if (confirmSaveProjectBtn) {
+    const clone = confirmSaveProjectBtn.cloneNode(true);
+    confirmSaveProjectBtn.replaceWith(clone);
+    clone.addEventListener('click', saveProjectState);
+  }
+
+  // Rewire dos botões de abas e fullscreen para usar módulo
+  const tabEditor = document.getElementById('tabEditor');
+  if (tabEditor) {
+    const clone = tabEditor.cloneNode(true);
+    tabEditor.replaceWith(clone);
+  }
+  const btnCapture = document.getElementById('btnCapture');
+  if (btnCapture) {
+    const clone = btnCapture.cloneNode(true);
+    btnCapture.replaceWith(clone);
+  }
+  const btnFullscreen = document.getElementById('btnFullscreen');
+  if (btnFullscreen) {
+    const clone = btnFullscreen.cloneNode(true);
+    btnFullscreen.replaceWith(clone);
+    clone.addEventListener('click', () => {
+      try { toggleFullscreenMode(); } catch (_) {}
+      try { updateHeaderHeightVar(); } catch (_) {}
+      try { updateGoTopVisibility(); } catch (_) {}
+    });
+  }
+
+  // Botão: Upload de novo PDF
+  const btnUpload = document.getElementById('upload_file');
+  if (btnUpload) {
+    const clone = btnUpload.cloneNode(true);
+    btnUpload.replaceWith(clone);
+    clone.addEventListener('click', () => {
+      try {
+        const inp = document.createElement('input');
+        inp.type = 'file';
+        inp.accept = 'application/pdf';
+        inp.style.display = 'none';
+        document.body.appendChild(inp);
+        inp.addEventListener('change', () => {
+          const file = inp.files && inp.files[0];
+          if (file) {
+            try { uploadPdfAndReload(file); } catch (e) { console.error(e); }
+          }
+          try { document.body.removeChild(inp); } catch (_) {}
+        });
+        inp.click();
+      } catch (e) { console.error(e); }
+    });
+  }
+
+  // Botão: Recuperar imagens iniciais do PDF
+  const btnRecover = document.getElementById('btnRecoverInitialImages');
+  if (btnRecover) {
+    const clone = btnRecover.cloneNode(true);
+    btnRecover.replaceWith(clone);
+    clone.addEventListener('click', () => { try { recoverInitialImages(); } catch (e) { console.error(e); } });
+  }
+
+  // Toggle de retração/expansão da galeria (sidebar)
+  const sidebar = document.getElementById('sidebar');
+  const sidebarToggleEl = document.getElementById('sidebarToggle');
+  const containerEl = document.querySelector('.container');
+  let sidebarToggle = sidebarToggleEl;
+  if (sidebarToggleEl) {
+    const clone = sidebarToggleEl.cloneNode(true);
+    sidebarToggleEl.replaceWith(clone);
+    sidebarToggle = clone;
+  }
+  function setToggleState(collapsed) {
+    if (!sidebarToggle || !sidebar) return;
+    if (collapsed) {
+      sidebarToggle.innerHTML = '<img src="../images/view_sidebar_gallery.svg" alt="Abrir Galeria" width="58" height="58" style="transform: rotate(180deg);" />';
+      sidebarToggle.title = 'Abrir Galeria';
+      sidebarToggle.setAttribute('aria-label', 'Abrir Galeria');
+    } else {
+      sidebarToggle.innerHTML = '<img src="../images/close_small.svg" alt="Retrair Galeria" width="56" height="56" style="transform: rotate(180deg);" />';
+      sidebarToggle.title = 'Retrair Galeria';
+      sidebarToggle.setAttribute('aria-label', 'Retrair Galeria');
+    }
+  }
+  setToggleState(false);
+  if (sidebarToggle && sidebar) {
+    sidebarToggle.addEventListener('click', () => {
+      const isCollapsed = sidebar.classList.toggle('collapsed');
+      setToggleState(isCollapsed);
+      if (containerEl) {
+        containerEl.classList.toggle('sidebar-collapsed', isCollapsed);
+      }
+    });
+  }
+
+  // Inicializar abas via módulo (evita duplicações ao clonar botões)
+  try { initEditorTabs(); } catch (_) {}
+
+  // Inicializar dados do editor e Jodit via módulos
+  try {
+    Promise.resolve(loadEditorData()).finally(() => {
+      try { initJoditDocumentMode(); } catch (_) {}
+    });
+  } catch (_) { try { initJoditDocumentMode(); } catch (e) {} }
+
+  // Drop zones e switch da galeria já expostos globalmente
+  try { setupDropZones(); } catch (_) {}
+  try { initGallerySwitch(); } catch (_) {}
+  try { setGalleryMode('pdf'); } catch (_) {}
+
+  // Inicializar captura de tela e listener de colagem
+  try { initCaptureButton(); } catch (_) {}
+  try { initPasteCaptureListener(); } catch (_) {}
+
+  // UI: botão Ir ao topo e sincronização de altura do header
+  try { initGoToTop(); } catch (_) {}
+  try { initHeaderHeightSync(); } catch (_) {}
+
+  // Atualizar disponibilidade de PDF em temp_uploads
+  try { refreshPdfAvailability(); } catch (_) {}
+});

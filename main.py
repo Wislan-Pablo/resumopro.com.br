@@ -10,11 +10,16 @@ from dotenv import load_dotenv
 from typing import List, Optional
 import time
 from fastapi import Body
+from main_pipeline import start_full_processing, extrair_titulo_do_resumo, setup_logging
+from websocket_manager import ConnectionManager
 
 # Carregar variáveis do arquivo .env (se existir)
 load_dotenv(os.path.join(os.path.dirname(__file__), '.env'))
 
 app = FastAPI()
+
+# Configurar logging
+setup_logging()
 
 app.add_middleware(
     CORSMiddleware,
@@ -47,6 +52,26 @@ if not os.path.exists(UPLOAD_DIR):
     os.makedirs(UPLOAD_DIR)
 
 ARQUIVO_PDF_FINAL = "Resumo_Final_Com_Prints.pdf"
+
+# Diretório para estados salvos do editor (projetos)
+EDITOR_STATES_DIR = os.path.join(UPLOAD_DIR, "editor_states")
+if not os.path.exists(EDITOR_STATES_DIR):
+    os.makedirs(EDITOR_STATES_DIR, exist_ok=True)
+
+def _slugify_name(name: str) -> str:
+    """Cria um slug seguro para nomes de projeto (apenas letras, números, hífens e underscore)."""
+    if not isinstance(name, str):
+        name = str(name or "")
+    base = name.strip().lower()
+    # Substitui espaços e separadores por hífen
+    base = re.sub(r"[\s/\\]+", "-", base)
+    # Remove caracteres não permitidos
+    base = re.sub(r"[^a-z0-9._-]", "", base)
+    # Evita vazio
+    if not base:
+        base = f"projeto-{int(time.time())}"
+    # Limita tamanho razoável
+    return base[:64]
 
 def normalize_to_markdown(raw_text: str) -> str:
     lines = raw_text.splitlines()
@@ -371,20 +396,7 @@ def _format_structured_data_as_table(table_lines: list) -> list:
     
     return formatted_lines
 
-class ConnectionManager:
-    def __init__(self):
-        self.active_connections: List[WebSocket] = []
 
-    async def connect(self, websocket: WebSocket):
-        await websocket.accept()
-        self.active_connections.append(websocket)
-
-    def disconnect(self, websocket: WebSocket):
-        self.active_connections.remove(websocket)
-
-    async def send_message(self, message: str):
-        for connection in self.active_connections:
-            await connection.send_text(message)
 
 manager = ConnectionManager()
 
@@ -485,6 +497,168 @@ async def save_structured_summary(request_data: dict):
         print(f"Erro ao salvar resumo estruturado: {e}")
         raise HTTPException(status_code=500, detail="Erro interno ao salvar resumo estruturado")
 
+# --- ENDPOINTS: Estados do Editor (Projetos) ---
+
+@app.post("/api/editor-state/save-image")
+async def editor_state_save_image(file: UploadFile = File(...), project: str = Form(...), filename: Optional[str] = Form(None)):
+    """Salva uma imagem (blob/data) dentro da pasta do projeto (captures/)."""
+    try:
+        slug = _slugify_name(project)
+        project_dir = os.path.join(EDITOR_STATES_DIR, slug)
+        captures_dir = os.path.join(project_dir, "captures")
+        os.makedirs(captures_dir, exist_ok=True)
+
+        base_name = filename or f"capture_{int(time.time()*1000)}.png"
+        if not base_name.lower().endswith(".png") and not base_name.lower().endswith(".jpg") and not base_name.lower().endswith(".jpeg"):
+            base_name = base_name + ".png"
+        save_path = os.path.join(captures_dir, base_name)
+
+        data = await file.read()
+        with open(save_path, 'wb') as f:
+            f.write(data)
+
+        rel_path = f"/{UPLOAD_DIR}/editor_states/{slug}/captures/{base_name}"
+        return {"status": "ok", "filename": base_name, "path": rel_path}
+    except Exception as e:
+        print(f"Erro ao salvar imagem do estado do editor: {e}")
+        raise HTTPException(status_code=500, detail="Falha ao salvar imagem do projeto")
+
+@app.post("/api/editor-state/save")
+async def editor_state_save(request_data: dict = Body(...)):
+    """Salva o estado do editor (HTML) associado a um nome de projeto."""
+    try:
+        name = request_data.get('name') or ''
+        html = request_data.get('html') or ''
+        pdf_name = request_data.get('pdf_name') or None
+        gallery_images = request_data.get('gallery_images') or []  # nomes base em imagens_extraidas
+
+        if not isinstance(name, str) or not name.strip():
+            raise HTTPException(status_code=400, detail="Nome do projeto não fornecido")
+        if not isinstance(html, str) or not html.strip():
+            raise HTTPException(status_code=400, detail="Conteúdo HTML do editor vazio")
+
+        slug = _slugify_name(name)
+        project_dir = os.path.join(EDITOR_STATES_DIR, slug)
+        images_dir = os.path.join(project_dir, "images")
+        captures_dir = os.path.join(project_dir, "captures")
+        os.makedirs(project_dir, exist_ok=True)
+        os.makedirs(images_dir, exist_ok=True)
+        os.makedirs(captures_dir, exist_ok=True)
+
+        # Copiar imagens da galeria referenciadas para a pasta do projeto (images/)
+        copied = []
+        for base_name in gallery_images:
+            try:
+                base = str(base_name).split('/')[-1]
+                src_path = os.path.join(UPLOAD_DIR, "imagens_extraidas", base)
+                dst_path = os.path.join(images_dir, base)
+                if os.path.exists(src_path):
+                    shutil.copy2(src_path, dst_path)
+                    copied.append(base)
+            except Exception as ce:
+                print(f"Aviso: falha ao copiar imagem de galeria '{base_name}' para projeto '{slug}': {ce}")
+
+        # Salvar HTML
+        html_path = os.path.join(project_dir, "resumo.html")
+        with open(html_path, 'w', encoding='utf-8') as f:
+            f.write(html)
+
+        # Salvar metadados
+        state = {
+            "name": name,
+            "slug": slug,
+            "saved_at": int(time.time()*1000),
+            "pdf_name": pdf_name,
+            "images_copied": copied,
+        }
+        state_path = os.path.join(project_dir, "state.json")
+        with open(state_path, 'w', encoding='utf-8') as f:
+            json.dump(state, f, ensure_ascii=False, indent=2)
+
+        return {"status": "ok", "slug": slug, "project_path": f"/{UPLOAD_DIR}/editor_states/{slug}"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Erro ao salvar estado do editor: {e}")
+        raise HTTPException(status_code=500, detail="Falha ao salvar estado do editor")
+
+@app.get("/api/editor-state/list")
+async def editor_state_list():
+    """Lista os projetos salvos com metadados básicos."""
+    try:
+        items = []
+        if os.path.isdir(EDITOR_STATES_DIR):
+            for entry in os.listdir(EDITOR_STATES_DIR):
+                proj_dir = os.path.join(EDITOR_STATES_DIR, entry)
+                if not os.path.isdir(proj_dir):
+                    continue
+                state_path = os.path.join(proj_dir, 'state.json')
+                html_path = os.path.join(proj_dir, 'resumo.html')
+                meta = {
+                    "slug": entry,
+                    "name": entry,
+                    "saved_at": None,
+                    "pdf_name": None,
+                    "has_html": os.path.exists(html_path),
+                }
+                try:
+                    if os.path.exists(state_path):
+                        with open(state_path, 'r', encoding='utf-8') as f:
+                            data = json.load(f)
+                        meta.update({
+                            "name": data.get('name') or entry,
+                            "saved_at": data.get('saved_at'),
+                            "pdf_name": data.get('pdf_name'),
+                        })
+                except Exception:
+                    pass
+                items.append(meta)
+        return {"items": items, "count": len(items)}
+    except Exception as e:
+        print(f"Erro ao listar estados do editor: {e}")
+        raise HTTPException(status_code=500, detail="Erro ao listar projetos salvos")
+
+@app.get("/api/editor-state/{slug}")
+async def editor_state_get(slug: str):
+    """Carrega o estado do editor por slug."""
+    try:
+        s = _slugify_name(slug)
+        proj_dir = os.path.join(EDITOR_STATES_DIR, s)
+        if not os.path.isdir(proj_dir):
+            raise HTTPException(status_code=404, detail="Projeto não encontrado")
+        state_path = os.path.join(proj_dir, 'state.json')
+        html_path = os.path.join(proj_dir, 'resumo.html')
+        meta = {}
+        if os.path.exists(state_path):
+            with open(state_path, 'r', encoding='utf-8') as f:
+                meta = json.load(f)
+        html_text = ""
+        if os.path.exists(html_path):
+            with open(html_path, 'r', encoding='utf-8') as f:
+                html_text = f.read()
+        return {"meta": meta, "html": html_text}
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Erro ao carregar estado do editor: {e}")
+        raise HTTPException(status_code=500, detail="Erro ao carregar projeto salvo")
+
+@app.delete("/api/editor-state/{slug}")
+async def editor_state_delete(slug: str):
+    """Remove o projeto e seus arquivos."""
+    try:
+        s = _slugify_name(slug)
+        proj_dir = os.path.join(EDITOR_STATES_DIR, s)
+        if not os.path.isdir(proj_dir):
+            raise HTTPException(status_code=404, detail="Projeto não encontrado")
+        shutil.rmtree(proj_dir, ignore_errors=False)
+        return {"status": "ok", "deleted": s}
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Erro ao deletar estado do editor: {e}")
+        raise HTTPException(status_code=500, detail="Erro ao remover projeto salvo")
+
 @app.post("/api/processamento-full")
 async def receive_files_and_text(
     background_tasks: BackgroundTasks,
@@ -525,7 +699,7 @@ async def receive_files_and_text(
     
     # --- NOVO BLOCO DE IMPORTAÇÃO LOCAL ---
     # Importa a função APENAS quando é necessário executá-la
-    from main_pipeline import start_full_processing 
+    from main_pipeline import start_full_processing, extrair_titulo_do_resumo 
     # --------------------------------------
 
     # --- 3. INJEÇÃO DA TAREFA NO BACKGROUND (INÍCIO DO PIPELINE) ---
@@ -744,12 +918,23 @@ async def generate_final_pdf(request_data: dict):
 
 @app.post("/api/upload-pdf")
 async def upload_pdf(originalPdf: UploadFile = File(...)):
+    # Limpar o diretório de imagens extraídas para garantir que não haja imagens antigas.
+    imagens_dir = os.path.join(UPLOAD_DIR, "imagens_extraidas")
+    if os.path.exists(imagens_dir):
+        for f in os.listdir(imagens_dir):
+            if f.lower().endswith(('.png', '.jpg', '.jpeg', '.gif')) or f == 'imagens_info.json':
+                try:
+                    os.remove(os.path.join(imagens_dir, f))
+                except Exception as e:
+                    print(f"Aviso: Falha ao remover arquivo de imagem antigo '{f}': {e}")
+    else:
+        os.makedirs(imagens_dir)
+
     safe_pdf_filename = originalPdf.filename.replace('\\', '_').replace('/', '_')
     base_name, ext = os.path.splitext(safe_pdf_filename)
     candidate_name = safe_pdf_filename
     pdf_path = os.path.join(UPLOAD_DIR, candidate_name)
 
-    # Se já existir, gera um nome único para evitar conflito/lock de arquivo no Windows
     if os.path.exists(pdf_path):
         idx = 1
         while True:
@@ -760,7 +945,6 @@ async def upload_pdf(originalPdf: UploadFile = File(...)):
             idx += 1
 
     try:
-        # Garante que o ponteiro do arquivo esteja no início
         try:
             originalPdf.file.seek(0)
         except Exception:
@@ -769,6 +953,21 @@ async def upload_pdf(originalPdf: UploadFile = File(...)):
         with open(pdf_path, "wb") as buffer:
             shutil.copyfileobj(originalPdf.file, buffer)
         print(f"[TRACE] PDF recebido e salvo em: {pdf_path}")
+
+        # Criar um arquivo de resumo temporário
+        resumo_temp_path = os.path.join(UPLOAD_DIR, f"temp_resumo_{base_name}.txt")
+        with open(resumo_temp_path, "w", encoding="utf-8") as f:
+            f.write("Resumo temporário para extração de imagens.")
+
+        # Acionar a extração de imagens
+        await start_full_processing(
+            caminho_pdf_input=pdf_path,
+            caminho_resumo_input=resumo_temp_path,
+            upload_dir=UPLOAD_DIR,
+            arquivo_pdf_output_name=f"output_{base_name}.pdf",
+            manager=manager
+        )
+
         return {"status": "success", "filename": candidate_name, "path": f"/temp_uploads/{candidate_name}"}
     except Exception as e:
         print(f"[ERRO] upload-pdf: {e}")

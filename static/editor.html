@@ -12,11 +12,13 @@
     <script src="https://cdn.jsdelivr.net/npm/jodit@3.24.5/build/jodit.min.js"></script>
     <!-- Idioma Pt-BR para Jodit -->
     <script src="https://cdn.jsdelivr.net/npm/jodit@3.24.5/build/langs/pt_br.js"></script>
-    <script src="https://documentcloud.adobe.com/view-sdk/main.js"></script>
+    
     <!-- Fonte Noto Sans -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/editor.css">
+    <!--
     <style>
         * {
             margin: 0;
@@ -474,6 +476,32 @@
             flex-shrink: 0;
         }
 
+        /* Toggle Switch da Galeria */
+        .gallery-switch {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 8px 0 12px;
+        }
+        .gallery-switch .switch-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 10px;
+            border: 1px solid #bbb;
+            background: #f3f3f3;
+            color: #333;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 0.9em;
+        }
+        .gallery-switch .switch-btn[aria-pressed="true"] {
+            background: #d8e6ff;
+            border-color: #6b9bff;
+            color: #0a3d62;
+        }
+        .gallery-switch .switch-label { user-select: none; }
+
         .btn-danger {
             margin: 0 auto;
             background: #8d9092;
@@ -520,49 +548,7 @@
             margin: 10px 40px 16px;
         }
 
-        /* Mensagem informativa do editor */
-        .page-info-banner {
-            position: relative;
-            display: flex;
-            align-items: center;
-            justify-content: flex-start;
-            gap: 12px;
-            margin: 0 20px 10px 20px;
-            padding: 10px 40px 10px 16px;
-            border: 1px solid #cfe0ff;
-            background-color: #e9f2ff;
-            color: #0a3d62;
-            border-radius: 6px;
-        }
-        .page-info-banner .page-info-text {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            text-align: justify;
-            font-size: 1.02em;
-            line-height: 1.35;
-        }
-        .page-info-banner .page-info-close {
-            position: absolute;
-            top: 0;
-            right: 0;
-            background: transparent;
-            border: none;
-            cursor: pointer;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 6px;
-            padding: 4px;
-        }
-        .page-info-banner .page-info-close img {
-            display: block;
-            width: 32px;
-            height: 32px;
-        }
-        .page-info-banner .page-info-close:hover {
-            background-color: rgba(10, 61, 98, 0.08);
-        }
+        /* (Removido) Mensagem informativa do editor */
 
         .editor-actions {
             width: 600px;
@@ -612,6 +598,40 @@
             background: #007bff;
         }
 
+        #btnCaptureImage {
+            background: #09b706;
+        }
+
+        #btnCaptureImage:hover {
+            background: #09b706; /* mantém a cor padrão no hover */
+        }
+
+        /* Transições: aplicar transform apenas na toolbar PDF; nas abas, só cor */
+        .pdf-viewer-toolbar .tab-btn {
+            transition: transform 0.2s ease;
+        }
+        .editor-tabs .tab-btn {
+            transition: background-color 0.2s ease;
+        }
+
+        .editor-tabs .tab-btn:hover {
+            background: #8d9092; /* evita azul no hover nas abas */
+        }
+
+        .editor-tabs .tab-btn.active:hover {
+            background: #007bff; /* mantém aparência de ativo sem alterar cor */
+        }
+
+        .pdf-viewer-toolbar .tab-btn:hover {
+            transform: scale(1.1);
+            background: #8d9092; /* evita azul no hover na toolbar PDF */
+        }
+
+        /* Exceção: manter o hover do botão de captura em verde na toolbar PDF */
+        .pdf-viewer-toolbar #btnCaptureImage:hover {
+            background: #09b706;
+        }
+
         /* Área de Conteúdo */
         .content-area {
             flex: 1;
@@ -638,7 +658,7 @@
         .editor-tabs {
             width: 100%;
             display: flex;
-            gap: 10px;
+            gap: 15px;
             align-items: center;
         }
         .editor-tabs .tab-btn {
@@ -667,6 +687,9 @@
             vertical-align: middle;
         }
         .editor-actions .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
             padding: 6px 10px;
             font-size: 16px;
             font-weight: 500;
@@ -700,6 +723,9 @@
             display: flex;
             gap: 10px;
             align-items: center;
+        }
+        .pdf-viewer-toolbar .toolbar-right {
+            gap: 20px;
         }
         .pdf-viewer-toolbar #pageIndicator {
             display: flex;
@@ -1071,7 +1097,39 @@
   width: 100%;
 }
 #galleryEmptyState { overflow-x: hidden; }
-</style>
+/* Jodit: aumentar ícones +10px em toda a UI */
+.jodit .jodit-ui-button__icon svg,
+.jodit .jodit-toolbar-button svg,
+.jodit .jodit-icon {
+  width: calc(1em + 5px) !important;
+  height: calc(1em + 5px) !important;
+}
+
+/* Containers de ícones: garantir centralização e evitar corte */
+.jodit .jodit-ui-button__icon,
+.jodit .jodit-toolbar-button__icon {
+  width: calc(1em + 5px) !important;
+  height: calc(1em + 5px) !important;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  overflow: visible !important;
+}
+
+/* Ajustar altura mínima de toolbar para acomodar ícones maiores */
+.jodit .jodit-toolbar__box,
+.jodit .jodit-toolbar {
+  min-height: calc(2.2em + 5px) !important;
+}
+
+/* Menus contextuais e popups do Jodit */
+.jodit .jodit-context-menu__item .jodit-icon,
+.jodit .jodit-popup__content .jodit-icon {
+  width: calc(1em + 5px) !important;
+  height: calc(1em + 5px) !important;
+}
+    </style>
+    -->
 </head>
 
 <body>
@@ -1092,6 +1150,12 @@
                 <div class="gallery-source" aria-live="polite">
                     <img src="../images/icon_pdf_name_gallery.svg" alt="Ícone PDF" class="gallery-source-icon" />
                     <strong id="currentPdfLabel">Nenhum PDF encontrado</strong>
+                </div>
+                <!-- Toggle Switch de Galeria -->
+                <div class="gallery-switch" id="gallerySwitchBar">
+                    <button id="gallerySwitch" class="btn btn-secondary switch-btn" aria-pressed="false" title="Alternar galeria">
+                        <span class="switch-label" id="gallerySwitchLabel">Imagens Carregadas do PDF</span>
+                    </button>
                 </div>
                 <div class="info-message" id="galleryInfoMessage">
                     <h3 id="imageCountInfo">Identifiquei 0 imagens vetoriais no PDF</h3>
@@ -1130,11 +1194,21 @@
                     </button>
                     <button id="btnCapture" class="btn btn-secondary tab-btn">
                         <img src="../images/view_pdf.svg" alt="Ver PDF" class="btn-icon" />
-                        Capturar Imagens no PDF
+                        Capturar Imagem no PDF
                     </button>
                     <button id="upload_file" class="btn btn-secondary tab-btn">
                         <img src="../images/upload_file.svg" alt="Carregar PDF" class="btn-icon" />
                         Novo Arquivo
+                    </button>
+                </div>
+                <div class="editor-actions">
+                    <button id="btnSavedStates" class="btn btn-secondary" title="Projetos Salvos" aria-label="Projetos Salvos">
+                        <img src="../images/folder_projects.svg" alt="Projetos Salvos" class="btn-icon" />
+                        Projetos Salvos
+                    </button>
+                    <button id="btnSaveProjectState" class="btn btn-primary" title="Salvar Projeto" aria-label="Salvar Projeto">
+                        <img src="../images/save_project.svg" alt="Salvar Projeto" class="btn-icon" />
+                        Salvar Projeto
                     </button>
                 </div>
             </div>
@@ -1143,14 +1217,7 @@
                 <!-- Painel de Texto -->
                 <div class="text-panel">
                     <div id="editorSection" class="editor-section" style="margin-top: 0;">
-                        <div id="pageInfo" class="page-info-banner" role="region" aria-label="Mensagem informativa">
-                            <div class="page-info-text">
-                                <span>Selecione e arraste as imagens da galeria ao lado, ou capture outra imagem de qualquer parte do PDF usando a seção de Captura - botão [Capturar Imagens no PDF] acima, e posicione-as em qualquer parte do resumo. Use os botões do Editor para redimencionar, centrarlizar, alinhar lateralemnte com o texto, e diversos outros recursos para <b>turbinar o seu resumo!</b> &#128512;</span>
-                            </div>
-                            <button id="pageInfoClose" class="page-info-close" title="Fechar mensagem" aria-label="Fechar mensagem">
-                                 <img src="../images/close_small.svg" alt="Fechar" />
-                             </button>
-                        </div>
+                        
                         <div id="structuredSummary" class="formatted-summary">
                             <div class="drop-zone">Solte a imagem aqui para inserir</div>
                             <!-- Conteúdo do resumo será carregado aqui -->
@@ -1168,8 +1235,8 @@
                                      <span>CAPTURAR IMAGEM</span>
                                  </button>
                                  <button id="btnFullscreen" class="btn btn-secondary tab-btn" title="Modo tela cheia" aria-label="Modo tela cheia">
-                                     <img src="../images/zoom_out_map.svg" alt="Modo tela cheia" class="btn-icon-small" />
-                                     <span>MODO TELA CHEIA</span>
+                                     <img src="../images/open_in_full.svg" alt="Modo tela cheia" class="btn-icon-small" />
+                                     <span>OCULTAR MENU</span>
                                  </button>
                              </div>
                          </div>
@@ -1201,15 +1268,56 @@
             <div class="modal-actions">
                 <button class="btn btn-secondary" onclick="prevModalImage()">◀ Anterior</button>
                 <button class="btn btn-secondary" onclick="nextModalImage()">Próxima ▶</button>
-                <button class="btn btn-danger" onclick="deleteCurrentModalImage()">Excluir da galeria</button>
+                <button class="btn btn-danger" onclick="deleteCurrentModalImage()">
+                    <img src="../images/delete_all_items.svg" alt="Excluir" class="btn-icon-modal" />
+                    <span>Excluir da galeria</span>
+                </button>
             </div>
         </div>
     </div>
 
-    <script>
+    <!-- Modal: Salvar Projeto -->
+    <div id="projectSaveModal" class="modal-overlay" onclick="closeProjectSaveModal()">
+        <div class="modal-content" onclick="event.stopPropagation()" style="background: #FFFFFF;">
+            <button class="modal-close" onclick="closeProjectSaveModal()" title="Fechar" aria-label="Fechar" style="padding: 4px 8px;">X</button>
+            <h3 style="margin-bottom:10px">Salvar Projeto</h3>
+            <input id="projectNameInput" type="text" placeholder="Nome do projeto" style="width: 500px; padding: 10px; border-radius: 6px; border: 1px solid #8d9092; margin: 10px 0;" />
+            <div class="modal-actions">
+                <button class="btn btn-secondary" onclick="closeProjectSaveModal()" style="padding: 4px 8px;">
+                    <img src="/images/close.svg" alt="Cancelar" class="btn-icon-modal" />
+                    Cancelar
+                </button>
+                <button class="btn btn-primary" id="confirmSaveProjectBtn" style="padding: 4px 8px;">
+                    <img src="/images/save_project.svg" alt="Salvar" class="btn-icon-modal" />
+                    Salvar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Projetos Salvos -->
+    <div id="savedStatesModal" class="modal-overlay" onclick="closeSavedStatesModal()">
+        <div class="modal-content" onclick="event.stopPropagation()" style="background: #FFFFFF;">
+            <button class="modal-close" onclick="closeSavedStatesModal()" title="Fechar" aria-label="Fechar" style="padding: 4px 8px;">X</button>
+            <h3 style="margin-bottom:10px">Projetos/Resumos Salvos</h3>
+            <div id="savedStatesList" style="width: 100%;"></div>
+        </div>
+    </div>
+
+    <!-- Modal: Sucesso -->
+    <div id="successModal" class="modal-overlay" onclick="closeSuccessModal()">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <button class="modal-close" onclick="closeSuccessModal()" title="Fechar" aria-label="Fechar">X</button>
+            <div id="successMessage" style="margin: 10px 0;">Operação concluída com sucesso.</div>
+        </div>
+    </div>
+
+    <script type="text/disabled">
         let estruturaEdicao = null;
         let imagensPosicionadas = [];
         let galleryCacheBust = Date.now();
+        let galleryMode = 'pdf'; // 'pdf' | 'captures'
+        let capturedImages = []; // fila FIFO: { id, blob, url, createdAt }
 
         // Função para converter Markdown para HTML usando a mesma lógica do index.html
         function convertMarkdownToHtml(markdown) {
@@ -1264,7 +1372,11 @@
         function setCurrentPdfLabel(name) {
             const el = document.getElementById('currentPdfLabel');
             if (!el) return;
-            el.textContent = (name && String(name).trim()) ? name : 'Nenhum PDF encontrado';
+            const n = (name || '').trim();
+            const base = String(n)
+                .split(/[\\\/]/).pop()
+                .replace(/\.pdf$/i, '');
+            el.textContent = base ? base : 'Nenhum PDF encontrado';
         }
 
         async function refreshPdfAvailability() {
@@ -1343,6 +1455,9 @@
                 }
 
                 galleryCacheBust = Date.now();
+
+                // Sincronizar com o estado compartilhado para módulos
+                try { if (window.setEstruturaEdicao) window.setEstruturaEdicao(estruturaEdicao); } catch (e) {}
 
                 // Persistir nome do PDF para ser exibido corretamente na galeria
                 try {
@@ -1435,7 +1550,11 @@
 
                 // Obter informação da página com mapeamento robusto
                 const info = getImagePageInfo(imageName);
-                const displayName = (info && info.pagina != null) ? `${imageName} — Página ${info.pagina}</br> do PDF` : imageName;
+                const baseName = imageName.replace('.png', '');
+                const formattedName = baseName.replace(/^img_/i, 'imagem-');
+                const displayName = (info && info.pagina != null)
+                  ? `${formattedName} — Página ${info.pagina}`
+                  : formattedName;
 
                 imageItem.innerHTML = `
                     <img src="/temp_uploads/imagens_extraidas/${imageName}?v=${galleryCacheBust}" alt="${imageName}">
@@ -1480,10 +1599,236 @@
             }
         }
 
+        // Renderizar galeria de capturas (fila FIFO)
+        function loadCaptureGallery() {
+            const gallery = document.getElementById('imageGallery');
+            gallery.innerHTML = '';
+            const actions = document.querySelector('.gallery-actions');
+            const emptyState = document.getElementById('galleryEmptyState');
+
+            if (!Array.isArray(capturedImages) || capturedImages.length === 0) {
+                if (actions) actions.style.display = 'none';
+                if (emptyState) {
+                    emptyState.style.display = '';
+                    const msg = emptyState.querySelector('.gallery-empty-message');
+                    const ctrls = emptyState.querySelector('.gallery-empty-controls');
+                    if (msg) msg.textContent = 'Nenhuma captura de tela salva. Use CAPTURAR IMAGEM e depois cole (Ctrl+V) para salvar aqui.';
+                    if (ctrls) ctrls.style.display = 'none';
+                }
+                updateImageCountInfoCaptures();
+                return;
+            }
+            if (actions) actions.style.display = '';
+            if (emptyState) emptyState.style.display = 'none';
+
+            capturedImages.forEach((item, idx) => {
+                const imageItem = document.createElement('div');
+                imageItem.className = 'image-item';
+                imageItem.draggable = true;
+                imageItem.dataset.captureId = item.id;
+                imageItem.dataset.captureUrl = item.url;
+                const displayName = `Captura #${idx + 1}`;
+                imageItem.innerHTML = `
+                    <img src="${item.url}" alt="${displayName}">
+                    <button class=\"copy-btn\" title=\"Copiar imagem\" onclick=\"copyCaptureImage('${item.id}')\" onmousedown=\"event.stopPropagation()\">
+                        <img src=\"../images/copy_image_gallery.svg\" alt=\"Copiar\" width=\"18\" height=\"18\" />
+                    </button>
+                    <button class=\"view-btn\" title=\"Visualizar imagem\" onclick=\"openCaptureModal('${item.id}')\" onmousedown=\"event.stopPropagation()\">
+                        <svg viewBox=\"0 0 24 24\" width=\"30\" height=\"30\" fill=\"none\" stroke=\"white\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\">
+                            <path d=\"M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7\"></path>
+                            <circle cx=\"12\" cy=\"12\" r=\"3\"></circle>
+                        </svg>
+                    </button>
+                    <div class=\"copy-feedback\" aria-live=\"polite\">
+                        <img src=\"../images/copy_image_gallery.svg\" alt=\"\" width=\"20\" height=\"20\" />
+                        <span>Imagem foi copiada para a área de transferência</span>
+                    </div>
+                    <div class=\"image-name\">${displayName}</div>
+                    <button class=\"delete-btn\" onclick=\"deleteCaptureImage('${item.id}')\" title=\"Excluir esta captura\">
+                        <img src=\"../images/delete_img_gallery.svg\" alt=\"Excluir\" width=\"18\" height=\"18\" />
+                    </button>
+                `;
+                imageItem.addEventListener('dragstart', handleDragStart);
+                imageItem.addEventListener('dragend', handleDragEnd);
+                gallery.appendChild(imageItem);
+            });
+
+            updateImageCountInfoCaptures();
+        }
+
+        function updateImageCountInfoCaptures() {
+            const imageCountInfo = document.getElementById('imageCountInfo');
+            if (imageCountInfo) {
+                const n = capturedImages.length || 0;
+                imageCountInfo.innerHTML = `Você tem <strong>${n} captura(s)</strong> salvas nesta sessão. Arraste para inserir no resumo ou clique para visualizar/copiar.`;
+            }
+        }
+
+        // Copiar imagem de captura para área de transferência
+        async function copyCaptureImage(id) {
+            try {
+                const item = capturedImages.find(ci => ci.id === id);
+                if (!item) return;
+                const isLocalhost = ['localhost', '127.0.0.1'].includes(window.location.hostname);
+                const canWriteImages = (navigator.clipboard && 'write' in navigator.clipboard && window.ClipboardItem && (window.isSecureContext || isLocalhost));
+
+                if (canWriteImages) {
+                    let blob = item.blob;
+                    if (!blob) {
+                        const resp = await fetch(item.url, { cache: 'no-store' });
+                        if (!resp.ok) throw new Error('Falha ao obter imagem de captura');
+                        blob = await resp.blob();
+                    }
+                    const mime = blob.type || 'image/png';
+                    const clipboardItem = new ClipboardItem({ [mime]: blob });
+                    try {
+                        if (navigator.permissions && navigator.permissions.query) {
+                            await navigator.permissions.query({ name: 'clipboard-write' }).catch(() => {});
+                        }
+                    } catch (_) {}
+                    await navigator.clipboard.write([clipboardItem]);
+                    updateStatus('Imagem de captura copiada para a área de transferência');
+                    showCaptureCopyFeedback(id);
+                    return;
+                }
+
+                // Fallback: copiar URL da captura
+                await navigator.clipboard.writeText(item.url);
+                updateStatus('Link da imagem de captura copiado para a área de transferência');
+            } catch (err) {
+                console.error('Erro ao copiar captura:', err);
+                updateStatus('Não foi possível copiar a captura');
+            }
+        }
+
+        function showCaptureCopyFeedback(id) {
+            try {
+                const selector = `.image-item[data-capture-id="${CSS.escape(id)}"]`;
+                const itemEl = document.querySelector(selector);
+                if (!itemEl) return;
+                const fb = itemEl.querySelector('.copy-feedback');
+                if (!fb) return;
+                fb.classList.add('show');
+                if (fb.__hideTimer) clearTimeout(fb.__hideTimer);
+                fb.__hideTimer = setTimeout(() => {
+                    fb.classList.remove('show');
+                }, 3000);
+            } catch (e) {}
+        }
+
+        // Visualizar imagem de captura em modal leve
+        function openCaptureModal(id) {
+            try {
+                const item = capturedImages.find(ci => ci.id === id);
+                if (!item) return;
+                let overlay = document.getElementById('captureModalOverlay');
+                if (!overlay) {
+                    overlay = document.createElement('div');
+                    overlay.id = 'captureModalOverlay';
+                    overlay.className = 'modal-overlay';
+                    overlay.addEventListener('click', closeCaptureModal);
+                    document.body.appendChild(overlay);
+                }
+                overlay.innerHTML = '';
+                const content = document.createElement('div');
+                content.className = 'modal-content';
+                content.addEventListener('click', (e) => e.stopPropagation());
+                const closeBtn = document.createElement('button');
+                closeBtn.className = 'modal-close';
+                closeBtn.title = 'Fechar';
+                closeBtn.setAttribute('aria-label', 'Fechar');
+                closeBtn.textContent = 'X';
+                closeBtn.addEventListener('click', closeCaptureModal);
+                const wrapper = document.createElement('div');
+                wrapper.className = 'modal-image-wrapper';
+                const img = document.createElement('img');
+                img.className = 'modal-image';
+                img.src = item.url;
+                img.alt = 'Captura de Tela';
+                wrapper.appendChild(img);
+                const actions = document.createElement('div');
+                actions.className = 'modal-actions';
+                const delBtn = document.createElement('button');
+                delBtn.className = 'btn btn-danger';
+                delBtn.textContent = 'Excluir da galeria';
+                delBtn.addEventListener('click', () => { deleteCaptureImage(id); closeCaptureModal(); });
+                actions.appendChild(delBtn);
+                content.appendChild(closeBtn);
+                content.appendChild(wrapper);
+                content.appendChild(actions);
+                overlay.appendChild(content);
+                overlay.classList.add('active');
+            } catch (e) { console.error(e); }
+        }
+
+        function closeCaptureModal() {
+            const overlay = document.getElementById('captureModalOverlay');
+            if (overlay) overlay.classList.remove('active');
+        }
+
+        // Excluir imagem de captura
+        function deleteCaptureImage(id) {
+            try {
+                const idx = capturedImages.findIndex(ci => ci.id === id);
+                if (idx >= 0) {
+                    try { URL.revokeObjectURL(capturedImages[idx].url); } catch (e) {}
+                    capturedImages.splice(idx, 1);
+                    loadCaptureGallery();
+                    updateStatus('Captura removida da galeria');
+                }
+            } catch (e) { console.error(e); }
+        }
+
+        // Alternar modo da galeria
+        function setGalleryMode(mode) {
+            const m = (mode === 'captures') ? 'captures' : 'pdf';
+            galleryMode = m;
+            const switchBtn = document.getElementById('gallerySwitch');
+            const switchLabel = document.getElementById('gallerySwitchLabel');
+            if (switchBtn) switchBtn.setAttribute('aria-pressed', m === 'captures' ? 'true' : 'false');
+            if (switchLabel) switchLabel.textContent = (m === 'captures') ? 'Capturas de Tela Salvas' : 'Imagens Carregadas do PDF';
+            updateDeleteAllLabel();
+            try {
+                if (m === 'pdf') {
+                    loadImageGallery();
+                    updateImageCountInfo();
+                } else {
+                    loadCaptureGallery();
+                }
+            } catch (e) { console.error(e); }
+        }
+
+        function updateDeleteAllLabel() {
+            const btn = document.querySelector('.delete-all-btn');
+            if (!btn) return;
+            const span = btn.querySelector('span');
+            if (span) span.textContent = (galleryMode === 'captures') ? 'Excluir Todas as Capturas' : 'Excluir Todas as Imagens';
+            btn.title = (galleryMode === 'captures') ? 'Excluir todas as capturas' : 'Excluir todas as imagens';
+            btn.setAttribute('aria-label', btn.title);
+        }
+
+        function initGallerySwitch() {
+            const btn = document.getElementById('gallerySwitch');
+            const label = document.getElementById('gallerySwitchLabel');
+            if (!btn || !label) return;
+            btn.addEventListener('click', function(){
+                const pressed = this.getAttribute('aria-pressed') === 'true';
+                setGalleryMode(pressed ? 'pdf' : 'captures');
+            });
+        }
+
         // Drag and Drop handlers
         function handleDragStart(e) {
             this.classList.add('dragging');
-            e.dataTransfer.setData('text/plain', this.dataset.imageName);
+            if (this.dataset.imageName) {
+                e.dataTransfer.setData('text/plain', this.dataset.imageName);
+            }
+            if (this.dataset.captureUrl) {
+                try {
+                    e.dataTransfer.setData('text/uri-list', this.dataset.captureUrl);
+                    e.dataTransfer.setData('text/plain', this.dataset.captureUrl);
+                } catch (err) {}
+            }
         }
 
         function handleDragEnd(e) {
@@ -1509,9 +1854,14 @@
                 e.preventDefault();
                 structuredSummary.classList.remove('drag-over');
 
-                const imageName = e.dataTransfer.getData('text/plain');
-                if (imageName) {
-                    insertImageAtPosition(imageName, e.clientX, e.clientY);
+                const plain = e.dataTransfer.getData('text/plain');
+                const uri = e.dataTransfer.getData('text/uri-list');
+                const value = uri || plain || '';
+                if (!value) return;
+                if (/^(blob:|data:|https?:)/.test(value)) {
+                    insertCaptureImageAtPosition(value, e.clientX, e.clientY);
+                } else {
+                    insertImageAtPosition(value, e.clientX, e.clientY);
                 }
             });
         }
@@ -1565,6 +1915,44 @@
             }
         }
 
+        // Inserir imagem de captura (URL blob/data) na posição do mouse
+        function insertCaptureImageAtPosition(srcUrl, mouseX, mouseY) {
+            const structuredSummary = document.getElementById('structuredSummary');
+            const rect = structuredSummary.getBoundingClientRect();
+            const relativeY = mouseY - rect.top;
+
+            const img = document.createElement('img');
+            img.src = srcUrl;
+            img.alt = 'Captura';
+            img.style.maxWidth = '100%';
+            img.style.display = 'block';
+
+            // Inserir antes do nó de texto com Y mais próximo
+            const textNodes = getTextNodes(structuredSummary);
+            let targetNode = null;
+            let targetOffset = 0;
+            for (let i = 0; i < textNodes.length; i++) {
+                const range = document.createRange();
+                range.setStart(textNodes[i], 0);
+                range.setEnd(textNodes[i], textNodes[i].textContent.length);
+                const textRect = range.getBoundingClientRect();
+                if (relativeY <= textRect.bottom) {
+                    targetNode = textNodes[i];
+                    targetOffset = 0;
+                    break;
+                }
+            }
+            if (targetNode) {
+                const range = document.createRange();
+                range.setStart(targetNode, targetOffset);
+                range.collapse(true);
+                range.insertNode(img);
+            } else {
+                structuredSummary.appendChild(img);
+            }
+            updateStatus('Imagem de captura inserida');
+        }
+
         // Criar placeholder para imagem
         function createImagePlaceholder(imageName) {
             const placeholder = document.createElement('div');
@@ -1608,40 +1996,7 @@
             updateStatus('Todas as imagens removidas');
         }
 
-        // Persistir HTML atual do editor (Jodit) no backend
-        async function saveCurrentSummaryHTML(origin) {
-            try {
-                const el = document.getElementById('structuredSummary');
-                let htmlContent = '';
-                if (joditEditor && joditEditor.editorDocument && joditEditor.editorDocument.body) {
-                    htmlContent = joditEditor.editorDocument.body.innerHTML;
-                } else {
-                    htmlContent = el.innerHTML;
-                }
-
-                await fetch('/api/save-structured-summary', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ markdown: '', html: htmlContent })
-                });
-                updateStatus('Resumo salvo');
-            } catch (err) {
-                console.error('Falha ao salvar resumo estruturado:', err);
-                updateStatus('Falha ao salvar resumo');
-            }
-        }
-
-        // Debounce utilitário simples
-        function debounce(fn, delay) {
-            let t;
-            return function () {
-                const ctx = this, args = arguments;
-                clearTimeout(t);
-                t = setTimeout(function () { fn.apply(ctx, args); }, delay);
-            };
-        }
-
-        const saveCurrentSummaryHTMLDebounced = debounce(function(){ saveCurrentSummaryHTML('change'); }, 800);
+        
 
 
         // Gerar PDF final
@@ -1719,6 +2074,20 @@
             document.getElementById('imageCount').textContent = imagensPosicionadas.length;
         }
 
+        // Reconstruir lista de imagens posicionadas a partir do DOM do editor
+        function rebuildImagensPosicionadasFromDOM() {
+            try {
+                const root = (joditEditor && joditEditor.editorDocument && joditEditor.editorDocument.body)
+                    ? joditEditor.editorDocument.body
+                    : document.getElementById('structuredSummary');
+                const placeholders = root ? root.querySelectorAll('.image-placeholder') : [];
+                imagensPosicionadas = Array.from(placeholders)
+                    .map(ph => ph && ph.dataset ? ph.dataset.imageName : null)
+                    .filter(Boolean);
+                updateImageCount();
+            } catch (e) { /* noop */ }
+        }
+
         function updateStatus(message) {
             document.getElementById('status').textContent = message;
         }
@@ -1755,7 +2124,10 @@
 
         // Deletar imagem individual da galeria
         function deleteGalleryImage(imageName) {
-            if (confirm(`Tem certeza que deseja excluir a imagem ${imageName} da galeria?`)) {
+            const pretty = String(imageName)
+                .replace(/\.png$/i, '')
+                .replace(/^img_/i, 'imagem-');
+            if (confirm(`Tem certeza que deseja excluir a ${pretty} da galeria?`)) {
                 // Remover da estrutura de edição
                 const index = estruturaEdicao.images.indexOf(imageName);
                 if (index > -1) {
@@ -1873,20 +2245,31 @@
 
         // Deletar todas as imagens da galeria (inclui deleção física na pasta imagens_extraidas)
         async function deleteAllGalleryImages() {
-            if (confirm('Tem certeza que deseja excluir todas as imagens da galeria?')) {
-                try {
-                    updateStatus('Removendo todas as imagens da pasta...');
-                    const resp = await fetch('/api/delete-all-images', { method: 'POST' });
-                    if (!resp.ok) throw new Error('Falha ao deletar imagens no servidor');
-                } catch (err) {
-                    console.error(err);
+            if (galleryMode === 'pdf') {
+                if (confirm('Tem certeza que deseja excluir todas as imagens da Galeria?')) {
+                    try {
+                        updateStatus('Removendo todas as imagens da pasta...');
+                        const resp = await fetch('/api/delete-all-images', { method: 'POST' });
+                        if (!resp.ok) throw new Error('Falha ao deletar imagens no servidor');
+                    } catch (err) {
+                        console.error(err);
+                    }
+                    estruturaEdicao.images = [];
+                    window.__imageInfoLookup = {};
+                    loadImageGallery();
+                    updateImageCountInfo();
+                    updateStatus('Todas as imagens removidas da galeria');
+                    try { showGalleryEmptyState(); } catch (e) {}
                 }
-                estruturaEdicao.images = [];
-                window.__imageInfoLookup = {};
-                loadImageGallery();
-                updateImageCountInfo();
-                updateStatus('Todas as imagens removidas da galeria');
-                try { showGalleryEmptyState(); } catch (e) {}
+            } else {
+                if (confirm('Tem certeza que deseja excluir todas as capturas de tela?')) {
+                    try {
+                        capturedImages.forEach(ci => { try { URL.revokeObjectURL(ci.url); } catch (e) {} });
+                        capturedImages = [];
+                        loadCaptureGallery();
+                        updateStatus('Todas as capturas removidas');
+                    } catch (err) { console.error(err); }
+                }
             }
         }
 
@@ -1895,7 +2278,18 @@
             const actions = document.querySelector('.gallery-actions');
             const empty = document.getElementById('galleryEmptyState');
             if (actions) actions.style.display = 'none';
-            if (empty) empty.style.display = '';
+            if (empty) {
+                empty.style.display = '';
+                const msg = empty.querySelector('.gallery-empty-message');
+                const ctrls = empty.querySelector('.gallery-empty-controls');
+                if (galleryMode === 'pdf') {
+                    if (msg) msg.textContent = 'Você não tem mais imagens do PDF na galeria. Capture novas imagens usando o painel de captura ou clique no botão abaixo para recapturar automaticamente as imagens iniciais do PDF.';
+                    if (ctrls) ctrls.style.display = '';
+                } else {
+                    if (msg) msg.textContent = 'Nenhuma captura de tela salva. Use CAPTURAR IMAGEM e depois cole (Ctrl+V) para salvar aqui.';
+                    if (ctrls) ctrls.style.display = 'none';
+                }
+            }
         }
 
         function hideGalleryEmptyState() {
@@ -1927,7 +2321,16 @@
         // Recarregar imagens iniciais do PDF
         async function reloadInitialPdfImages() {
             try {
-                const res = await fetch('/temp_uploads/imagens_extraidas/imagens_info.json', { headers: { 'Accept': 'application/json' } });
+                // Resetar o viewer Adobe para permitir carregamento de novo PDF
+                try {
+                    if (typeof window.resetAdobeViewer === 'function') {
+                        window.resetAdobeViewer();
+                    }
+                } catch (e) {
+                    console.warn('Erro ao resetar Adobe viewer:', e);
+                }
+
+                const res = await fetch(`/temp_uploads/imagens_extraidas/imagens_info.json?v=${Date.now()}`, { headers: { 'Accept': 'application/json' } });
                 if (!res.ok) throw new Error('Falha ao carregar imagens iniciais');
                 const data = await res.json();
                 estruturaEdicao.imagens_info = data || {};
@@ -1935,13 +2338,22 @@
                 estruturaEdicao.images = images;
                 window.__imageInfoLookup = buildImagemInfoLookup(estruturaEdicao.imagens_info);
                 galleryCacheBust = Date.now();
-                loadImageGallery();
+                if (galleryMode === 'pdf') loadImageGallery();
                 updateImageCountInfo();
                 hideGalleryEmptyState();
                 updateStatus('Imagens iniciais do PDF recuperadas');
                 // Rótulo do PDF pode ter mudado
                 try { setCurrentPdfLabel(localStorage.getItem('selectedPdfName') || estruturaEdicao.pdf_name); } catch (e) {}
                 refreshPdfAvailability();
+
+                // Recarregar o PDF no viewer Adobe após resetar
+                try {
+                    if (typeof window.loadPdfForCapture === 'function') {
+                        window.loadPdfForCapture();
+                    }
+                } catch (e) {
+                    console.warn('Erro ao recarregar PDF no viewer:', e);
+                }
             } catch (err) {
                 console.error(err);
                 updateStatus('Não foi possível recuperar as imagens iniciais (verifique o PDF)');
@@ -1951,26 +2363,26 @@
         // Upload de PDF e recarregar imagens iniciais
         async function uploadPdfAndReload(file) {
             if (!file) return;
+            const fd = new FormData();
+            fd.append('originalPdf', file);
+
             try {
-                const fd = new FormData();
-                fd.append('originalPdf', file);
-                const resp = await fetch('/api/upload-pdf', { method: 'POST', body: fd });
-                if (resp && resp.ok) {
-                    const json = await resp.json().catch(() => null);
-                    if (json && json.filename) {
-                        try { localStorage.setItem('selectedPdfName', json.filename); } catch (e) {}
-                    } else {
-                        try { localStorage.setItem('selectedPdfName', file.name); } catch (e) {}
-                    }
-                    await reloadInitialPdfImages();
+                const response = await fetch('/api/upload-pdf', {
+                    method: 'POST',
+                    body: fd,
+                });
+
+                if (response.ok) {
+                    const result = await response.json();
+                    try { localStorage.setItem('selectedPdfName', result.filename); } catch (e) {}
                 } else {
-                    // Falha no backend: persistir apenas localmente e tentar recarregar
+                    console.error('Falha no upload do PDF');
                     try { localStorage.setItem('selectedPdfName', file.name); } catch (e) {}
-                    await reloadInitialPdfImages();
                 }
-            } catch (err) {
-                console.error('Erro no upload do PDF:', err);
+            } catch (error) {
+                console.error('Erro durante o upload do PDF:', error);
                 try { localStorage.setItem('selectedPdfName', file.name); } catch (e) {}
+            } finally {
                 await reloadInitialPdfImages();
             }
         }
@@ -2012,7 +2424,7 @@
             if (labelEl) {
                 // Obter informação da página com mapeamento robusto
                 const info = getImagePageInfo(name);
-                const displayName = (info && info.pagina != null) ? `${name} - Página ${info.pagina}` : name;
+                const displayName = (info && info.pagina != null) ? `${name.replace('.png', '')} - Página ${info.pagina}` : name.replace('.png', '');
                 labelEl.textContent = displayName;
             }
         }
@@ -2038,147 +2450,6 @@
             }, 0);
         }
 
-        // Controle de abas e captura de PDF (Adobe Embed API)
-         let pdfLoadedForCapture = false;
-         let adobeView = null;
-
-        function initAdobeViewer(url, fileName) {
-            const divId = 'adobe-dc-view';
-            const containerDiv = document.getElementById(divId);
-            if (!containerDiv || !url || typeof url !== 'string') return;
-
-            const pdfSection = document.getElementById('pdfCaptureSection');
-            const isSectionVisible = pdfSection && pdfSection.style.display !== 'none';
-            if (!isSectionVisible) return;
-
-            if (adobeView || pdfLoadedForCapture) return;
-
-            if (!window.AdobeDC || !AdobeDC.View) {
-                console.warn('AdobeDC View SDK não carregado.');
-                return;
-            }
-
-            try {
-                adobeView = new AdobeDC.View({ clientId: 'b06000c70bd143a0adc54a2f6d394b2a', divId });
-                adobeView.previewFile({
-                    content: { location: { url } },
-                    metaData: { fileName: fileName || 'documento.pdf' }
-                }, {
-                    embedMode: 'SIZED_CONTAINER',
-                    showDownloadPDF: true,
-                    showPrintPDF: true,
-                    showFullScreen: true
-                }).then(() => {
-                    pdfLoadedForCapture = true;
-                }).catch((e) => {
-                    console.error('Falha ao inicializar Adobe Viewer:', e);
-                });
-            } catch (e) {
-                console.error('Erro ao criar AdobeDC.View:', e);
-            }
-        }
-        function initEditorTabs() {
-            const tabEditor = document.getElementById('tabEditor');
-            const btnCapture = document.getElementById('btnCapture');
-            const editorSection = document.getElementById('editorSection');
-            const pdfSection = document.getElementById('pdfCaptureSection');
-            
-            let activeTab = 'editor';
-
-            function activate(tab) {
-                activeTab = tab;
-                tabEditor.classList.remove('active');
-                if (btnCapture) btnCapture.classList.remove('active');
-
-                if (tab === 'editor') {
-                    tabEditor.classList.add('active');
-                    editorSection.style.display = '';
-                    pdfSection.style.display = 'none';
-                } else {
-                    if (btnCapture) btnCapture.classList.add('active');
-                    editorSection.style.display = 'none';
-                    pdfSection.style.display = '';
-                    if (!pdfLoadedForCapture) {
-                        loadPdfForCapture();
-                    }
-                }
-            }
-
-            tabEditor.addEventListener('click', () => activate('editor'));
-            
-            if (btnCapture) {
-                btnCapture.disabled = false;
-                btnCapture.title = 'Abrir Visualizar PDF';
-                btnCapture.style.cursor = '';
-                btnCapture.addEventListener('click', () => {
-                    const sidebar = document.getElementById('sidebar');
-                    const toggleBtn = document.getElementById('sidebarToggle');
-                    const containerEl = document.querySelector('.container');
-                    if (sidebar && !sidebar.classList.contains('collapsed')) {
-                        sidebar.classList.add('collapsed');
-                        if (containerEl) containerEl.classList.add('sidebar-collapsed');
-                        if (toggleBtn) {
-                            toggleBtn.innerHTML = '<img src="../images/view_sidebar_gallery.svg" alt="Abrir Galeria" width="58" height="58" style="transform: rotate(180deg);" />';
-                            toggleBtn.title = 'Abrir Galeria';
-                            toggleBtn.setAttribute('aria-label', 'Abrir Galeria');
-                        }
-                    }
-                    activate('pdf');
-                });
-            }
-
-            // Estado inicial
-            activate('editor');
-        }
-
-        function loadPdfForCapture() {
-            const container = document.getElementById('pdfCaptureContainer');
-            if (!container) return;
-
-            // Descobrir caminho do PDF
-            const candidatePaths = [];
-            const selectedName = (() => { try { return localStorage.getItem('selectedPdfName'); } catch (e) { return null; } })();
-            const uploadDir = (estruturaEdicao && estruturaEdicao.upload_dir) ? estruturaEdicao.upload_dir : 'temp_uploads';
-            if (selectedName && selectedName.trim()) {
-                const encoded = encodeURIComponent(selectedName.trim());
-                candidatePaths.push(`/${uploadDir}/${encoded}`);
-                candidatePaths.push(`/temp_uploads/${encoded}`);
-            }
-            try {
-                if (estruturaEdicao && estruturaEdicao.pdf_path) {
-                    candidatePaths.push(estruturaEdicao.pdf_path);
-                }
-                if (estruturaEdicao && estruturaEdicao.upload_dir) {
-                    candidatePaths.push(`/${estruturaEdicao.upload_dir}/arquivoteste.pdf`);
-                }
-            } catch (e) {}
-            candidatePaths.push('/temp_uploads/arquivoteste.pdf');
-
-            // Tentar carregar o primeiro disponível usando Adobe Embed API
-            const tryLoad = (idx) => {
-                if (idx >= candidatePaths.length) {
-                    container.innerHTML = `
-                        <div class="pdf-error">
-                            <p>Não foi possível localizar o PDF para captura.</p>
-                        </div>
-                    `;
-                    return;
-                }
-                const url = candidatePaths[idx];
-                fetch(url, { method: 'HEAD' })
-                    .then(resp => {
-                        if (resp.ok) {
-                            const fileName = selectedName && selectedName.trim() ? selectedName.trim() : (url.split('/').pop() || 'documento.pdf');
-                            initAdobeViewer(url, fileName);
-                        } else {
-                            throw new Error('PDF não encontrado');
-                        }
-                    })
-                    .catch(() => tryLoad(idx + 1));
-            };
-
-            tryLoad(0);
-        }
 
         function renderAllPagesCapture() {
             const container = document.getElementById('pdfCaptureContainer');
@@ -2246,88 +2517,11 @@
             });
         }
 
-        // Função para alternar modo tela cheia (PDF Viewer)
-        function toggleFullscreenMode() {
-            const container = document.querySelector('.container');
-            const btnFullscreen = document.getElementById('btnFullscreen');
-            const btnText = btnFullscreen.querySelector('span');
-            const btnIcon = btnFullscreen.querySelector('img');
-            
-            if (container.classList.contains('fullscreen-mode')) {
-                // Sair do modo tela cheia
-                container.classList.remove('fullscreen-mode');
-                btnText.textContent = 'MODO TELA CHEIA';
-                btnIcon.src = '../images/zoom_out_map.svg';
-                btnIcon.alt = 'Modo tela cheia';
-                btnFullscreen.title = 'Modo tela cheia';
-                btnFullscreen.setAttribute('aria-label', 'Modo tela cheia');
-            } else {
-                // Entrar no modo tela cheia
-                container.classList.add('fullscreen-mode');
-                btnText.textContent = 'TELA NORMAL';
-                btnIcon.src = '../images/zoom_in_map.svg';
-                btnIcon.alt = 'Sair do modo tela cheia';
-                btnFullscreen.title = 'Sair do modo tela cheia';
-                btnFullscreen.setAttribute('aria-label', 'Sair do modo tela cheia');
-            }
-            if (typeof updateGoTopVisibility === 'function') updateGoTopVisibility();
-        }
+        
 
         
 
-        // Inicializar Jodit (Document Mode) no structuredSummary
-        let joditEditor = null;
-        function initJoditDocumentMode() {
-            const el = document.getElementById('structuredSummary');
-            if (!el) return;
-            if (joditEditor) return;
-
-            joditEditor = Jodit.make('#structuredSummary', {
-                language: 'pt_br',
-                iframe: true,
-                height: 500,
-                toolbarButtonSize: 'small',
-                iframeCSSLinks: [
-                    'https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;700&display=swap'
-                ],
-                iframeStyle: `
-                    body.jodit-wysiwyg { font-family: 'Noto Sans', Arial, sans-serif; color:#222; line-height:1.5; }
-                    img { max-width: 100%; height: auto; }
-                    h1 { font-size: 1.4em; }
-                    h2 { font-size: 1.2em; }
-                    h3 { font-size: 1.1em; }
-                    table { border-collapse: collapse; }
-                    th, td { border: 1px solid #444; text-align: center; }
-                    thead tr, th { background-color: #cfe0ff; }
-                `,
-                events: {
-                    afterInit: function(editor){
-                        try {
-                            const doc = editor.editorDocument;
-                            if (doc && doc.body) {
-                                doc.body.addEventListener('dragover', function(e){ e.preventDefault(); });
-                                doc.body.addEventListener('drop', function(e){
-                                    e.preventDefault();
-                                    const imageName = e.dataTransfer && e.dataTransfer.getData('text/plain');
-                                    if (imageName) {
-                                        const ph = createImagePlaceholder(imageName);
-                                        const html = ph.outerHTML + '<br />';
-                                        editor.selection.focus();
-                                        editor.selection.insertHTML(html);
-                                        imagensPosicionadas.push(imageName);
-                                        updateImageCount();
-                                        updateStatus(`Imagem ${imageName} inserida`);
-                                    }
-                                });
-                            }
-                        } catch (e) {}
-                    },
-                    change: function(){ try { saveCurrentSummaryHTMLDebounced(); } catch (e) {} },
-                    paste: function(){ try { saveCurrentSummaryHTMLDebounced(); } catch (e) {} },
-                    blur: function(){ try { saveCurrentSummaryHTMLDebounced(); } catch (e) {} }
-                }
-            });
-        }
+        
 
         // Inicializar editor e abas
         document.addEventListener('DOMContentLoaded', function () {
@@ -2339,19 +2533,7 @@
                 });
             }
 
-            // Banner informativo do editor (fechar e persistir)
-            const pageInfo = document.getElementById('pageInfo');
-            const pageInfoClose = document.getElementById('pageInfoClose');
-            try {
-                const hidePageInfo = localStorage.getItem('hidePageInfo');
-                if (hidePageInfo === '1' && pageInfo) pageInfo.style.display = 'none';
-            } catch (e) {}
-            if (pageInfoClose && pageInfo) {
-                pageInfoClose.addEventListener('click', function () {
-                    pageInfo.style.display = 'none';
-                    try { localStorage.setItem('hidePageInfo', '1'); } catch (e) {}
-                });
-            }
+            // (Removido) Banner informativo do editor
 
             // Mostrar loader da galeria por 3 segundos
             const galleryLoading = document.getElementById('galleryLoading');
@@ -2365,62 +2547,21 @@
                 }, 3000);
             }
 
-            // Toggle de retração/expansão da galeria
-            const sidebar = document.getElementById('sidebar');
-            const toggleBtn = document.getElementById('sidebarToggle');
-            const containerEl = document.querySelector('.container');
-            function setToggleState(collapsed) {
-                if (!toggleBtn || !sidebar) return;
-                if (collapsed) {
-                    toggleBtn.innerHTML = '<img src="../images/view_sidebar_gallery.svg" alt="Abrir Galeria" width="58" height="58" style="transform: rotate(180deg);" />';
-                    toggleBtn.title = 'Abrir Galeria';
-                    toggleBtn.setAttribute('aria-label', 'Abrir Galeria');
-                } else {
-                    toggleBtn.innerHTML = '<img src="../images/close_small.svg" alt="Retrair Galeria" width="56" height="56" style="transform: rotate(180deg);" />';
-                    toggleBtn.title = 'Retrair Galeria';
-                    toggleBtn.setAttribute('aria-label', 'Retrair Galeria');
-                }
-            }
-            setToggleState(false);
-            if (toggleBtn && sidebar) {
-                toggleBtn.addEventListener('click', () => {
-                    const isCollapsed = sidebar.classList.toggle('collapsed');
-                    setToggleState(isCollapsed);
-                    if (containerEl) {
-                        containerEl.classList.toggle('sidebar-collapsed', isCollapsed);
-                    }
-                });
-            }
+            // Controle de retração/expansão da galeria movido para main.js (orquestrador)
 
-            loadEditorData().finally(() => { try { initJoditDocumentMode(); } catch (e) {} });
-            // Salvar ao sair da página (mantém formatação após reload)
+            // Salvar ao sair da página usando função modular
             window.addEventListener('beforeunload', function(){
                 try {
-                    const el = document.getElementById('structuredSummary');
-                    let htmlContent = '';
-                    if (joditEditor && joditEditor.editorDocument && joditEditor.editorDocument.body) {
-                        htmlContent = joditEditor.editorDocument.body.innerHTML;
-                    } else {
-                        htmlContent = el.innerHTML;
+                    if (window.saveCurrentSummaryHTML) {
+                        window.saveCurrentSummaryHTML('beforeunload');
                     }
-                    fetch('/api/save-structured-summary', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ markdown: '', html: htmlContent }),
-                        keepalive: true
-                    });
                 } catch (e) {}
             });
 
-            // Removidos handlers dos botões SALVAR e BAIXAR EM PDF (não são mais necessários)
-             setupDropZones();
-             initEditorTabs();
+             // Removidos handlers dos botões SALVAR e BAIXAR EM PDF (não são mais necessários)
+             // Orquestração das abas/galeria e drop zones realizada em main.js
 
-             // Event listener para o botão de modo tela cheia (PDF Viewer)
-             const btnFullscreen = document.getElementById('btnFullscreen');
-             if (btnFullscreen) {
-                 btnFullscreen.addEventListener('click', toggleFullscreenMode);
-             }
+             // Listener de fullscreen é definido pelo orquestrador (main.js)
 
              // Controle do estado vazio: botão para recapturar imagens iniciais
              const btnRecoverInitialImages = document.getElementById('btnRecoverInitialImages');
@@ -2519,22 +2660,386 @@
              // Sticky toolbar fallback removido (era específico do Summernote). Jodit gerencia sua própria toolbar.
 
              const btnCaptureImage = document.getElementById('btnCaptureImage');
-            if (btnCaptureImage) {
-                btnCaptureImage.addEventListener('click', function () {
-                    try {
-                        const a = document.createElement('a');
-                        a.href = 'ms-screenclip:';
-                        a.style.display = 'none';
-                        document.body.appendChild(a);
-                        a.click();
-                        document.body.removeChild(a);
-                    } catch (e) {
-                        console.warn('Screen Snip não pôde ser iniciado:', e);
+             if (btnCaptureImage) {
+                 btnCaptureImage.addEventListener('click', function () {
+                     try {
+                         const a = document.createElement('a');
+                         a.href = 'ms-screenclip:';
+                         a.style.display = 'none';
+                         document.body.appendChild(a);
+                         a.click();
+                         document.body.removeChild(a);
+                         // Preparar para salvar a captura
+                         setGalleryMode('captures');
+                         updateStatus('Após capturar, pressione Ctrl+V para salvar a imagem na galeria de capturas.');
+                     } catch (e) {
+                         console.warn('Screen Snip não pôde ser iniciado:', e);
+                     }
+                 });
+             }
+
+             // Salvar capturas via evento de paste (clipboard image)
+             window.addEventListener('paste', async function(e){
+                try {
+                    const dt = e.clipboardData || window.clipboardData;
+                    if (!dt || !dt.items) return;
+                    let file = null;
+                    for (let i = 0; i < dt.items.length; i++) {
+                        const it = dt.items[i];
+                        if (it.type && (it.type.startsWith('image/png') || it.type.startsWith('image/jpeg'))) {
+                            file = it.getAsFile();
+                            break;
+                        }
                     }
-                });
-            }
+                    if (!file) return;
+                    e.preventDefault();
+                    const blob = file;
+                    const url = URL.createObjectURL(blob);
+                    const id = 'cap_' + Date.now() + '_' + (capturedImages.length + 1);
+                    capturedImages.push({ id, blob, url, createdAt: Date.now() });
+                    setGalleryMode('captures');
+                    updateStatus('Captura salva na galeria');
+                } catch (err) { console.error(err); }
+             });
+
+            // Botões de Projeto: abrir modais
+            const btnSaveProjectState = document.getElementById('btnSaveProjectState');
+            const btnSavedStates = document.getElementById('btnSavedStates');
+            const confirmSaveProjectBtn = document.getElementById('confirmSaveProjectBtn');
+            if (btnSaveProjectState) btnSaveProjectState.addEventListener('click', function(){
+                const current = getCurrentProject();
+                if (current && current.slug) {
+                    // Salvar diretamente no projeto atual, sem abrir modal
+                    saveProjectStateImmediate(current);
+                } else {
+                    // Sem projeto atual carregado: abrir modal para nomear
+                    openProjectSaveModal();
+                }
+            });
+            if (btnSavedStates) btnSavedStates.addEventListener('click', openSavedStatesModal);
+            if (confirmSaveProjectBtn) confirmSaveProjectBtn.addEventListener('click', saveProjectState);
         });
+
+        // ---- Fluxo de Projetos Salvos (Estados do Editor) ----
+        function openProjectSaveModal() {
+            const modal = document.getElementById('projectSaveModal');
+            if (modal) modal.classList.add('active');
+            const input = document.getElementById('projectNameInput');
+            if (input) {
+                input.value = '';
+                input.focus();
+            }
+        }
+        function closeProjectSaveModal() {
+            const modal = document.getElementById('projectSaveModal');
+            if (modal) modal.classList.remove('active');
+        }
+        function openSavedStatesModal() {
+            const modal = document.getElementById('savedStatesModal');
+            if (modal) modal.classList.add('active');
+            loadSavedStates();
+        }
+        function closeSavedStatesModal() {
+            const modal = document.getElementById('savedStatesModal');
+            if (modal) modal.classList.remove('active');
+        }
+
+        // Modal de sucesso com timeout
+        function showSuccessModal(message) {
+            const modal = document.getElementById('successModal');
+            const msgEl = document.getElementById('successMessage');
+            if (msgEl) msgEl.textContent = message || 'Operação concluída com sucesso.';
+            if (modal) {
+                modal.classList.add('active');
+                setTimeout(() => { closeSuccessModal(); }, 3000);
+            }
+        }
+        function closeSuccessModal() {
+            const modal = document.getElementById('successModal');
+            if (modal) modal.classList.remove('active');
+        }
+
+        // Rastreamento do projeto atual em uso
+        function setCurrentProject(slug, name) {
+            try {
+                localStorage.setItem('currentProjectSlug', slug || '');
+                localStorage.setItem('currentProjectName', name || '');
+            } catch (e) {}
+        }
+        function getCurrentProject() {
+            try {
+                const slug = localStorage.getItem('currentProjectSlug');
+                const name = localStorage.getItem('currentProjectName');
+                if (slug) return { slug, name };
+            } catch (e) {}
+            return null;
+        }
+        function clearCurrentProject() {
+            try {
+                localStorage.removeItem('currentProjectSlug');
+                localStorage.removeItem('currentProjectName');
+            } catch (e) {}
+        }
+
+        function slugifyProjectName(name) {
+            try {
+                const base = String(name || '').toLowerCase().trim()
+                    .replace(/[\s/\\]+/g, '-')
+                    .replace(/[^a-z0-9._-]/g, '')
+                    .slice(0, 64);
+                return base || ('projeto-' + Date.now());
+            } catch (e) {
+                return 'projeto-' + Date.now();
+            }
+        }
+
+        async function uploadProjectImage(slug, blob, preferredName) {
+            const fd = new FormData();
+            fd.append('project', slug);
+            const fname = preferredName || ('capture_' + Date.now() + '.png');
+            fd.append('file', blob, fname);
+            const resp = await fetch('/api/editor-state/save-image', { method: 'POST', body: fd });
+            if (!resp.ok) throw new Error('Falha ao enviar imagem do projeto');
+            return resp.json();
+        }
+
+        async function prepareHtmlForProjectSave(slug) {
+            // Clonar HTML atual do editor para processamento
+            const root = (joditEditor && joditEditor.editorDocument && joditEditor.editorDocument.body)
+                ? joditEditor.editorDocument.body
+                : document.getElementById('structuredSummary');
+            const container = document.createElement('div');
+            container.innerHTML = root ? root.innerHTML : '';
+
+            const imgs = Array.from(container.querySelectorAll('img'));
+            const galleryImagesToCopy = [];
+            let uploadIndex = 0;
+            for (const img of imgs) {
+                const src = img.getAttribute('src') || '';
+                if (!src) continue;
+                // Imagens da galeria (persistentes): copiar para pasta do projeto
+                if (src.startsWith('/temp_uploads/imagens_extraidas/')) {
+                    const base = src.split('/').pop().split('?')[0];
+                    if (base) {
+                        galleryImagesToCopy.push(base);
+                        img.setAttribute('src', `/temp_uploads/editor_states/${slug}/images/${base}`);
+                    }
+                    continue;
+                }
+                // Imagens blob/data: enviar para servidor
+                if (src.startsWith('blob:') || src.startsWith('data:')) {
+                    try {
+                        const r = await fetch(src);
+                        const b = await r.blob();
+                        const name = `capture_${Date.now()}_${++uploadIndex}.png`;
+                        const up = await uploadProjectImage(slug, b, name);
+                        if (up && up.path) img.setAttribute('src', up.path);
+                    } catch (e) {
+                        console.warn('Falha ao persistir imagem blob/data:', e);
+                    }
+                }
+            }
+
+            return { html: container.innerHTML, galleryImages: galleryImagesToCopy };
+        }
+
+        async function saveProjectState() {
+            try {
+                const input = document.getElementById('projectNameInput');
+                const projectName = input ? input.value.trim() : '';
+                if (!projectName) {
+                    updateStatus('Informe um nome para o projeto');
+                    return;
+                }
+                const slug = slugifyProjectName(projectName);
+                updateStatus('Preparando imagens e conteúdo para salvar...');
+                const prepared = await prepareHtmlForProjectSave(slug);
+                const pdfName = (() => {
+                    try { const s = localStorage.getItem('selectedPdfName'); if (s) return s; } catch (e) {}
+                    return estruturaEdicao && estruturaEdicao.pdf_name ? estruturaEdicao.pdf_name : null;
+                })();
+
+                const payload = { name: projectName, html: prepared.html, pdf_name: pdfName, gallery_images: prepared.galleryImages };
+                const resp = await fetch('/api/editor-state/save', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                if (!resp.ok) throw new Error('Falha ao salvar projeto');
+                const data = await resp.json();
+                updateStatus('Projeto salvo com sucesso');
+                // Marcar projeto atual em uso
+                setCurrentProject(data.slug || slug, projectName);
+                // Mostrar modal de sucesso
+                showSuccessModal('Projeto salvo com sucesso');
+                closeProjectSaveModal();
+            } catch (err) {
+                console.error(err);
+                updateStatus('Erro ao salvar projeto');
+            }
+        }
+
+        // Salvar diretamente no projeto atual sem abrir modal
+        async function saveProjectStateImmediate(current) {
+            try {
+                const name = current && current.name ? current.name : '';
+                const slug = current && current.slug ? current.slug : slugifyProjectName(name || ('projeto-' + Date.now()));
+                updateStatus('Preparando imagens e conteúdo para salvar...');
+                const prepared = await prepareHtmlForProjectSave(slug);
+                const pdfName = (() => {
+                    try { const s = localStorage.getItem('selectedPdfName'); if (s) return s; } catch (e) {}
+                    return estruturaEdicao && estruturaEdicao.pdf_name ? estruturaEdicao.pdf_name : null;
+                })();
+                const payload = { name: name || slug, html: prepared.html, pdf_name: pdfName, gallery_images: prepared.galleryImages };
+                const resp = await fetch('/api/editor-state/save', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                if (!resp.ok) throw new Error('Falha ao salvar projeto');
+                const data = await resp.json();
+                // Atualizar projeto atual em uso
+                setCurrentProject(data.slug || slug, name || slug);
+                updateStatus('Projeto salvo com sucesso');
+                showSuccessModal('Projeto salvo com sucesso');
+            } catch (err) {
+                console.error(err);
+                updateStatus('Erro ao salvar projeto');
+            }
+        }
+
+        async function loadSavedStates() {
+            try {
+                const listEl = document.getElementById('savedStatesList');
+                if (!listEl) return;
+                listEl.innerHTML = '<p>Carregando projetos...</p>';
+                const resp = await fetch('/api/editor-state/list');
+                if (!resp.ok) throw new Error('Falha ao listar projetos');
+                const data = await resp.json();
+                renderSavedStates(Array.isArray(data.items) ? data.items : []);
+            } catch (e) {
+                const listEl = document.getElementById('savedStatesList');
+                if (listEl) listEl.innerHTML = '<p>Não foi possível carregar a lista.</p>';
+            }
+        }
+
+        function renderSavedStates(items) {
+            const listEl = document.getElementById('savedStatesList');
+            if (!listEl) return;
+            listEl.innerHTML = '';
+            if (!items.length) {
+                listEl.innerHTML = '<p>Nenhum projeto salvo.</p>';
+                return;
+            }
+            for (const it of items) {
+                const row = document.createElement('div');
+                row.style.display = 'flex';
+                row.style.justifyContent = 'space-between';
+                row.style.alignItems = 'center';
+                row.style.gap = '14px';
+                row.style.width = '100%';
+                row.style.padding = '8px 0';
+                const left = document.createElement('div');
+                left.style.flex = '1';
+                const dt = it.saved_at ? new Date(it.saved_at) : null;
+                const dtStr = dt ? dt.toLocaleString() : '';
+                left.innerHTML = `<strong>${it.name || it.slug}</strong>${dtStr ? ' • ' + dtStr : ''}${it.pdf_name ? ' • ' + it.pdf_name : ''}`;
+                const actions = document.createElement('div');
+                actions.style.display = 'flex';
+                actions.style.gap = '10px';
+                const btnCont = document.createElement('button');
+                btnCont.className = 'btn btn-secondary';
+                btnCont.innerHTML = '<img src="/images/editor_resumo.svg" alt="Continuar" class="btn-icon-small" /> <span>CONTINUAR</span>';
+                btnCont.style.padding = '4px 8px';
+                btnCont.title = 'Recuperar a edição e continuar de onde você parou';
+                btnCont.addEventListener('click', () => continueEditingState(it.slug));
+                const btnDel = document.createElement('button');
+                btnDel.className = 'btn btn-danger';
+                btnDel.innerHTML = '<img src="/images/delete_all_items.svg" alt="Excluir" class="btn-icon-small" /> <span>EXCLUIR</span>';
+                btnDel.title = 'Excluir este Projeto/Resumo';
+                btnDel.style.padding = '4px 8px';
+                btnDel.addEventListener('click', () => deleteSavedState(it.slug));
+                actions.appendChild(btnCont);
+                actions.appendChild(btnDel);
+                row.appendChild(left);
+                row.appendChild(actions);
+                listEl.appendChild(row);
+            }
+        }
+
+        async function continueEditingState(slug) {
+            try {
+                const resp = await fetch('/api/editor-state/' + encodeURIComponent(slug));
+                if (!resp.ok) throw new Error('Falha ao carregar projeto salvo');
+                const data = await resp.json();
+                const html = data && data.html ? data.html : '';
+                if (joditEditor) {
+                    try { joditEditor.value = html; } catch (e) {}
+                    try {
+                        if (joditEditor.editorDocument && joditEditor.editorDocument.body) {
+                            joditEditor.editorDocument.body.innerHTML = html;
+                        }
+                    } catch (e) {}
+                } else {
+                    const el = document.getElementById('structuredSummary');
+                    if (el) el.innerHTML = html;
+                }
+                try { rebuildImagensPosicionadasFromDOM(); } catch (e) {}
+                const pdfName = data && data.meta && data.meta.pdf_name ? data.meta.pdf_name : null;
+                if (pdfName) {
+                    try { localStorage.setItem('selectedPdfName', pdfName); } catch (e) {}
+                    setCurrentPdfLabel(pdfName);
+                }
+                // Marcar projeto atual em uso
+                const projName = data && data.meta && data.meta.name ? data.meta.name : slug;
+                setCurrentProject(slug, projName);
+                updateStatus('Projeto carregado');
+                showSuccessModal('Projeto carregado com sucesso');
+                closeSavedStatesModal();
+            } catch (e) {
+                console.error(e);
+                updateStatus('Erro ao carregar projeto salvo');
+            }
+        }
+
+        async function deleteSavedState(slug) {
+            try {
+                if (!slug) return;
+                const ok = window.confirm('Tem certeza que deseja excluir este projeto?');
+                if (!ok) return;
+                const resp = await fetch('/api/editor-state/' + encodeURIComponent(slug), { method: 'DELETE' });
+                if (!resp.ok) throw new Error('Falha ao excluir projeto');
+                updateStatus('Projeto excluído');
+                // Se o projeto excluído for o atual, limpar referência
+                const current = getCurrentProject();
+                if (current && current.slug === slug) clearCurrentProject();
+                showSuccessModal('Projeto excluído com sucesso');
+                // Verificar se ainda existem projetos; se não houver, fechar a modal
+                try {
+                    const listResp = await fetch('/api/editor-state/list');
+                    if (listResp.ok) {
+                        const data = await listResp.json();
+                        const count = (typeof data.count === 'number') ? data.count : (Array.isArray(data.items) ? data.items.length : 0);
+                        if (count === 0) {
+                            closeSavedStatesModal();
+                        } else {
+                            loadSavedStates();
+                        }
+                    } else {
+                        // Fallback: atualizar lista
+                        loadSavedStates();
+                    }
+                } catch (e) {
+                    // Em caso de erro ao listar, manter comportamento atual
+                    loadSavedStates();
+                }
+            } catch (e) {
+                console.error(e);
+                updateStatus('Erro ao excluir projeto');
+            }
+        }
     </script>
+    <script type="module" src="/static/js/editor/main.js?v=7&t=1761947123"></script>
 </body>
 
 </html>

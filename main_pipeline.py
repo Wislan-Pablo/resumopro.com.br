@@ -3,7 +3,18 @@ import fitz
 import json
 from dotenv import load_dotenv
 from fastapi import WebSocket
-from main import ConnectionManager # Importar ConnectionManager
+import logging
+
+def setup_logging():
+    logging.basicConfig(
+        level=logging.INFO,
+        format="[%(levelname)s] %(message)s",
+        handlers=[
+            logging.StreamHandler()
+        ]
+    )
+
+from websocket_manager import ConnectionManager # Importar ConnectionManager
 
 
 # --- ETAPA DE CARREGAMENTO DE AMBIENTE E API ---
