@@ -18,7 +18,14 @@ export function initAdobeViewer(url, fileName) {
     .then(() => {
       if (state.adobeView || state.pdfLoadedForCapture) return;
       try {
-        const view = new AdobeDC.View({ clientId: 'b06000c70bd143a0adc54a2f6d394b2a', divId });
+        // Seleciona o clientId conforme o hostname para permitir desenvolvimento em localhost
+        const hostname = (window && window.location && window.location.hostname) || '';
+        const CLIENT_ID_LOCALHOST = '6bd75db0774d4c1da4477dcbd0904aaf';
+        const CLIENT_ID_PROD = 'b06000c70bd143a0adc54a2f6d394b2a';
+        const selectedClientId = (hostname === 'localhost' || hostname === '127.0.0.1')
+          ? CLIENT_ID_LOCALHOST
+          : CLIENT_ID_PROD;
+        const view = new AdobeDC.View({ clientId: selectedClientId, divId });
         setAdobeView(view);
 
         // Atualiza o título da toolbar com o nome do PDF em uso (sem extensão) e ícone

@@ -204,7 +204,7 @@ export function renderSavedStates(items) {
   if (!listEl) return;
   listEl.innerHTML = '';
   if (!items.length) {
-    listEl.innerHTML = '<p>Nenhum projeto salvo.</p>';
+    listEl.innerHTML = '<p class="saved-states-empty">Você não tem nenhum Projeto Salvo ainda. Use o <strong>Editor</strong> para começar uma nova edição de texto e depois clique no botão "<strong>Salvar Projeto</strong>" no menu superior.</p>';
     return;
   }
   for (const it of items) {

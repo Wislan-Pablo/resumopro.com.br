@@ -1,6 +1,6 @@
 import { state, setJoditEditor } from './state.js';
 import { updateStatus, updateImageCount, debounce } from './utils.js';
-import { createImagePlaceholder } from './gallery.js';
+import { createImagePlaceholder, setGalleryMode, loadCaptureGallery } from './gallery.js';
 
 export async function saveCurrentSummaryHTML(origin) {
   try {
@@ -41,6 +41,9 @@ export function initJoditDocumentMode() {
     iframe: true,
     height: 500,
     toolbarButtonSize: 'small',
+    askBeforePasteHTML: false,
+    askBeforePasteFromWord: false,
+    defaultActionOnPaste: 'insert_as_html',
     iframeCSSLinks: [
       'https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;700&display=swap'
     ],
@@ -85,7 +88,51 @@ export function initJoditDocumentMode() {
         } catch (e) {}
       },
       change: function () { try { saveCurrentSummaryHTMLDebounced(); } catch (e) {} },
-      paste: function () { try { saveCurrentSummaryHTMLDebounced(); } catch (e) {} },
+      paste: function (e) {
+        try {
+          // Somente tratar inserção de imagem quando a captura foi iniciada via botão
+          const shouldHandleCapture = !!state.captureTriggeredByButton;
+          const dt = e && (e.clipboardData || window.clipboardData);
+          const items = dt && dt.items;
+          let file = null;
+          if (items && items.length) {
+            for (let i = 0; i < items.length; i++) {
+              const it = items[i];
+              if (it && it.type && (it.type.startsWith('image/png') || it.type.startsWith('image/jpeg'))) {
+                file = it.getAsFile();
+                break;
+              }
+            }
+          }
+
+          if (shouldHandleCapture && file) {
+            // Inserir imagem no editor e salvar na galeria somente quando colado no Jodit
+            e.preventDefault();
+            const blob = file;
+            const url = URL.createObjectURL(blob);
+            const id = 'cap_' + Date.now() + '_' + (state.capturedImages.length + 1);
+            state.capturedImages.push({ id, blob, url, createdAt: Date.now() });
+            try { setGalleryMode('captures'); loadCaptureGallery(); } catch (_) {}
+            try {
+              const editorInstance = state.joditEditor;
+              if (editorInstance && editorInstance.selection) {
+                editorInstance.selection.focus();
+                const html = `<img src="${url}" alt="Captura" style="max-width:100%;display:block;"/><br />`;
+                editorInstance.selection.insertHTML(html);
+              }
+            } catch (_) {}
+            updateStatus('Captura colada: inserida no editor e salva na galeria');
+            state.captureTriggeredByButton = false;
+            try { saveCurrentSummaryHTMLDebounced(); } catch (_) {}
+            return;
+          }
+
+          // Fluxo padrão: não bloquear colagens que não são parte da captura
+          try { saveCurrentSummaryHTMLDebounced(); } catch (_) {}
+        } catch (err) {
+          try { saveCurrentSummaryHTMLDebounced(); } catch (_) {}
+        }
+      },
       blur: function () { try { saveCurrentSummaryHTMLDebounced(); } catch (e) {} }
     }
   });

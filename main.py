@@ -475,24 +475,20 @@ async def save_structured_summary(request_data: dict):
     """Salva o resumo estruturado com formatação HTML completa."""
     try:
         markdown_content = request_data.get('markdown', '')
-        html_content = request_data.get('html', '')
+        # html_content é ignorado definitivamente — não geramos mais o arquivo HTML
         
-        # Salvar o Markdown (como antes)
-        markdown_path = os.path.join(UPLOAD_DIR, "resumo_notebooklm_normalized.md")
-        with open(markdown_path, 'w', encoding='utf-8') as f:
-            f.write(markdown_content)
+        # Salvar apenas o Markdown quando houver conteúdo
+        if markdown_content and markdown_content.strip():
+            markdown_path = os.path.join(UPLOAD_DIR, "resumo_notebooklm_normalized.md")
+            with open(markdown_path, 'w', encoding='utf-8') as f:
+                f.write(markdown_content)
+            print(f"[TRACE] Resumo estruturado salvo (Markdown): {markdown_path}")
+        else:
+            print("[TRACE] Ignorado salvamento de Markdown vazio em /api/save-structured-summary")
         
-        # Salvar o HTML formatado
-        html_path = os.path.join(UPLOAD_DIR, "resumo_estruturado_formatado.html")
-        with open(html_path, 'w', encoding='utf-8') as f:
-            f.write(html_content)
-        
-        print(f"[TRACE] Resumo estruturado salvo:")
-        print(f"  - Markdown: {markdown_path}")
-        print(f"  - HTML: {html_path}")
-        
-        return {"status": "success", "message": "Resumo estruturado salvo com sucesso"}
-        
+        # Não gerar mais 'resumo_estruturado_formatado.html'
+        return {"status": "success", "message": "Resumo estruturado salvo (HTML descontinuado)"}
+    
     except Exception as e:
         print(f"Erro ao salvar resumo estruturado: {e}")
         raise HTTPException(status_code=500, detail="Erro interno ao salvar resumo estruturado")
@@ -771,12 +767,8 @@ async def get_preview_data():
                 print(f"Erro ao listar imagens no fallback: {e}")
                 imagens = []
         resumo_text = ""
-        resumo_html_path = os.path.join(UPLOAD_DIR, "resumo_estruturado_formatado.html")
         resumo_md_path = os.path.join(UPLOAD_DIR, "resumo_notebooklm_normalized.md")
-        if os.path.exists(resumo_html_path):
-            with open(resumo_html_path, 'r', encoding='utf-8') as f:
-                resumo_text = f.read()
-        elif os.path.exists(resumo_md_path):
+        if os.path.exists(resumo_md_path):
             with open(resumo_md_path, 'r', encoding='utf-8') as f:
                 resumo_text = f.read()
         return {
@@ -845,21 +837,13 @@ async def get_editor_data():
             except Exception:
                 pass
 
-        # Carregar o resumo estruturado com formatação HTML se existir
-        resumo_html_path = os.path.join(UPLOAD_DIR, "resumo_estruturado_formatado.html")
-        if os.path.exists(resumo_html_path):
-            with open(resumo_html_path, 'r', encoding='utf-8') as f:
-                resumo_html = f.read()
-            estrutura['resumo_text'] = resumo_html
-            estrutura['resumo_formatado'] = True  # Flag para indicar que é HTML
-        else:
-            # Fallback para o Markdown se o HTML não existir
-            resumo_estruturado_path = os.path.join(UPLOAD_DIR, "resumo_notebooklm_normalized.md")
-            if os.path.exists(resumo_estruturado_path):
-                with open(resumo_estruturado_path, 'r', encoding='utf-8') as f:
-                    resumo_estruturado = f.read()
-                estrutura['resumo_text'] = resumo_estruturado
-                estrutura['resumo_formatado'] = False  # Flag para indicar que é Markdown
+        # Carregar apenas o resumo em Markdown
+        resumo_estruturado_path = os.path.join(UPLOAD_DIR, "resumo_notebooklm_normalized.md")
+        if os.path.exists(resumo_estruturado_path):
+            with open(resumo_estruturado_path, 'r', encoding='utf-8') as f:
+                resumo_estruturado = f.read()
+            estrutura['resumo_text'] = resumo_estruturado
+            estrutura['resumo_formatado'] = False  # Sempre Markdown; conversão para HTML no frontend
 
         return estrutura
     except Exception as e:

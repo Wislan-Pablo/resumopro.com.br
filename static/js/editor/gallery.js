@@ -8,6 +8,8 @@ export function loadImageGallery() {
 
   if (!state.estruturaEdicao || !Array.isArray(state.estruturaEdicao.images)) {
     updateImageCountInfo();
+    // Atualiza contador no rótulo quando não há imagens
+    renderGallerySwitchLabelCount();
     return;
   }
 
@@ -56,6 +58,8 @@ export function loadImageGallery() {
   });
 
   updateImageCountInfo();
+  // Atualiza contador no rótulo após recarregar a galeria
+  renderGallerySwitchLabelCount();
 
   const actions = document.querySelector('.gallery-actions');
   const emptyState = document.getElementById('galleryEmptyState');
@@ -82,10 +86,12 @@ export function loadCaptureGallery() {
       emptyState.style.display = '';
       const msg = emptyState.querySelector('.gallery-empty-message');
       const ctrls = emptyState.querySelector('.gallery-empty-controls');
-      if (msg) msg.textContent = 'Nenhuma captura de tela salva. Use CAPTURAR IMAGEM e depois cole (Ctrl+V) para salvar aqui.';
+  if (msg) msg.textContent = 'Nenhuma captura de tela salva. Use o botão CAPTURAR IMAGEM e depois cole (Ctrl+V) no editor para salvar aqui 😊';
       if (ctrls) ctrls.style.display = 'none';
     }
     updateImageCountInfoCaptures();
+    // Atualiza contador no rótulo quando não há capturas
+    renderGallerySwitchLabelCount();
     return;
   }
 
@@ -129,9 +135,17 @@ export function loadCaptureGallery() {
 
 export function updateImageCountInfoCaptures() {
   const imageCountInfo = document.getElementById('imageCountInfo');
+  const infoMessage = document.getElementById('galleryInfoMessage');
   if (imageCountInfo) {
     const n = state.capturedImages.length || 0;
-    imageCountInfo.innerHTML = `Você tem <strong>${n} captura(s)</strong> salvas nesta sessão. Arraste para inserir no resumo ou clique para visualizar/copiar.`;
+    imageCountInfo.innerHTML = `Você tem <strong>${n} captura(s)</strong> salva(s) nesta sessão. Clique e arraste para inserir no texto do Editor ou clique no ícone de copiar imagem e colar (Ctrl + V).`;
+    if (infoMessage) {
+      if (n > 0) {
+        infoMessage.style.display = '';
+      } else {
+        infoMessage.style.display = 'none';
+      }
+    }
   }
 }
 
@@ -189,8 +203,10 @@ export function showCaptureCopyFeedback(id) {
 
 export function openCaptureModal(id) {
   try {
-    const item = state.capturedImages.find(ci => ci.id === id);
-    if (!item) return;
+    const index = state.capturedImages.findIndex(ci => ci.id === id);
+    if (index < 0) return;
+    state.captureModalIndex = index;
+    const item = state.capturedImages[index];
     let overlay = document.getElementById('captureModalOverlay');
     if (!overlay) {
       overlay = document.createElement('div');
@@ -209,21 +225,37 @@ export function openCaptureModal(id) {
     closeBtn.setAttribute('aria-label', 'Fechar');
     closeBtn.textContent = 'X';
     closeBtn.addEventListener('click', closeCaptureModal);
+    const filename = document.createElement('div');
+    filename.className = 'modal-filename';
+    filename.id = 'captureModalFilename';
+    filename.textContent = `Captura #${index + 1}`;
     const wrapper = document.createElement('div');
     wrapper.className = 'modal-image-wrapper';
     const img = document.createElement('img');
     img.className = 'modal-image';
+    img.id = 'captureModalImage';
     img.src = item.url;
-    img.alt = 'Captura de Tela';
+    img.alt = `Captura #${index + 1}`;
     wrapper.appendChild(img);
     const actions = document.createElement('div');
     actions.className = 'modal-actions';
+    const prevBtn = document.createElement('button');
+    prevBtn.className = 'btn btn-secondary';
+    prevBtn.innerHTML = '◀ Anterior';
+    prevBtn.addEventListener('click', prevCaptureModalImage);
+    const nextBtn = document.createElement('button');
+    nextBtn.className = 'btn btn-secondary';
+    nextBtn.innerHTML = 'Próxima ▶';
+    nextBtn.addEventListener('click', nextCaptureModalImage);
     const delBtn = document.createElement('button');
     delBtn.className = 'btn btn-danger';
-    delBtn.textContent = 'Excluir da galeria';
-    delBtn.addEventListener('click', () => { deleteCaptureImage(id); closeCaptureModal(); });
+    delBtn.innerHTML = '<img src="../images/delete_all_items.svg" alt="Excluir" class="btn-icon-modal" /> <span>Excluir da galeria</span>';
+    delBtn.addEventListener('click', deleteCurrentCaptureModalImage);
+    actions.appendChild(prevBtn);
+    actions.appendChild(nextBtn);
     actions.appendChild(delBtn);
     content.appendChild(closeBtn);
+    content.appendChild(filename);
     content.appendChild(wrapper);
     content.appendChild(actions);
     overlay.appendChild(content);
@@ -234,6 +266,49 @@ export function openCaptureModal(id) {
 export function closeCaptureModal() {
   const overlay = document.getElementById('captureModalOverlay');
   if (overlay) overlay.classList.remove('active');
+}
+
+export function updateCaptureModalImage() {
+  try {
+    const idx = typeof state.captureModalIndex === 'number' ? state.captureModalIndex : 0;
+    if (!Array.isArray(state.capturedImages) || state.capturedImages.length === 0) { closeCaptureModal(); return; }
+    let index = idx;
+    if (index < 0) index = state.capturedImages.length - 1;
+    if (index >= state.capturedImages.length) index = 0;
+    state.captureModalIndex = index;
+    const item = state.capturedImages[index];
+    const imgEl = document.getElementById('captureModalImage');
+    if (imgEl) {
+      imgEl.src = item.url;
+      imgEl.alt = `Captura #${index + 1}`;
+    }
+    const labelEl = document.getElementById('captureModalFilename');
+    if (labelEl) {
+      labelEl.textContent = `Captura #${index + 1}`;
+    }
+  } catch (e) { console.error(e); }
+}
+
+export function nextCaptureModalImage() { state.captureModalIndex = (state.captureModalIndex || 0) + 1; updateCaptureModalImage(); }
+export function prevCaptureModalImage() { state.captureModalIndex = (state.captureModalIndex || 0) - 1; updateCaptureModalImage(); }
+
+export function deleteCurrentCaptureModalImage() {
+  try {
+    if (!Array.isArray(state.capturedImages) || state.capturedImages.length === 0) return;
+    const idx = typeof state.captureModalIndex === 'number' ? state.captureModalIndex : 0;
+    const item = state.capturedImages[idx];
+    if (!item) return;
+    deleteCaptureImage(item.id);
+    // Após excluir, ajustar índice e exibir próxima/fechar
+    if (state.capturedImages.length === 0) {
+      closeCaptureModal();
+      return;
+    }
+    if (state.captureModalIndex >= state.capturedImages.length) {
+      state.captureModalIndex = state.capturedImages.length - 1;
+    }
+    updateCaptureModalImage();
+  } catch (e) { console.error(e); }
 }
 
 export function deleteCaptureImage(id) {
@@ -252,9 +327,9 @@ export function setGalleryMode(mode) {
   const m = (mode === 'captures') ? 'captures' : 'pdf';
   setGalleryModeState(m);
   const switchBtn = document.getElementById('gallerySwitch');
-  const switchLabel = document.getElementById('gallerySwitchLabel');
   if (switchBtn) switchBtn.setAttribute('aria-pressed', m === 'captures' ? 'true' : 'false');
-  if (switchLabel) switchLabel.textContent = (m === 'captures') ? 'Capturas de Tela Salvas' : 'Imagens Carregadas do PDF';
+  // Atualiza o rótulo com contador após alterar o modo
+  renderGallerySwitchLabelCount();
   updateDeleteAllLabel();
   try {
     if (m === 'pdf') {
@@ -283,6 +358,32 @@ export function initGallerySwitch() {
     const pressed = this.getAttribute('aria-pressed') === 'true';
     setGalleryMode(pressed ? 'pdf' : 'captures');
   });
+
+  // Atualiza contador no rótulo após recarregar a galeria de capturas
+  renderGallerySwitchLabelCount();
+
+  // Inicializa o clique do ícone de fechar da mensagem informativa
+  const infoClose = document.getElementById('galleryInfoClose');
+  const infoMessage = document.getElementById('galleryInfoMessage');
+  if (infoClose && infoMessage) {
+    infoClose.addEventListener('click', function(){
+      infoMessage.style.display = 'none';
+    });
+  }
+}
+
+// Atualiza o texto do rótulo (gallerySwitchLabel) com contador entre parênteses e em negrito
+export function renderGallerySwitchLabelCount() {
+  const label = document.getElementById('gallerySwitchLabel');
+  if (!label) return;
+  const baseText = (state.galleryMode === 'captures') ? 'Capturas de Tela Salvas' : 'Imagens Pré-Carregadas';
+  let count = 0;
+  if (state.galleryMode === 'captures') {
+    count = Array.isArray(state.capturedImages) ? state.capturedImages.length : 0;
+  } else {
+    count = (state.estruturaEdicao && Array.isArray(state.estruturaEdicao.images)) ? state.estruturaEdicao.images.length : 0;
+  }
+  label.innerHTML = `${baseText} (${count})`;
 }
 
 export function handleDragStart(e) {
@@ -617,7 +718,7 @@ export function updateImageCountInfo() {
     const candidateFromPath = fromPath(state.estruturaEdicao.pdf_path);
     const pdfNameCandidate = storedPdfName || state.estruturaEdicao.pdf_name || candidateFromPath;
     const pdfName = pdfNameCandidate || 'PDF selecionado';
-    imageCountInfo.innerHTML = `Identifiquei <strong>${imageCount} imagens</strong> vetoriais neste PDF. Use esta galeria para: arrastá-las e inserí-las no texto; incluir novas imagens de captura; visualizá-las em tamanho orginal; e excluir as que não são relevantes para o seu resumo.`;
+    imageCountInfo.innerHTML = `Identifiquei <strong>${imageCount} elemento(s) do tipo imagem </strong>neste PDF. Use esta galeria para: arrastá-las e inserí-las no texto; incluir novas imagens de captura; visualizá-las em tamanho orginal; e excluir as que não são relevantes para o seu texto/projeto.`;
     const pdfNameSpan = document.getElementById('imageCountInfoPdfName');
     if (pdfNameSpan) pdfNameSpan.textContent = pdfName;
     if (infoMessage) {

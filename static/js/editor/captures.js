@@ -7,14 +7,15 @@ export function initCaptureButton() {
   if (!btnCaptureImage) return;
   btnCaptureImage.addEventListener('click', function () {
     try {
+      // Marcar que a captura foi iniciada via botão
+      state.captureTriggeredByButton = true;
       const a = document.createElement('a');
       a.href = 'ms-screenclip:';
       a.style.display = 'none';
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
-      setGalleryMode('captures');
-      updateStatus('Após capturar, pressione Ctrl+V para salvar a imagem na galeria de capturas.');
+      updateStatus('Conclua a captura e cole (Ctrl+V) no editor para salvar na galeria.');
     } catch (e) {
       console.warn('Screen Snip não pôde ser iniciado:', e);
     }
@@ -22,27 +23,6 @@ export function initCaptureButton() {
 }
 
 export function initPasteCaptureListener() {
-  window.addEventListener('paste', async function(e){
-    try {
-      const dt = e.clipboardData || window.clipboardData;
-      if (!dt || !dt.items) return;
-      let file = null;
-      for (let i = 0; i < dt.items.length; i++) {
-        const it = dt.items[i];
-        if (it.type && (it.type.startsWith('image/png') || it.type.startsWith('image/jpeg'))) {
-          file = it.getAsFile();
-          break;
-        }
-      }
-      if (!file) return;
-      e.preventDefault();
-      const blob = file;
-      const url = URL.createObjectURL(blob);
-      const id = 'cap_' + Date.now() + '_' + (state.capturedImages.length + 1);
-      state.capturedImages.push({ id, blob, url, createdAt: Date.now() });
-      setGalleryMode('captures');
-      loadCaptureGallery();
-      updateStatus('Captura salva na galeria');
-    } catch (err) { console.error(err); }
-  });
+  // Listener global removido para evitar inserções fora do editor.
+  // A captura será tratada pelo evento de paste do Jodit dentro do iframe.
 }

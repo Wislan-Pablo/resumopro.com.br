@@ -165,6 +165,7 @@ body {
 .modal-image { max-width: 76vw; max-height: 65vh; object-fit: contain; border-radius: 6px; }
 .modal-image-wrapper { position: relative; }
 .modal-filename { position: absolute; top: 8px; left: 8px; background: rgba(0,0,0,0.6); color: #fff; padding: 4px 8px; border-radius: 6px; font-size: 12px; max-width: calc(100% - 16px); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; pointer-events: none; z-index: 1002; }
+.modal-filename.filename-right { left: auto; right: 8px; }
 .modal-actions { margin-top: 12px; display: flex; gap: 30px; }
 .modal-close { position: absolute; top: -17px; right: -17px; width: 35px; height: 35px; border-radius: 50%; background: #ffffff; color: #333; border: 1px solid rgba(0,0,0,0.2); box-shadow: 0 4px 12px rgba(0,0,0,0.18); display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: bold; line-height: 1; cursor: pointer; z-index: 1001; }
 .modal-close:hover { background: #f5f5f5; }
@@ -179,9 +180,18 @@ body {
 .gallery-source .gallery-source-icon { width: 24px; height: 24px; margin-right: 6px; flex-shrink: 0; }
 
 .gallery-switch { display: flex; justify-content: center; align-items: center; margin: 8px 0 12px; }
-.gallery-switch .switch-btn { display: inline-flex; align-items: center; gap: 8px; padding: 6px 10px; border: 1px solid #bbb; background: #f3f3f3; color: #333; border-radius: 20px; cursor: pointer; font-size: 0.9em; }
-.gallery-switch .switch-btn[aria-pressed="true"] { background: #d8e6ff; border-color: #6b9bff; color: #0a3d62; }
-.gallery-switch .switch-label { user-select: none; }
+.gallery-switch .switch-btn { display: inline-flex; align-items: center; gap: 8px; padding: 6px 10px; border: 1px solid #bbb; background: #f3f3f3; color: #333; border-radius: 10px; cursor: pointer; font-size: 0.9em; width: 100%; }
+.gallery-switch .switch-btn[aria-pressed="true"] { background: #f3f3f3; border-color: #bbb; color: #333; }
+.gallery-switch .switch-btn:hover { background: #FFF; }
+
+.saved-states-empty {
+  text-align: center;
+  font-size: 18px;
+}
+.gallery-switch .switch-label { text-align: center; user-select: none; }
+
+/* Reduz a margem do ícone apenas no contexto do botão da gallery-switch */
+.gallery-switch .btn-icon-24 { margin-right: 4px; }
 
 .btn-danger { margin: 0 auto; background: #8d9092; color: white; }
 .btn-danger:hover { background: #c82333; }
@@ -209,7 +219,7 @@ body {
 .content-area { flex: 1; display: flex; overflow: visible; min-width: 0; background-color: #f9f9f9; }
 .text-panel { flex: 1; padding: 0; overflow-y: visible; min-width: 0; }
 .text-panel h3 { color: #8d9092; margin-right: 40px; font-size: 1.3em; }
-.editor-tabs { width: 100%; display: flex; gap: 15px; align-items: center; }
+.editor-tabs { width: 100%; display: flex; gap: 10px; align-items: center; }
 .editor-tabs .tab-btn { display: inline-flex; align-items: center; gap: 8px; padding: 6px 10px; font-size: 16px; font-weight: 500; min-height: 32px; border-radius: 6px; }
 .btn-icon { width: 28px; height: 28px; display: inline-block; vertical-align: middle; }
 .btn-icon-small { width: 24px; height: 24px; display: inline-block; margin-right: 8px; vertical-align: middle; }
@@ -313,6 +323,11 @@ body {
     margin-right: 8px;
     display: inline-block;
     vertical-align: middle;
+}
+
+/* Input da modal Salvar Projeto */
+#projectSaveModal #projectNameInput {
+    font-size: 1em;
 }
 .btn-icon { width: 28px; height: 28px; display: inline-block; vertical-align: middle; }
 .btn-icon-small { width: 24px; height: 24px; display: inline-block; margin-right: 8px; vertical-align: middle; }

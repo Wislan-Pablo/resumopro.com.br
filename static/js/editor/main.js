@@ -9,6 +9,10 @@ import {
   loadCaptureGallery,
   openCaptureModal,
   closeCaptureModal,
+  updateCaptureModalImage,
+  nextCaptureModalImage,
+  prevCaptureModalImage,
+  deleteCurrentCaptureModalImage,
   deleteCaptureImage,
   copyCaptureImage,
   setupDropZones,
@@ -51,6 +55,10 @@ window.copyGalleryImage = copyGalleryImage;
 window.removeImage = removeImage;
 window.openCaptureModal = openCaptureModal;
 window.closeCaptureModal = closeCaptureModal;
+window.updateCaptureModalImage = updateCaptureModalImage;
+window.nextCaptureModalImage = nextCaptureModalImage;
+window.prevCaptureModalImage = prevCaptureModalImage;
+window.deleteCurrentCaptureModalImage = deleteCurrentCaptureModalImage;
 window.deleteCaptureImage = deleteCaptureImage;
 window.copyCaptureImage = copyCaptureImage;
 window.deleteAllGalleryImages = deleteAllGalleryImages;

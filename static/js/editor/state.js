@@ -5,6 +5,7 @@ export const state = {
   galleryCacheBust: Date.now(),
   galleryMode: 'pdf',
   capturedImages: [],
+  captureTriggeredByButton: false,
   joditEditor: null,
   modalCurrentIndex: null,
   pdfLoadedForCapture: false,
