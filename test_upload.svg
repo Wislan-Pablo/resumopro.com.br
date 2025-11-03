@@ -1,0 +1,6 @@
+<svg width="200" height="100" xmlns="http://www.w3.org/2000/svg">
+  <rect width="200" height="100" fill="#2196F3" rx="10"/>
+  <text x="100" y="35" text-anchor="middle" fill="white" font-family="Arial" font-size="16" font-weight="bold">TESTE UPLOAD</text>
+  <text x="100" y="55" text-anchor="middle" fill="white" font-family="Arial" font-size="12">Porta 8006</text>
+  <text x="100" y="75" text-anchor="middle" fill="white" font-family="Arial" font-size="10">${new Date().toLocaleString()}</text>
+</svg>

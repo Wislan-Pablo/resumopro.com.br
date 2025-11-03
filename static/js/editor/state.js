@@ -5,6 +5,7 @@ export const state = {
   galleryCacheBust: Date.now(),
   galleryMode: 'pdf',
   capturedImages: [],
+  uploadedImages: [],
   captureTriggeredByButton: false,
   joditEditor: null,
   // Último HTML salvo para detectar alterações no documento
@@ -26,7 +27,9 @@ export function setEstruturaEdicao(data) {
 }
 
 export function setGalleryMode(mode) {
-  state.galleryMode = mode === 'captures' ? 'captures' : 'pdf';
+  state.galleryMode = (mode === 'captures')
+    ? 'captures'
+    : (mode === 'uploads' ? 'uploads' : 'pdf');
 }
 
 export function setGalleryCacheBust() {

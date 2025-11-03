@@ -166,10 +166,10 @@ body {
 
 .modal-overlay { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.6); display: none; align-items: center; justify-content: center; z-index: 1000; }
 .modal-overlay.active { display: flex; }
-.modal-content { background: #ccc; border-radius: 10px; max-width: 80vw; max-height: 80vh; padding: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); position: relative; display: flex; flex-direction: column; align-items: center; }
-.modal-image { max-width: 76vw; max-height: 65vh; object-fit: contain; border-radius: 6px; }
-.modal-image-wrapper { position: relative; }
-.modal-filename { position: absolute; top: 8px; left: 8px; right: 8px; background: rgba(0,0,0,0.6); color: #fff; padding: 4px 8px; border-radius: 6px; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; pointer-events: none; z-index: 1002; }
+.modal-content { background: #ccc; border-radius: 10px; max-width: 90vw; max-height: 90vh; padding: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); position: relative; display: flex; flex-direction: column; align-items: center; width: fit-content; }
+.modal-image { max-width: 80vw; max-height: 70vh; width: auto; height: auto; object-fit: contain; border-radius: 6px; }
+.modal-image-wrapper { position: relative; display: flex; align-items: center; justify-content: center; }
+.modal-filename { position: absolute; top: 8px; left: 8px; right: 8px; background: rgba(0,0,0,0.6); color: #fff; padding: 4px 8px; border-radius: 6px; font-size: 12px; max-width: fit-content; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; pointer-events: none; z-index: 1002; }
 .modal-filename.filename-right { left: auto; max-width: calc(100% - 16px); }
 .modal-actions { margin-top: 12px; display: flex; gap: 30px; }
 .modal-close { position: absolute; top: -17px; right: -17px; width: 35px; height: 35px; border-radius: 50%; background: #ffffff; color: #333; border: 1px solid rgba(0,0,0,0.2); box-shadow: 0 4px 12px rgba(0,0,0,0.18); display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: bold; line-height: 1; cursor: pointer; z-index: 1001; }
@@ -188,6 +188,8 @@ body {
 .gallery-switch .switch-btn { display: inline-flex; align-items: center; gap: 8px; padding: 6px 10px; border: 1px solid #bbb; background: #f3f3f3; color: #333; border-radius: 10px; cursor: pointer; font-size: 0.9em; width: 100%; }
 .gallery-switch .switch-btn[aria-pressed="true"] { background: #f3f3f3; border-color: #bbb; color: #333; }
 .gallery-switch .switch-btn:hover { background: #FFF; }
+.gallery-switch .gallery-select { width: 100%; padding: 6px 10px; border: 1px solid #bbb; background: #f3f3f3; color: #333; font-size: 0.9em; }
+.gallery-switch .gallery-select:hover { background: #FFF; }
 
 .saved-states-empty {
   text-align: center;
@@ -197,6 +199,10 @@ body {
 
 /* Reduz a margem do ícone apenas no contexto do botão da gallery-switch */
 .gallery-switch .btn-icon-24 { margin-right: 4px; }
+
+/* Controles de Uploads */
+.uploads-controls { display: flex; gap: 8px; margin: 8px 0 12px; }
+.uploads-controls .btn { width: 100%; }
 
 .btn-danger { margin: 0 auto; background: #8d9092; color: white; }
 .btn-danger:hover { background: #c82333; }

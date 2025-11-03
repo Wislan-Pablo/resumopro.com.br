@@ -373,6 +373,8 @@ export function initJoditDocumentMode() {
             return;
           }
 
+          // Sem suporte à galeria de área de transferência: deixar o editor tratar colagens não relacionadas à captura
+
           // Fluxo padrão: não bloquear colagens que não são parte da captura
           try { saveCurrentSummaryHTMLDebounced(); } catch (_) {}
           try { updateSaveButtonsDisabled(); } catch (_) {}

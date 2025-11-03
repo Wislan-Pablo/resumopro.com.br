@@ -1081,6 +1081,71 @@ async def upload_captured_image(file: UploadFile = File(...), filename: Optional
         print(f"Erro no upload de captura: {e}")
         raise HTTPException(status_code=500, detail="Falha ao salvar imagem capturada")
 
+# --- ROTAS: Uploads de imagens enviadas pelo usuário ---
+@app.post("/api/uploads/upload")
+async def uploads_upload(file: UploadFile = File(...)):
+    try:
+        dest_dir = os.path.join(UPLOAD_DIR, "Imagens_de_Uploads")
+        os.makedirs(dest_dir, exist_ok=True)
+        safe_name = (file.filename or f"upload_{int(time.time()*1000)}").replace('\\', '_').replace('/', '_')
+        base, ext = os.path.splitext(safe_name)
+        if not ext:
+            ext = ".png"
+        candidate = f"{base}{ext}"
+        save_path = os.path.join(dest_dir, candidate)
+        if os.path.exists(save_path):
+            idx = 1
+            while True:
+                candidate = f"{base} ({idx}){ext}"
+                save_path = os.path.join(dest_dir, candidate)
+                if not os.path.exists(save_path):
+                    break
+                idx += 1
+        try:
+            file.file.seek(0)
+        except Exception:
+            pass
+        with open(save_path, 'wb') as f:
+            shutil.copyfileobj(file.file, f)
+        return {"filename": candidate, "url": f"/{UPLOAD_DIR}/Imagens_de_Uploads/{candidate}"}
+    except Exception as e:
+        print(f"Erro no upload de imagem enviada: {e}")
+        raise HTTPException(status_code=500, detail="Falha ao salvar imagem enviada")
+
+@app.post("/api/uploads/delete")
+async def uploads_delete(request_data: dict = Body(default={})):  # { filename: str }
+    try:
+        filename = (request_data or {}).get("filename")
+        if not filename or not isinstance(filename, str):
+            raise HTTPException(status_code=400, detail="filename inválido")
+        dest_dir = os.path.join(UPLOAD_DIR, "Imagens_de_Uploads")
+        safe = os.path.basename(filename)
+        target = os.path.join(dest_dir, safe)
+        if os.path.exists(target):
+            os.remove(target)
+        return {"status": "ok"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Erro ao excluir upload: {e}")
+        raise HTTPException(status_code=500, detail="Falha ao excluir upload")
+
+@app.post("/api/uploads/delete-all")
+async def uploads_delete_all():
+    try:
+        dest_dir = os.path.join(UPLOAD_DIR, "Imagens_de_Uploads")
+        if os.path.isdir(dest_dir):
+            for f in os.listdir(dest_dir):
+                if f.lower().endswith((".png", ".jpg", ".jpeg", ".gif", ".webp")):
+                    try:
+                        os.remove(os.path.join(dest_dir, f))
+                    except Exception:
+                        pass
+        return {"status": "ok"}
+    except Exception as e:
+        print(f"Erro ao excluir todos os uploads: {e}")
+        raise HTTPException(status_code=500, detail="Falha ao excluir uploads")
+
 # --- ROTA: Reprocessar imagens iniciais do PDF (Somente Fase de Captura) ---
 @app.post("/api/recover-initial-images")
 async def recover_initial_images(request_data: dict = Body(default={})):  # aceita JSON com { pdf_name?: str }
@@ -1193,6 +1258,28 @@ async def api_delete_all_images():
     except Exception as e:
         print(f"Erro ao deletar todas as imagens: {e}")
         raise HTTPException(status_code=500, detail="Erro interno ao deletar imagens")
+# --- ROTA: Listar imagens enviadas (uploads) ---
+@app.get("/api/uploads/list")
+async def uploads_list():
+    try:
+        dest_dir = os.path.join(UPLOAD_DIR, "Imagens_de_Uploads")
+        os.makedirs(dest_dir, exist_ok=True)
+        
+        images = []
+        if os.path.exists(dest_dir):
+            for filename in os.listdir(dest_dir):
+                file_path = os.path.join(dest_dir, filename)
+                if os.path.isfile(file_path) and any(filename.lower().endswith(ext) for ext in ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.svg']):
+                    images.append({
+                        "filename": filename,
+                        "url": f"/temp_uploads/Imagens_de_Uploads/{filename}"
+                    })
+        
+        return {"images": images, "count": len(images)}
+    except Exception as e:
+        print(f"Erro ao listar imagens enviadas: {e}")
+        raise HTTPException(status_code=500, detail="Falha ao listar imagens enviadas")
+
 # --- ROTA: Listar PDFs disponíveis em temp_uploads ---
 @app.get("/api/list-pdfs")
 async def list_pdfs():

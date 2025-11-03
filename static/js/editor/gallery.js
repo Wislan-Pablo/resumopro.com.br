@@ -133,6 +133,350 @@ export function loadCaptureGallery() {
   updateImageCountInfoCaptures();
 }
 
+// Galeria de Uploads (arquivos enviados pelo usuário)
+export async function loadUploadsGallery() {
+  const gallery = document.getElementById('imageGallery');
+  if (!gallery) return;
+  gallery.innerHTML = '';
+
+  const actions = document.querySelector('.gallery-actions');
+  const emptyState = document.getElementById('galleryEmptyState');
+
+  // Se não há imagens no estado, tenta carregar do servidor
+  if (!Array.isArray(state.uploadedImages) || state.uploadedImages.length === 0) {
+    try {
+      const response = await fetch('/api/uploads/list');
+      if (response.ok) {
+        const data = await response.json();
+        if (data.images && data.images.length > 0) {
+          // Converte as imagens do servidor para o formato do estado
+          state.uploadedImages = data.images.map((img, index) => ({
+            id: `server_${index}_${Date.now()}`,
+            name: img.filename,
+            url: img.url,
+            serverFilename: img.filename
+          }));
+        }
+      }
+    } catch (error) {
+      console.error('Erro ao carregar imagens do servidor:', error);
+    }
+  }
+
+  if (!Array.isArray(state.uploadedImages) || state.uploadedImages.length === 0) {
+    if (actions) actions.style.display = 'none';
+    if (emptyState) {
+      emptyState.style.display = '';
+      const msg = emptyState.querySelector('.gallery-empty-message');
+      const ctrls = emptyState.querySelector('.gallery-empty-controls');
+      if (msg) msg.textContent = 'Nenhuma imagem enviada. Clique em "Enviar Imagens" acima ou cole diretamente no editor para salvar aqui.';
+      if (ctrls) ctrls.style.display = 'none';
+    }
+    updateImageCountInfoUploads();
+    renderGallerySwitchLabelCount();
+    return;
+  }
+
+  if (actions) actions.style.display = '';
+  if (emptyState) emptyState.style.display = 'none';
+
+  state.uploadedImages.forEach((item, idx) => {
+    const imageItem = document.createElement('div');
+    imageItem.className = 'image-item';
+    imageItem.draggable = true;
+    imageItem.dataset.uploadId = item.id;
+    imageItem.dataset.uploadUrl = item.url;
+    const displayName = item.name ? item.name : `Upload #${idx + 1}`;
+    imageItem.innerHTML = `
+      <img src="${item.url}" alt="${displayName}">
+      <button class=\"copy-btn\" title=\"Copiar imagem\" onclick=\"copyUploadImage('${item.id}')\" onmousedown=\"event.stopPropagation()\">
+        <img src=\"../images/copy_image_gallery.svg\" alt=\"Copiar\" width=\"18\" height=\"18\" />
+      </button>
+      <button class=\"view-btn\" title=\"Visualizar imagem\" onclick=\"openUploadModal('${item.id}')\" onmousedown=\"event.stopPropagation()\">
+        <svg viewBox=\"0 0 24 24\" width=\"30\" height=\"30\" fill=\"none\" stroke=\"white\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\">
+          <path d=\"M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7\"></path>
+          <circle cx=\"12\" cy=\"12\" r=\"3\"></circle>
+        </svg>
+      </button>
+      <div class=\"copy-feedback\" aria-live=\"polite\">
+        <img src=\"../images/copy_image_gallery.svg\" alt=\"\" width=\"20\" height=\"20\" />
+        <span>Imagem foi copiada para a área de transferência</span>
+      </div>
+      <div class=\"image-name\">${displayName}</div>
+      <button class=\"delete-btn\" onclick=\"deleteUploadImage('${item.id}')\" title=\"Excluir este upload\">
+        <img src=\"../images/delete_img_gallery.svg\" alt=\"Excluir\" width=\"18\" height=\"18\" />
+      </button>
+    `;
+    imageItem.addEventListener('dragstart', handleDragStart);
+    imageItem.addEventListener('dragend', handleDragEnd);
+    gallery.appendChild(imageItem);
+  });
+
+  updateImageCountInfoUploads();
+}
+
+export function updateImageCountInfoUploads() {
+  const imageCountInfo = document.getElementById('imageCountInfo');
+  const infoMessage = document.getElementById('galleryInfoMessage');
+  if (imageCountInfo) {
+    const n = Array.isArray(state.uploadedImages) ? state.uploadedImages.length : 0;
+    imageCountInfo.innerHTML = `Você tem <strong>${n} upload(s)</strong> nesta sessão. Arraste e solte no Editor ou use o ícone de copiar para colar no texto (Ctrl + V).`;
+    if (infoMessage) {
+      if (state.galleryInfoClosed) {
+        infoMessage.style.display = 'none';
+      } else {
+        infoMessage.style.display = n > 0 ? '' : 'none';
+      }
+    }
+  }
+}
+
+// Galeria de imagens copiadas da área de transferência (sessão local)
+export function loadClipboardGallery() {
+  const gallery = document.getElementById('imageGallery');
+  if (!gallery) return;
+  gallery.innerHTML = '';
+
+  const actions = document.querySelector('.gallery-actions');
+  const emptyState = document.getElementById('galleryEmptyState');
+
+  if (!Array.isArray(state.clipboardImages) || state.clipboardImages.length === 0) {
+    if (actions) actions.style.display = 'none';
+    if (emptyState) {
+      emptyState.style.display = '';
+      const msg = emptyState.querySelector('.gallery-empty-message');
+      const ctrls = emptyState.querySelector('.gallery-empty-controls');
+      if (msg) msg.textContent = 'Nenhuma imagem copiada. Cole (Ctrl+V) no editor para salvar aqui automaticamente.';
+      if (ctrls) ctrls.style.display = 'none';
+    }
+    updateImageCountInfoClipboard();
+    renderGallerySwitchLabelCount();
+    return;
+  }
+
+  if (actions) actions.style.display = '';
+  if (emptyState) emptyState.style.display = 'none';
+
+  state.clipboardImages.forEach((item, idx) => {
+    const imageItem = document.createElement('div');
+    imageItem.className = 'image-item';
+    imageItem.draggable = true;
+    imageItem.dataset.clipboardId = item.id;
+    imageItem.dataset.clipboardUrl = item.url;
+    const displayName = item.name ? item.name : `Copiada #${idx + 1}`;
+    imageItem.innerHTML = `
+      <img src="${item.url}" alt="${displayName}">
+      <button class=\"copy-btn\" title=\"Copiar imagem\" onclick=\"copyClipboardImage('${item.id}')\" onmousedown=\"event.stopPropagation()\">
+        <img src=\"../images/copy_image_gallery.svg\" alt=\"Copiar\" width=\"18\" height=\"18\" />
+      </button>
+      <button class=\"view-btn\" title=\"Visualizar imagem\" onclick=\"openClipboardModal('${item.id}')\" onmousedown=\"event.stopPropagation()\">
+        <svg viewBox=\"0 0 24 24\" width=\"30\" height=\"30\" fill=\"none\" stroke=\"white\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\">
+          <path d=\"M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7\"></path>
+          <circle cx=\"12\" cy=\"12\" r=\"3\"></circle>
+        </svg>
+      </button>
+      <div class=\"copy-feedback\" aria-live=\"polite\">
+        <img src=\"../images/copy_image_gallery.svg\" alt=\"\" width=\"20\" height=\"20\" />
+        <span>Imagem foi copiada para a área de transferência</span>
+      </div>
+      <div class=\"image-name\">${displayName}</div>
+      <button class=\"delete-btn\" onclick=\"deleteClipboardImage('${item.id}')\" title=\"Excluir esta imagem copiada\">
+        <img src=\"../images/delete_img_gallery.svg\" alt=\"Excluir\" width=\"18\" height=\"18\" />
+      </button>
+    `;
+    imageItem.addEventListener('dragstart', handleDragStart);
+    imageItem.addEventListener('dragend', handleDragEnd);
+    gallery.appendChild(imageItem);
+  });
+
+  updateImageCountInfoClipboard();
+}
+
+export function updateImageCountInfoClipboard() {
+  const imageCountInfo = document.getElementById('imageCountInfo');
+  const infoMessage = document.getElementById('galleryInfoMessage');
+  if (imageCountInfo) {
+    const n = Array.isArray(state.clipboardImages) ? state.clipboardImages.length : 0;
+    imageCountInfo.innerHTML = `Você tem <strong>${n} imagem(ns) copiadas</strong> nesta sessão. Arraste e solte no Editor ou use o ícone de copiar para colar no texto (Ctrl + V).`;
+    if (infoMessage) {
+      if (state.galleryInfoClosed) {
+        infoMessage.style.display = 'none';
+      } else {
+        infoMessage.style.display = n > 0 ? '' : 'none';
+      }
+    }
+  }
+}
+
+export function showClipboardCopyFeedback(id) {
+  try {
+    const selector = `.image-item[data-clipboard-id="${CSS.escape(id)}"]`;
+    const itemEl = document.querySelector(selector);
+    if (!itemEl) return;
+    const fb = itemEl.querySelector('.copy-feedback');
+    if (!fb) return;
+    fb.classList.add('show');
+    if (fb.__hideTimer) clearTimeout(fb.__hideTimer);
+    fb.__hideTimer = setTimeout(() => {
+      fb.classList.remove('show');
+    }, 3000);
+  } catch (e) {}
+}
+
+export function openClipboardModal(id) {
+  try {
+    const index = state.clipboardImages.findIndex(ci => ci.id === id);
+    if (index < 0) return;
+    state.clipboardModalIndex = index;
+    const item = state.clipboardImages[index];
+    let overlay = document.getElementById('clipboardModalOverlay');
+    if (!overlay) {
+      overlay = document.createElement('div');
+      overlay.id = 'clipboardModalOverlay';
+      overlay.className = 'modal-overlay';
+      overlay.addEventListener('click', closeClipboardModal);
+      document.body.appendChild(overlay);
+    }
+    overlay.innerHTML = '';
+    const content = document.createElement('div');
+    content.className = 'modal-content';
+    content.addEventListener('click', (e) => e.stopPropagation());
+    const closeBtn = document.createElement('button');
+    closeBtn.className = 'modal-close';
+    closeBtn.title = 'Fechar';
+    closeBtn.setAttribute('aria-label', 'Fechar');
+    closeBtn.textContent = 'X';
+    closeBtn.addEventListener('click', closeClipboardModal);
+    const filename = document.createElement('div');
+    filename.className = 'modal-filename';
+    filename.id = 'clipboardModalFilename';
+    filename.textContent = item.name ? item.name : `Copiada #${index + 1}`;
+    const wrapper = document.createElement('div');
+    wrapper.className = 'modal-image-wrapper';
+    const img = document.createElement('img');
+    img.className = 'modal-image';
+    img.id = 'clipboardModalImage';
+    img.src = item.url;
+    img.alt = item.name || `Copiada #${index + 1}`;
+    wrapper.appendChild(img);
+    const prevBtn = document.createElement('button');
+    prevBtn.className = 'modal-prev';
+    prevBtn.title = 'Anterior';
+    prevBtn.setAttribute('aria-label', 'Anterior');
+    prevBtn.textContent = '<';
+    prevBtn.addEventListener('click', (ev) => { ev.stopPropagation(); prevClipboardModalImage(); });
+    const nextBtn = document.createElement('button');
+    nextBtn.className = 'modal-next';
+    nextBtn.title = 'Próxima';
+    nextBtn.setAttribute('aria-label', 'Próxima');
+    nextBtn.textContent = '>';
+    nextBtn.addEventListener('click', (ev) => { ev.stopPropagation(); nextClipboardModalImage(); });
+    const delBtn = document.createElement('button');
+    delBtn.className = 'modal-delete';
+    delBtn.title = 'Excluir imagem atual';
+    delBtn.setAttribute('aria-label', 'Excluir imagem atual');
+    delBtn.textContent = 'Excluir';
+    delBtn.addEventListener('click', (ev) => { ev.stopPropagation(); deleteCurrentClipboardModalImage(); });
+    content.appendChild(closeBtn);
+    content.appendChild(filename);
+    content.appendChild(wrapper);
+    content.appendChild(prevBtn);
+    content.appendChild(nextBtn);
+    content.appendChild(delBtn);
+    overlay.appendChild(content);
+    overlay.classList.add('active');
+  } catch (e) { console.error(e); }
+}
+
+export function closeClipboardModal() {
+  const overlay = document.getElementById('clipboardModalOverlay');
+  if (overlay) overlay.classList.remove('active');
+}
+
+export function updateClipboardModalImage() {
+  try {
+    const idx = typeof state.clipboardModalIndex === 'number' ? state.clipboardModalIndex : 0;
+    if (!Array.isArray(state.clipboardImages) || state.clipboardImages.length === 0) { closeClipboardModal(); return; }
+    let index = idx;
+    if (index < 0) index = state.clipboardImages.length - 1;
+    if (index >= state.clipboardImages.length) index = 0;
+    state.clipboardModalIndex = index;
+    const item = state.clipboardImages[index];
+    const imgEl = document.getElementById('clipboardModalImage');
+    if (imgEl) {
+      imgEl.src = item.url;
+      imgEl.alt = item.name || `Copiada #${index + 1}`;
+    }
+    const labelEl = document.getElementById('clipboardModalFilename');
+    if (labelEl) {
+      labelEl.textContent = item.name ? item.name : `Copiada #${index + 1}`;
+    }
+  } catch (e) { console.error(e); }
+}
+
+export function nextClipboardModalImage() { state.clipboardModalIndex = (state.clipboardModalIndex || 0) + 1; updateClipboardModalImage(); }
+export function prevClipboardModalImage() { state.clipboardModalIndex = (state.clipboardModalIndex || 0) - 1; updateClipboardModalImage(); }
+
+export async function deleteCurrentClipboardModalImage() {
+  try {
+    if (!Array.isArray(state.clipboardImages) || state.clipboardImages.length === 0) return;
+    const idx = typeof state.clipboardModalIndex === 'number' ? state.clipboardModalIndex : 0;
+    const item = state.clipboardImages[idx];
+    if (!item) return;
+    await deleteClipboardImage(item.id);
+    if (state.clipboardImages.length === 0) { closeClipboardModal(); return; }
+    if (state.clipboardModalIndex >= state.clipboardImages.length) {
+      state.clipboardModalIndex = state.clipboardImages.length - 1;
+    }
+    updateClipboardModalImage();
+  } catch (e) { console.error(e); }
+}
+
+export async function deleteClipboardImage(id) {
+  try {
+    const idx = state.clipboardImages.findIndex(ci => ci.id === id);
+    if (idx < 0) return;
+    const item = state.clipboardImages[idx];
+    if (confirm('Excluir esta imagem copiada desta sessão?')) {
+      try { if (item.url && String(item.url).startsWith('blob:')) URL.revokeObjectURL(item.url); } catch (_) {}
+      state.clipboardImages.splice(idx, 1);
+      loadClipboardGallery();
+      updateStatus('Imagem copiada removida');
+    }
+  } catch (e) { console.error(e); }
+}
+
+export async function copyClipboardImage(id) {
+  try {
+    const item = state.clipboardImages.find(ci => ci.id === id);
+    if (!item) return;
+    const isLocalhost = ['localhost', '127.0.0.1'].includes(window.location.hostname);
+    const canWriteImages = (navigator.clipboard && 'write' in navigator.clipboard && window.ClipboardItem && (window.isSecureContext || isLocalhost));
+    if (canWriteImages) {
+      const blob = item.blob || (await (async () => {
+        try { const r = await fetch(item.url, { cache: 'no-store' }); if (!r.ok) throw new Error('Falha ao obter blob'); return await r.blob(); } catch (e) { return null; }
+      })());
+      if (blob) {
+        const mime = blob.type || 'image/png';
+        const clip = new ClipboardItem({ [mime]: blob });
+        try {
+          if (navigator.permissions && navigator.permissions.query) {
+            await navigator.permissions.query({ name: 'clipboard-write' }).catch(() => {});
+          }
+        } catch (_) {}
+        await navigator.clipboard.write([clip]);
+        updateStatus('Imagem copiada para a área de transferência');
+        showClipboardCopyFeedback(id);
+        return;
+      }
+    }
+    // Fallback: copiar URL
+    await navigator.clipboard.writeText(item.url);
+    updateStatus('Link da imagem copiada para a área de transferência');
+    showClipboardCopyFeedback(id);
+  } catch (e) { console.error(e); }
+}
+
 export function updateImageCountInfoCaptures() {
   const imageCountInfo = document.getElementById('imageCountInfo');
   const infoMessage = document.getElementById('galleryInfoMessage');
@@ -184,6 +528,58 @@ export function copyCaptureImage(id) {
       updateStatus('Não foi possível copiar a captura');
     }
   })();
+}
+
+export function copyUploadImage(id) {
+  (async () => {
+    try {
+      const item = Array.isArray(state.uploadedImages) ? state.uploadedImages.find(u => u.id === id) : null;
+      if (!item) return;
+      const isLocalhost = ['localhost', '127.0.0.1'].includes(window.location.hostname);
+      const canWriteImages = (navigator.clipboard && 'write' in navigator.clipboard && window.ClipboardItem && (window.isSecureContext || isLocalhost));
+
+      if (canWriteImages) {
+        let blob = item.blob;
+        if (!blob) {
+          const resp = await fetch(item.url, { cache: 'no-store' });
+          if (!resp.ok) throw new Error('Falha ao obter imagem de upload');
+          blob = await resp.blob();
+        }
+        const mime = blob.type || 'image/png';
+        const clipboardItem = new ClipboardItem({ [mime]: blob });
+        try {
+          if (navigator.permissions && navigator.permissions.query) {
+            await navigator.permissions.query({ name: 'clipboard-write' }).catch(() => {});
+          }
+        } catch (_) {}
+        await navigator.clipboard.write([clipboardItem]);
+        updateStatus('Imagem enviada copiada para a área de transferência');
+        showUploadCopyFeedback(id);
+        return;
+      }
+
+      await navigator.clipboard.writeText(item.url);
+      updateStatus('Link da imagem enviada copiado para a área de transferência');
+    } catch (err) {
+      console.error('Erro ao copiar upload:', err);
+      updateStatus('Não foi possível copiar o upload');
+    }
+  })();
+}
+
+export function showUploadCopyFeedback(id) {
+  try {
+    const selector = `.image-item[data-upload-id="${CSS.escape(id)}"]`;
+    const itemEl = document.querySelector(selector);
+    if (!itemEl) return;
+    const fb = itemEl.querySelector('.copy-feedback');
+    if (!fb) return;
+    fb.classList.add('show');
+    if (fb.__hideTimer) clearTimeout(fb.__hideTimer);
+    fb.__hideTimer = setTimeout(() => {
+      fb.classList.remove('show');
+    }, 3000);
+  } catch (e) {}
 }
 
 export function showCaptureCopyFeedback(id) {
@@ -263,6 +659,131 @@ export function openCaptureModal(id) {
   } catch (e) { console.error(e); }
 }
 
+export function openUploadModal(id) {
+  try {
+    const index = Array.isArray(state.uploadedImages) ? state.uploadedImages.findIndex(u => u.id === id) : -1;
+    if (index < 0) return;
+    state.uploadModalIndex = index;
+    const item = state.uploadedImages[index];
+    let overlay = document.getElementById('uploadModalOverlay');
+    if (!overlay) {
+      overlay = document.createElement('div');
+      overlay.id = 'uploadModalOverlay';
+      overlay.className = 'modal-overlay';
+      overlay.addEventListener('click', closeUploadModal);
+      document.body.appendChild(overlay);
+    }
+    overlay.innerHTML = '';
+    const content = document.createElement('div');
+    content.className = 'modal-content';
+    content.addEventListener('click', (e) => e.stopPropagation());
+    const closeBtn = document.createElement('button');
+    closeBtn.className = 'modal-close';
+    closeBtn.title = 'Fechar';
+    closeBtn.setAttribute('aria-label', 'Fechar');
+    closeBtn.textContent = 'X';
+    closeBtn.addEventListener('click', closeUploadModal);
+    const filename = document.createElement('div');
+    filename.className = 'modal-filename';
+    filename.id = 'uploadModalFilename';
+    filename.textContent = item.name ? item.name : `Upload #${index + 1}`;
+    const wrapper = document.createElement('div');
+    wrapper.className = 'modal-image-wrapper';
+    const img = document.createElement('img');
+    img.className = 'modal-image';
+    img.id = 'uploadModalImage';
+    img.src = item.url;
+    img.alt = item.name || `Upload #${index + 1}`;
+    wrapper.appendChild(img);
+    const actions = document.createElement('div');
+    actions.className = 'modal-actions';
+    const prevBtn = document.createElement('button');
+    prevBtn.className = 'btn btn-secondary';
+    prevBtn.innerHTML = '◀ Anterior';
+    prevBtn.addEventListener('click', prevUploadModalImage);
+    const nextBtn = document.createElement('button');
+    nextBtn.className = 'btn btn-secondary';
+    nextBtn.innerHTML = 'Próxima ▶';
+    nextBtn.addEventListener('click', nextUploadModalImage);
+    const delBtn = document.createElement('button');
+    delBtn.className = 'btn btn-danger';
+    delBtn.innerHTML = '<img src="../images/delete_all_items.svg" alt="Excluir" class="btn-icon-modal" /> <span>Excluir da galeria</span>';
+    delBtn.addEventListener('click', deleteCurrentUploadModalImage);
+    actions.appendChild(prevBtn);
+    actions.appendChild(nextBtn);
+    actions.appendChild(delBtn);
+    content.appendChild(closeBtn);
+    content.appendChild(filename);
+    content.appendChild(wrapper);
+    content.appendChild(actions);
+    overlay.appendChild(content);
+    overlay.classList.add('active');
+  } catch (e) { console.error(e); }
+}
+
+export function closeUploadModal() {
+  const overlay = document.getElementById('uploadModalOverlay');
+  if (overlay) overlay.classList.remove('active');
+}
+
+export function updateUploadModalImage() {
+  try {
+    const idx = typeof state.uploadModalIndex === 'number' ? state.uploadModalIndex : 0;
+    if (!Array.isArray(state.uploadedImages) || state.uploadedImages.length === 0) { closeUploadModal(); return; }
+    let index = idx;
+    if (index < 0) index = state.uploadedImages.length - 1;
+    if (index >= state.uploadedImages.length) index = 0;
+    state.uploadModalIndex = index;
+    const item = state.uploadedImages[index];
+    const imgEl = document.getElementById('uploadModalImage');
+    if (imgEl) {
+      imgEl.src = item.url;
+      imgEl.alt = item.name || `Upload #${index + 1}`;
+    }
+    const labelEl = document.getElementById('uploadModalFilename');
+    if (labelEl) {
+      labelEl.textContent = item.name ? item.name : `Upload #${index + 1}`;
+    }
+  } catch (e) { console.error(e); }
+}
+
+export function nextUploadModalImage() { state.uploadModalIndex = (state.uploadModalIndex || 0) + 1; updateUploadModalImage(); }
+export function prevUploadModalImage() { state.uploadModalIndex = (state.uploadModalIndex || 0) - 1; updateUploadModalImage(); }
+
+export async function deleteCurrentUploadModalImage() {
+  try {
+    if (!Array.isArray(state.uploadedImages) || state.uploadedImages.length === 0) return;
+    const idx = typeof state.uploadModalIndex === 'number' ? state.uploadModalIndex : 0;
+    const item = state.uploadedImages[idx];
+    if (!item) return;
+    await deleteUploadImage(item.id);
+    if (state.uploadedImages.length === 0) { closeUploadModal(); return; }
+    if (state.uploadModalIndex >= state.uploadedImages.length) {
+      state.uploadModalIndex = state.uploadedImages.length - 1;
+    }
+    updateUploadModalImage();
+  } catch (e) { console.error(e); }
+}
+
+export async function deleteUploadImage(id) {
+  try {
+    const index = Array.isArray(state.uploadedImages) ? state.uploadedImages.findIndex(u => u.id === id) : -1;
+    if (index < 0) return;
+    const item = state.uploadedImages[index];
+    try { URL.revokeObjectURL(item.url); } catch (e) {}
+    // Opcional: solicitar remoção no backend, se houver
+    try {
+      const payload = { filename: (item.serverFilename || item.name || null) };
+      await fetch('/api/uploads/delete', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
+      }).catch(() => {});
+    } catch (_) {}
+    state.uploadedImages.splice(index, 1);
+    await loadUploadsGallery();
+    updateStatus('Upload removido da galeria');
+  } catch (e) { console.error(e); }
+}
+
 export function closeCaptureModal() {
   const overlay = document.getElementById('captureModalOverlay');
   if (overlay) overlay.classList.remove('active');
@@ -336,20 +857,22 @@ export async function deleteCaptureImage(id) {
   } catch (e) { console.error(e); }
 }
 
-export function setGalleryMode(mode) {
-  const m = (mode === 'captures') ? 'captures' : 'pdf';
+export async function setGalleryMode(mode) {
+  const m = (mode === 'captures') ? 'captures' : (mode === 'uploads' ? 'uploads' : 'pdf');
   setGalleryModeState(m);
-  const switchBtn = document.getElementById('gallerySwitch');
-  if (switchBtn) switchBtn.setAttribute('aria-pressed', m === 'captures' ? 'true' : 'false');
-  // Atualiza o rótulo com contador após alterar o modo
+  const selectEl = document.getElementById('gallerySelect');
+  if (selectEl) selectEl.value = m;
+  updateUploadsControlsVisibility();
   renderGallerySwitchLabelCount();
   updateDeleteAllLabel();
   try {
     if (m === 'pdf') {
       loadImageGallery();
       updateImageCountInfo();
-    } else {
+    } else if (m === 'captures') {
       loadCaptureGallery();
+    } else {
+      await loadUploadsGallery();
     }
   } catch (e) { console.error(e); }
 }
@@ -358,24 +881,25 @@ export function updateDeleteAllLabel() {
   const btn = document.querySelector('.delete-all-btn');
   if (!btn) return;
   const span = btn.querySelector('span');
-  if (span) span.textContent = (state.galleryMode === 'captures') ? 'Excluir Todas as Capturas' : 'Excluir Todas as Imagens';
-  btn.title = (state.galleryMode === 'captures') ? 'Excluir todas as capturas' : 'Excluir todas as imagens';
+  const isCaptures = state.galleryMode === 'captures';
+  const isUploads = state.galleryMode === 'uploads';
+  if (span) span.textContent = isCaptures ? 'Excluir Todas as Capturas' : (isUploads ? 'Excluir Todos os Uploads' : 'Excluir Todas as Imagens');
+  btn.title = isCaptures ? 'Excluir todas as capturas' : (isUploads ? 'Excluir todos os uploads' : 'Excluir todas as imagens');
   btn.setAttribute('aria-label', btn.title);
 }
 
 export function initGallerySwitch() {
-  const btn = document.getElementById('gallerySwitch');
-  const label = document.getElementById('gallerySwitchLabel');
-  if (!btn || !label) return;
-  btn.addEventListener('click', function(){
-    const pressed = this.getAttribute('aria-pressed') === 'true';
-    setGalleryMode(pressed ? 'pdf' : 'captures');
+  const selectEl = document.getElementById('gallerySelect');
+  if (!selectEl) return;
+  selectEl.addEventListener('change', async function(){
+    const val = String(this.value || 'pdf');
+    await setGalleryMode(val);
   });
-
-  // Atualiza contador no rótulo após recarregar a galeria de capturas
+  // Inicializar valor e visibilidade dos controles
+  try { selectEl.value = state.galleryMode || 'pdf'; } catch (_) {}
+  updateUploadsControlsVisibility();
   renderGallerySwitchLabelCount();
 
-  // Inicializa o clique do ícone de fechar da mensagem informativa
   const infoClose = document.getElementById('galleryInfoClose');
   const infoMessage = document.getElementById('galleryInfoMessage');
   if (infoClose && infoMessage) {
@@ -386,18 +910,25 @@ export function initGallerySwitch() {
   }
 }
 
-// Atualiza o texto do rótulo (gallerySwitchLabel) com contador entre parênteses e em negrito
+// Atualiza os textos das opções do select com o contador no final
 export function renderGallerySwitchLabelCount() {
-  const label = document.getElementById('gallerySwitchLabel');
-  if (!label) return;
-  const baseText = (state.galleryMode === 'captures') ? 'Capturas de Tela Salvas' : 'Imagens Pré-Carregadas';
-  let count = 0;
-  if (state.galleryMode === 'captures') {
-    count = Array.isArray(state.capturedImages) ? state.capturedImages.length : 0;
-  } else {
-    count = (state.estruturaEdicao && Array.isArray(state.estruturaEdicao.images)) ? state.estruturaEdicao.images.length : 0;
-  }
-  label.innerHTML = `${baseText} (${count})`;
+  const selectEl = document.getElementById('gallerySelect');
+  if (!selectEl) return;
+  const pdfCount = (state.estruturaEdicao && Array.isArray(state.estruturaEdicao.images)) ? state.estruturaEdicao.images.length : 0;
+  const capCount = Array.isArray(state.capturedImages) ? state.capturedImages.length : 0;
+  const uplCount = Array.isArray(state.uploadedImages) ? state.uploadedImages.length : 0;
+  const baseText = {
+    pdf: 'Imagens Pré-Carregadas',
+    captures: 'Capturas de Tela Salvas',
+    uploads: 'Imagens Enviadas/Uploads'
+  };
+  const counts = { pdf: pdfCount, captures: capCount, uploads: uplCount };
+  Array.from(selectEl.options).forEach((opt) => {
+    const v = opt.value;
+    const text = baseText[v] || opt.textContent;
+    const n = counts[v] ?? 0;
+    opt.textContent = `${text} (${n})`;
+  });
 }
 
 export function handleDragStart(e) {
@@ -432,6 +963,16 @@ export function handleDragStart(e) {
     // Definir os dados carregados para refletirem apenas a imagem
     if (this.dataset.captureUrl) {
       const src = this.dataset.captureUrl;
+      try {
+        e.dataTransfer.setData('text/uri-list', src);
+        e.dataTransfer.setData('text/plain', src);
+        e.dataTransfer.setData('text/html', `<img src="${src}" alt="Imagem" style="max-width:100%;display:block;"/>`);
+      } catch (_) {}
+      return;
+    }
+
+    if (this.dataset.uploadUrl) {
+      const src = this.dataset.uploadUrl;
       try {
         e.dataTransfer.setData('text/uri-list', src);
         e.dataTransfer.setData('text/plain', src);
@@ -712,7 +1253,7 @@ export async function deleteAllGalleryImages() {
       updateStatus('Todas as imagens removidas da galeria');
       try { showGalleryEmptyState(); } catch (e) {}
     }
-  } else {
+  } else if (state.galleryMode === 'captures') {
     if (confirm('Tem certeza que deseja excluir todas as capturas de tela?')) {
       try {
         // Solicitar exclusão de todas as capturas no backend
@@ -722,7 +1263,20 @@ export async function deleteAllGalleryImages() {
         state.capturedImages.forEach(ci => { try { URL.revokeObjectURL(ci.url); } catch (e) {} });
         state.capturedImages = [];
         loadCaptureGallery();
-        updateStatus('Todas as capturas removidas');
+      updateStatus('Todas as capturas removidas');
+    } catch (err) { console.error(err); }
+    }
+  } else {
+    if (confirm('Tem certeza que deseja excluir todos os uploads?')) {
+      try {
+        // Opcional: solicitar exclusão de uploads no backend
+        try {
+          await fetch('/api/uploads/delete-all', { method: 'POST' });
+        } catch (_) {}
+        state.uploadedImages.forEach(u => { try { URL.revokeObjectURL(u.url); } catch (e) {} });
+        state.uploadedImages = [];
+        await loadUploadsGallery();
+        updateStatus('Todos os uploads removidos');
       } catch (err) { console.error(err); }
     }
   }
@@ -739,8 +1293,11 @@ export function showGalleryEmptyState() {
     if (state.galleryMode === 'pdf') {
       if (msg) msg.textContent = 'Você não tem mais imagens do PDF na galeria. Capture novas imagens usando o painel de captura ou clique no botão abaixo para recapturar automaticamente as imagens iniciais do PDF.';
       if (ctrls) ctrls.style.display = '';
-    } else {
+    } else if (state.galleryMode === 'captures') {
       if (msg) msg.textContent = 'Nenhuma captura de tela salva. Use CAPTURAR IMAGEM e depois cole (Ctrl+V) para salvar aqui.';
+      if (ctrls) ctrls.style.display = 'none';
+    } else {
+      if (msg) msg.textContent = 'Nenhuma imagem enviada. Clique em "Enviar Imagens" acima para salvar aqui.';
       if (ctrls) ctrls.style.display = 'none';
     }
   }
@@ -766,6 +1323,59 @@ export function setGalleryLoading(message, show) {
   if (galleryContent) {
     galleryContent.style.display = show ? 'none' : '';
   }
+}
+
+export function initUploadControls() {
+  const btn = document.getElementById('btnUploadImages');
+  const inp = document.getElementById('inpUploadImages');
+  if (btn) {
+    btn.addEventListener('click', () => {
+      if (inp) inp.click();
+    });
+  }
+  if (inp) {
+    inp.addEventListener('change', async () => {
+      const files = Array.from(inp.files || []);
+      if (!files.length) return;
+      try { setGalleryLoading('Enviando imagens...', true); } catch (_) {}
+      for (const file of files) {
+        const id = `upl_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+        try {
+          const fd = new FormData();
+          fd.append('file', file, file.name);
+          const resp = await fetch('/api/uploads/upload', { method: 'POST', body: fd });
+          if (!resp.ok) throw new Error('Falha no upload');
+          const data = await resp.json();
+          const url = data && data.url ? data.url : null;
+          const serverFilename = data && data.filename ? data.filename : null;
+          if (url) {
+            state.uploadedImages.push({ id, url, name: serverFilename || file.name, serverFilename });
+          } else {
+            // Fallback para manter a experiência ainda que o backend falhe
+            const blobUrl = URL.createObjectURL(file);
+            state.uploadedImages.push({ id, url: blobUrl, blob: file, name: file.name });
+          }
+        } catch (e) {
+          console.error('Erro ao enviar upload:', e);
+          try {
+            const blobUrl = URL.createObjectURL(file);
+            state.uploadedImages.push({ id, url: blobUrl, blob: file, name: file.name });
+          } catch (err) { console.error(err); }
+        }
+      }
+      try { inp.value = ''; } catch (_) {}
+      try { setGalleryLoading('', false); } catch (_) {}
+      await setGalleryMode('uploads');
+      renderGallerySwitchLabelCount();
+      updateStatus('Uploads adicionados à galeria');
+    });
+  }
+}
+
+export function updateUploadsControlsVisibility() {
+  const ctrls = document.getElementById('uploadsControls');
+  if (!ctrls) return;
+  ctrls.style.display = (state.galleryMode === 'uploads') ? '' : 'none';
 }
 
 export function updateImageCountInfo() {

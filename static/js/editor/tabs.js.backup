@@ -253,3 +253,19 @@ export function toggleFullscreenMode() {
     if (typeof window.updateGoTopVisibility === 'function') window.updateGoTopVisibility();
   } catch (_) {}
 }
+
+// Função para ocultar/mostrar o editor-header
+export function toggleEditorHeader() {
+  const editorHeader = document.querySelector('.editor-header');
+  if (!editorHeader) return false;
+  
+  const isHidden = editorHeader.style.display === 'none';
+  
+  if (isHidden) {
+    editorHeader.style.display = '';
+  } else {
+    editorHeader.style.display = 'none';
+  }
+  
+  return !isHidden;
+}

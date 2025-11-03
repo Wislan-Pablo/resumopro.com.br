@@ -16,7 +16,13 @@ import {
   deleteCaptureImage,
   copyCaptureImage,
   setupDropZones,
-  deleteAllGalleryImages
+  deleteAllGalleryImages,
+  // Uploads
+  openUploadModal,
+  closeUploadModal,
+  deleteUploadImage,
+  copyUploadImage,
+  initUploadControls
 } from './gallery.js';
 import {
   openProjectSaveModal,
@@ -62,6 +68,13 @@ window.deleteCurrentCaptureModalImage = deleteCurrentCaptureModalImage;
 window.deleteCaptureImage = deleteCaptureImage;
 window.copyCaptureImage = copyCaptureImage;
 window.deleteAllGalleryImages = deleteAllGalleryImages;
+
+// Uploads: expor funções para os handlers declarados inline
+window.openUploadModal = openUploadModal;
+window.closeUploadModal = closeUploadModal;
+window.deleteUploadImage = deleteUploadImage;
+window.copyUploadImage = copyUploadImage;
+
 
 window.setGalleryMode = setGalleryMode;
 window.initGallerySwitch = initGallerySwitch;
@@ -233,6 +246,8 @@ document.addEventListener('DOMContentLoaded', () => {
   // Drop zones e switch da galeria já expostos globalmente
   try { setupDropZones(); } catch (_) {}
   try { initGallerySwitch(); } catch (_) {}
+  // Inicializar controles de upload de imagens
+  try { initUploadControls(); } catch (_) {}
   try { setGalleryMode('pdf'); } catch (_) {}
 
   // Inicializar captura de tela e listener de colagem

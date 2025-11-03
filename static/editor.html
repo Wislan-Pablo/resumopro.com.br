@@ -17,7 +17,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/static/css/editor.css">
+    <link rel="stylesheet" href="css/editor.css">
 </head>
 
 <body>
@@ -41,10 +41,18 @@
                 </div>
                 <!-- Toggle Switch de Galeria -->
                 <div class="gallery-switch" id="gallerySwitchBar">
-                    <button id="gallerySwitch" class="btn btn-secondary switch-btn" aria-pressed="false" title="Alternar galeria">
-                        <img src="../images/alternate_gallery.svg" alt="Alternar Galeria" class="btn-icon-24" />
-                        <span class="switch-label" id="gallerySwitchLabel">Imagens Pré-Carregadas</span>
+                    <select id="gallerySelect" class="gallery-select" title="Selecionar sessão da galeria" aria-label="Selecionar sessão da galeria">
+                        <option value="pdf">Imagens Pré-Carregadas</option>
+                        <option value="captures">Capturas de Tela Salvas</option>
+                        <option value="uploads">Imagens Enviadas (uploads)</option>
+                    </select>
+                </div>
+                <div id="uploadsControls" class="uploads-controls" style="display:none;">
+                    <button id="btnUploadImages" class="btn btn-secondary" title="Enviar imagens" aria-label="Enviar imagens">
+                        <img src="../images/upload_file.svg" alt="Enviar imagens" class="btn-icon-24" />
+                        <span>Enviar Imagens</span>
                     </button>
+                    <input id="inpUploadImages" type="file" accept="image/*" multiple style="display:none;" />
                 </div>
                 <div class="info-message" id="galleryInfoMessage">
                     <h3 id="imageCountInfo">Identifiquei 0 imagens vetoriais no PDF</h3>
@@ -200,7 +208,7 @@
             <div id="successMessage" style="margin: 10px 0;">Operação concluída com sucesso.</div>
         </div>
     </div>
-    <script type="module" src="/static/js/editor/main.js?v=7&t=1761947123"></script>
+    <script type="module" src="js/editor/main.js?v=7&t=1761947123"></script>
 </body>
 
 </html>
