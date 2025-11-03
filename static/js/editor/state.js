@@ -7,9 +7,13 @@ export const state = {
   capturedImages: [],
   captureTriggeredByButton: false,
   joditEditor: null,
+  // Último HTML salvo para detectar alterações no documento
+  lastSavedHtml: '',
   modalCurrentIndex: null,
   pdfLoadedForCapture: false,
-  adobeView: null
+  adobeView: null,
+  // Mantém, durante a sessão, se o usuário fechou a mensagem informativa da galeria
+  galleryInfoClosed: false
 };
 
 // Convenience setters to avoid accidental reassignment of the state object

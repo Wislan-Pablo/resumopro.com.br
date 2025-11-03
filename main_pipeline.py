@@ -116,22 +116,12 @@ async def start_full_processing(caminho_pdf_input: str, caminho_resumo_input: st
     print("\n[FASE 3/4] Preparando Interface de Edição Semântica...")
     await manager.send_message("{\"progress\": 50, \"status\": \"Fase 3/4: Preparando Interface de Edição...\"}")
     
-    # Criar estrutura JSON para a interface de edição
+    # Criar estrutura JSON para a interface de edição (sem html_content)
     estrutura_edicao = {
-        "html_content": "",
         "images": [],
         "resumo_text": "",
         "upload_dir": upload_dir
     }
-    
-    # Carregar conteúdo HTML
-    try:
-        with open(CAMINHO_HTML_TEMP, 'r', encoding='utf-8') as f:
-            estrutura_edicao["html_content"] = f.read()
-    except Exception as e:
-        print(f"❌ Erro ao carregar HTML: {e}")
-        await manager.send_message("{\"progress\": -1, \"status\": \"Erro ao carregar conteúdo HTML.\"}")
-        return False
     
     # Carregar lista de imagens
     try:

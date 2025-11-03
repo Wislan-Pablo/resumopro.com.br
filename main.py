@@ -788,6 +788,12 @@ async def get_editor_data():
         if os.path.exists(estrutura_path):
             with open(estrutura_path, 'r', encoding='utf-8') as f:
                 estrutura = json.load(f)
+            # Remover texto placeholder do resumo, caso exista
+            try:
+                if isinstance(estrutura.get('resumo_text'), str) and estrutura['resumo_text'].strip() == 'Resumo temporário para extração de imagens.':
+                    estrutura['resumo_text'] = ''
+            except Exception:
+                pass
             # Garantir que imagens_info seja incluído mesmo quando estrutura_edicao.json existe
             imagens_dir = os.path.join(UPLOAD_DIR, "imagens_extraidas")
             info_file_path = os.path.join(imagens_dir, 'imagens_info.json')
@@ -801,12 +807,24 @@ async def get_editor_data():
             except Exception as e:
                 print(f"Erro ao carregar imagens_info quando estrutura_edicao.json existe: {e}")
                 estrutura["imagens_info"] = estrutura.get("imagens_info", {})
+
+            # Incluir lista de capturas de tela do diretório caso não esteja presente
+            try:
+                cap_dir = os.path.join(UPLOAD_DIR, "capturas_de_tela")
+                if "captured_images" not in estrutura or not isinstance(estrutura.get("captured_images"), list):
+                    if os.path.isdir(cap_dir):
+                        estrutura["captured_images"] = [f for f in os.listdir(cap_dir) if f.lower().endswith('.png')]
+                    else:
+                        estrutura["captured_images"] = []
+            except Exception as e:
+                print(f"Erro ao listar capturas no get_editor_data: {e}")
         else:
             # Fallback quando estrutura_edicao.json não existe
             estrutura = {
                 "images": [],
                 "resumo_text": "",
-                "upload_dir": UPLOAD_DIR
+                "upload_dir": UPLOAD_DIR,
+                "captured_images": []
             }
             imagens_dir = os.path.join(UPLOAD_DIR, "imagens_extraidas")
             if os.path.isdir(imagens_dir):
@@ -828,6 +846,13 @@ async def get_editor_data():
                         
                 except Exception as e:
                     print(f"Erro ao listar imagens no fallback: {e}")
+            # Incluir capturas no fallback
+            try:
+                cap_dir = os.path.join(UPLOAD_DIR, "capturas_de_tela")
+                if os.path.isdir(cap_dir):
+                    estrutura["captured_images"] = [f for f in os.listdir(cap_dir) if f.lower().endswith('.png')]
+            except Exception:
+                pass
             # tentar descobrir um PDF no diretório para ajudar a UI
             try:
                 pdfs = [f for f in os.listdir(UPLOAD_DIR) if f.lower().endswith('.pdf')]
@@ -849,6 +874,65 @@ async def get_editor_data():
     except Exception as e:
         print(f"Erro ao carregar dados de edição: {e}")
         raise HTTPException(status_code=500, detail="Erro interno do servidor")
+
+# --- ROTAS: Exclusão de capturas ---
+@app.post("/api/captures/delete")
+async def delete_capture(request_data: dict = Body(default={})):  # { filename: str }
+    try:
+        filename = (request_data or {}).get("filename")
+        if not filename or not isinstance(filename, str):
+            raise HTTPException(status_code=400, detail="filename inválido")
+        # Garantir que é um nome simples, sem path traversal
+        safe = os.path.basename(filename)
+        cap_dir = os.path.join(UPLOAD_DIR, "capturas_de_tela")
+        target = os.path.join(cap_dir, safe)
+        if os.path.exists(target):
+            os.remove(target)
+        # Atualizar estrutura_edicao.json
+        estrutura_path = os.path.join(UPLOAD_DIR, "estrutura_edicao.json")
+        try:
+            if os.path.exists(estrutura_path):
+                with open(estrutura_path, 'r', encoding='utf-8') as f:
+                    estrutura = json.load(f)
+                captured_images = estrutura.get("captured_images", [])
+                estrutura["captured_images"] = [f for f in captured_images if f != safe]
+                with open(estrutura_path, 'w', encoding='utf-8') as f:
+                    json.dump(estrutura, f, ensure_ascii=False, indent=2)
+        except Exception as e:
+            print(f"Erro ao atualizar estrutura_edicao.json na exclusão: {e}")
+        return {"status": "ok"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Erro ao excluir captura: {e}")
+        raise HTTPException(status_code=500, detail="Falha ao excluir captura")
+
+@app.post("/api/captures/delete-all")
+async def delete_all_captures():
+    try:
+        cap_dir = os.path.join(UPLOAD_DIR, "capturas_de_tela")
+        if os.path.isdir(cap_dir):
+            for f in os.listdir(cap_dir):
+                if f.lower().endswith('.png'):
+                    try:
+                        os.remove(os.path.join(cap_dir, f))
+                    except Exception:
+                        pass
+        # Atualizar estrutura_edicao.json
+        estrutura_path = os.path.join(UPLOAD_DIR, "estrutura_edicao.json")
+        try:
+            if os.path.exists(estrutura_path):
+                with open(estrutura_path, 'r', encoding='utf-8') as f:
+                    estrutura = json.load(f)
+                estrutura["captured_images"] = []
+                with open(estrutura_path, 'w', encoding='utf-8') as f:
+                    json.dump(estrutura, f, ensure_ascii=False, indent=2)
+        except Exception as e:
+            print(f"Erro ao atualizar estrutura_edicao.json na exclusão de todas: {e}")
+        return {"status": "ok"}
+    except Exception as e:
+        print(f"Erro ao excluir todas as capturas: {e}")
+        raise HTTPException(status_code=500, detail="Falha ao excluir capturas")
 
 @app.get("/api/config-viewer")
 async def config_viewer():
@@ -938,10 +1022,10 @@ async def upload_pdf(originalPdf: UploadFile = File(...)):
             shutil.copyfileobj(originalPdf.file, buffer)
         print(f"[TRACE] PDF recebido e salvo em: {pdf_path}")
 
-        # Criar um arquivo de resumo temporário
+        # Criar um arquivo de resumo temporário vazio (sem texto inicial)
         resumo_temp_path = os.path.join(UPLOAD_DIR, f"temp_resumo_{base_name}.txt")
         with open(resumo_temp_path, "w", encoding="utf-8") as f:
-            f.write("Resumo temporário para extração de imagens.")
+            f.write("")
 
         # Acionar a extração de imagens
         await start_full_processing(
@@ -957,11 +1041,12 @@ async def upload_pdf(originalPdf: UploadFile = File(...)):
         print(f"[ERRO] upload-pdf: {e}")
         raise HTTPException(status_code=500, detail="Erro ao salvar o arquivo PDF.")
 
-# --- ROTA: Upload de imagem capturada (captura livre) ---
+# --- ROTA: Upload de imagem capturada (capturas de tela) ---
 @app.post("/api/upload-captured-image")
 async def upload_captured_image(file: UploadFile = File(...), filename: Optional[str] = Form(None)):
     try:
-        dest_dir = os.path.join(UPLOAD_DIR, "imagens_extraidas")
+        # Salvar em temp_uploads/capturas_de_tela
+        dest_dir = os.path.join(UPLOAD_DIR, "capturas_de_tela")
         os.makedirs(dest_dir, exist_ok=True)
         base_name = filename or f"img_capture_{int(time.time()*1000)}.png"
         if not base_name.lower().endswith('.png'):
@@ -971,7 +1056,7 @@ async def upload_captured_image(file: UploadFile = File(...), filename: Optional
         with open(save_path, 'wb') as f:
             f.write(data)
 
-        # Atualizar estrutura_edicao.json
+        # Atualizar estrutura_edicao.json com lista de captured_images (não poluir images do PDF)
         estrutura_path = os.path.join(UPLOAD_DIR, "estrutura_edicao.json")
         estrutura = {}
         if os.path.exists(estrutura_path):
@@ -980,10 +1065,10 @@ async def upload_captured_image(file: UploadFile = File(...), filename: Optional
                     estrutura = json.load(f)
             except Exception:
                 estrutura = {}
-        images = estrutura.get("images", [])
-        if base_name not in images:
-            images.append(base_name)
-            estrutura["images"] = images
+        captured_images = estrutura.get("captured_images", [])
+        if base_name not in captured_images:
+            captured_images.append(base_name)
+            estrutura["captured_images"] = captured_images
         if "upload_dir" not in estrutura:
             estrutura["upload_dir"] = UPLOAD_DIR
         try:
@@ -991,7 +1076,7 @@ async def upload_captured_image(file: UploadFile = File(...), filename: Optional
                 json.dump(estrutura, f, ensure_ascii=False, indent=2)
         except Exception as e:
             print(f"Erro ao salvar estrutura_edicao.json: {e}")
-        return {"filename": base_name}
+        return {"filename": base_name, "url": f"/{UPLOAD_DIR}/capturas_de_tela/{base_name}"}
     except Exception as e:
         print(f"Erro no upload de captura: {e}")
         raise HTTPException(status_code=500, detail="Falha ao salvar imagem capturada")

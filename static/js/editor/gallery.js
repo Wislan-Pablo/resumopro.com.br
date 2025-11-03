@@ -138,12 +138,12 @@ export function updateImageCountInfoCaptures() {
   const infoMessage = document.getElementById('galleryInfoMessage');
   if (imageCountInfo) {
     const n = state.capturedImages.length || 0;
-    imageCountInfo.innerHTML = `Você tem <strong>${n} captura(s)</strong> salva(s) nesta sessão. Clique e arraste para inserir no texto do Editor ou clique no ícone de copiar imagem e colar (Ctrl + V).`;
+    imageCountInfo.innerHTML = `Você tem <strong>${n} captura(s)</strong> salva(s) nesta sessão. Clique <strong>2x</strong> nas imagens (mantenha o botão do mouse pressionado), arraste e solte no Editor, ou se preferir, use o ícone de copiar (no canto superior esquerdo da imagem) para colar no texto (Ctrl + V).`;
     if (infoMessage) {
-      if (n > 0) {
-        infoMessage.style.display = '';
-      } else {
+      if (state.galleryInfoClosed) {
         infoMessage.style.display = 'none';
+      } else {
+        infoMessage.style.display = n > 0 ? '' : 'none';
       }
     }
   }
@@ -292,13 +292,13 @@ export function updateCaptureModalImage() {
 export function nextCaptureModalImage() { state.captureModalIndex = (state.captureModalIndex || 0) + 1; updateCaptureModalImage(); }
 export function prevCaptureModalImage() { state.captureModalIndex = (state.captureModalIndex || 0) - 1; updateCaptureModalImage(); }
 
-export function deleteCurrentCaptureModalImage() {
+export async function deleteCurrentCaptureModalImage() {
   try {
     if (!Array.isArray(state.capturedImages) || state.capturedImages.length === 0) return;
     const idx = typeof state.captureModalIndex === 'number' ? state.captureModalIndex : 0;
     const item = state.capturedImages[idx];
     if (!item) return;
-    deleteCaptureImage(item.id);
+    await deleteCaptureImage(item.id);
     // Após excluir, ajustar índice e exibir próxima/fechar
     if (state.capturedImages.length === 0) {
       closeCaptureModal();
@@ -311,11 +311,24 @@ export function deleteCurrentCaptureModalImage() {
   } catch (e) { console.error(e); }
 }
 
-export function deleteCaptureImage(id) {
+export async function deleteCaptureImage(id) {
   try {
     const idx = state.capturedImages.findIndex(ci => ci.id === id);
     if (idx >= 0) {
-      try { URL.revokeObjectURL(state.capturedImages[idx].url); } catch (e) {}
+      const item = state.capturedImages[idx];
+      // Tentar excluir no backend quando for uma URL persistida
+      try {
+        const url = item && item.url ? String(item.url) : '';
+        const m = url.match(/\/temp_uploads\/capturas_de_tela\/(.+)$/);
+        if (m && m[1]) {
+          await fetch('/api/captures/delete', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ filename: m[1] })
+          }).catch(() => {});
+        }
+      } catch (_) {}
+      try { URL.revokeObjectURL(item.url); } catch (e) {}
       state.capturedImages.splice(idx, 1);
       loadCaptureGallery();
       updateStatus('Captura removida da galeria');
@@ -368,6 +381,7 @@ export function initGallerySwitch() {
   if (infoClose && infoMessage) {
     infoClose.addEventListener('click', function(){
       infoMessage.style.display = 'none';
+      try { state.galleryInfoClosed = true; } catch (e) {}
     });
   }
 }
@@ -388,19 +402,65 @@ export function renderGallerySwitchLabelCount() {
 
 export function handleDragStart(e) {
   this.classList.add('dragging');
-  if (this.dataset.imageName) {
-    e.dataTransfer.setData('text/plain', this.dataset.imageName);
-  }
-  if (this.dataset.captureUrl) {
-    try {
-      e.dataTransfer.setData('text/uri-list', this.dataset.captureUrl);
-      e.dataTransfer.setData('text/plain', this.dataset.captureUrl);
-    } catch (err) {}
-  }
+  try {
+    // Sempre indicar operação de cópia ao soltar
+    if (e.dataTransfer && typeof e.dataTransfer.effectAllowed === 'string') {
+      e.dataTransfer.effectAllowed = 'copy';
+    }
+
+    // Usar somente a imagem como "ghost" do drag, não o container com ícones
+    const imgEl = this.querySelector('img');
+    if (imgEl && e.dataTransfer && e.dataTransfer.setDragImage) {
+      try {
+        // Criar uma cópia fora da tela para garantir que apenas a imagem apareça no ghost
+        const dragImg = imgEl.cloneNode(true);
+        dragImg.style.position = 'fixed';
+        dragImg.style.top = '-10000px';
+        dragImg.style.left = '-10000px';
+        dragImg.style.pointerEvents = 'none';
+        dragImg.style.zIndex = '-1';
+        document.body.appendChild(dragImg);
+        this.__dragImageEl = dragImg;
+
+        const rect = imgEl.getBoundingClientRect();
+        const ox = (typeof e.clientX === 'number') ? Math.min(Math.max(0, e.clientX - rect.left), rect.width) : Math.min(10, rect.width || 10);
+        const oy = (typeof e.clientY === 'number') ? Math.min(Math.max(0, e.clientY - rect.top), rect.height) : Math.min(10, rect.height || 10);
+        e.dataTransfer.setDragImage(dragImg, ox, oy);
+      } catch (_) {}
+    }
+
+    // Definir os dados carregados para refletirem apenas a imagem
+    if (this.dataset.captureUrl) {
+      const src = this.dataset.captureUrl;
+      try {
+        e.dataTransfer.setData('text/uri-list', src);
+        e.dataTransfer.setData('text/plain', src);
+        e.dataTransfer.setData('text/html', `<img src="${src}" alt="Imagem" style="max-width:100%;display:block;"/>`);
+      } catch (_) {}
+      return;
+    }
+
+    if (this.dataset.imageName) {
+      const name = this.dataset.imageName;
+      try {
+        e.dataTransfer.setData('text/plain', name);
+        // Também fornecer um HTML mínimo da imagem para destinos que preferem text/html
+        const src = `/temp_uploads/imagens_extraidas/${name}?v=${state.galleryCacheBust}`;
+        e.dataTransfer.setData('text/html', `<img src="${src}" alt="${name}" style="max-width:100%;display:block;"/>`);
+      } catch (_) {}
+      return;
+    }
+  } catch (_) {}
 }
 
 export function handleDragEnd(e) {
   this.classList.remove('dragging');
+  try {
+    if (this.__dragImageEl) {
+      this.__dragImageEl.remove();
+      delete this.__dragImageEl;
+    }
+  } catch (_) {}
 }
 
 export function setupDropZones() {
@@ -655,6 +715,10 @@ export async function deleteAllGalleryImages() {
   } else {
     if (confirm('Tem certeza que deseja excluir todas as capturas de tela?')) {
       try {
+        // Solicitar exclusão de todas as capturas no backend
+        try {
+          await fetch('/api/captures/delete-all', { method: 'POST' });
+        } catch (_) {}
         state.capturedImages.forEach(ci => { try { URL.revokeObjectURL(ci.url); } catch (e) {} });
         state.capturedImages = [];
         loadCaptureGallery();
@@ -718,14 +782,14 @@ export function updateImageCountInfo() {
     const candidateFromPath = fromPath(state.estruturaEdicao.pdf_path);
     const pdfNameCandidate = storedPdfName || state.estruturaEdicao.pdf_name || candidateFromPath;
     const pdfName = pdfNameCandidate || 'PDF selecionado';
-    imageCountInfo.innerHTML = `Identifiquei <strong>${imageCount} elemento(s) do tipo imagem </strong>neste PDF. Use esta galeria para: arrastá-las e inserí-las no texto; incluir novas imagens de captura; visualizá-las em tamanho orginal; e excluir as que não são relevantes para o seu texto/projeto.`;
+    imageCountInfo.innerHTML = `Identifiquei <strong>${imageCount} elemento(s) do tipo imagem </strong>neste PDF. Use esta galeria para: selecioná-las (clicar <strong>2x</strong>), arrastá-las e inserí-las no texto; visualizá-las em tamanho orginal; e excluir as que não são relevantes para o seu projeto.`;
     const pdfNameSpan = document.getElementById('imageCountInfoPdfName');
     if (pdfNameSpan) pdfNameSpan.textContent = pdfName;
     if (infoMessage) {
-      if (imageCount > 0) {
-        infoMessage.style.display = '';
-      } else {
+      if (state.galleryInfoClosed) {
         infoMessage.style.display = 'none';
+      } else {
+        infoMessage.style.display = imageCount > 0 ? '' : 'none';
       }
     }
   }

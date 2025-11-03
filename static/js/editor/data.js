@@ -92,6 +92,18 @@ export async function loadEditorData() {
       }
     } catch (_) {}
 
+    // Carregar capturas persistidas, se existirem
+    try {
+      const caps = Array.isArray(estruturaEdicao.captured_images) ? estruturaEdicao.captured_images : [];
+      if (caps.length) {
+        state.capturedImages = caps.map((fn, idx) => ({ id: `srv_${idx+1}_${fn}`, url: `/temp_uploads/capturas_de_tela/${String(fn).split(/[\\\/]/).pop()}`, createdAt: 0 }));
+      } else {
+        state.capturedImages = [];
+      }
+      // Atualizar empty state/contador da aba Capturas
+      try { setGalleryMode('pdf'); } catch (_) {}
+    } catch (_) {}
+
     updateStatus('Dados carregados com sucesso');
     // Atualizar disponibilidade de PDF para recaptura
     try { await refreshPdfAvailability(); } catch (_) {}

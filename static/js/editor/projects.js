@@ -1,4 +1,5 @@
 import { state } from './state.js';
+import { markDocumentSavedBaseline } from './jodit.js';
 import { updateStatus, updateImageCount, setCurrentPdfLabel } from './utils.js';
 
 export function openProjectSaveModal() {
@@ -17,6 +18,9 @@ export function closeProjectSaveModal() {
 }
 
 export function openSavedStatesModal() {
+  // Pré-preenche o conteúdo com um estado de carregamento antes de exibir a modal
+  const listEl = document.getElementById('savedStatesList');
+  if (listEl) listEl.innerHTML = '<p>Carregando projetos...</p>';
   const modal = document.getElementById('savedStatesModal');
   if (modal) modal.classList.add('active');
   loadSavedStates();
@@ -153,6 +157,7 @@ export async function saveProjectState() {
     setCurrentProject(data.slug || slug, projectName);
     showSuccessModal('Projeto salvo com sucesso');
     closeProjectSaveModal();
+    try { markDocumentSavedBaseline(); } catch (e) {}
   } catch (err) {
     console.error(err);
     updateStatus('Erro ao salvar projeto');
@@ -178,6 +183,7 @@ export async function saveProjectStateImmediate(current) {
     setCurrentProject(data.slug || slug, name || slug);
     updateStatus('Projeto salvo com sucesso');
     showSuccessModal('Projeto salvo com sucesso');
+    try { markDocumentSavedBaseline(); } catch (e) {}
   } catch (err) {
     console.error(err);
     updateStatus('Erro ao salvar projeto');
@@ -284,6 +290,7 @@ export async function continueEditingState(slug) {
     updateStatus('Projeto carregado');
     showSuccessModal('Projeto carregado com sucesso');
     closeSavedStatesModal();
+    try { markDocumentSavedBaseline(); } catch (e) {}
   } catch (e) {
     console.error(e);
     updateStatus('Erro ao carregar projeto salvo');
