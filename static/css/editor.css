@@ -218,7 +218,10 @@ body {
 .btn[disabled], .btn:disabled { pointer-events: none; opacity: 0.6; cursor: not-allowed; filter: grayscale(10%); }
 .btn-primary[disabled]:hover, .btn-primary:disabled:hover { background: #28a745; }
 .btn-secondary { background: #8d9092; color: white; }
-.btn-secondary:hover { background: #007bff; }
+/*.btn-secondary:hover { background: #007bff; }
+/* Botão "Projetos Salvos": usar azul apenas quando ativo; hover desativado */
+#btnSavedStates.active { background: #007bff !important; color: #fff !important; }
+/*#btnSavedStates:hover { background: #8d9092 !important; color: white !important; }*/
 #btnCaptureImage { background: #09b706; }
 #btnCaptureImage:hover { background: #09b706; }
 .pdf-viewer-toolbar .tab-btn { transition: transform 0.2s ease; }

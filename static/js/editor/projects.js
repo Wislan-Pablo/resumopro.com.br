@@ -23,12 +23,28 @@ export function openSavedStatesModal() {
   if (listEl) listEl.innerHTML = '<p>Carregando projetos...</p>';
   const modal = document.getElementById('savedStatesModal');
   if (modal) modal.classList.add('active');
+  const btn = document.getElementById('btnSavedStates');
+  if (btn) {
+    btn.classList.add('active');
+    try {
+      btn.style.background = '#007bff';
+      btn.style.color = '#fff';
+    } catch (e) {}
+  }
   loadSavedStates();
 }
 
 export function closeSavedStatesModal() {
   const modal = document.getElementById('savedStatesModal');
   if (modal) modal.classList.remove('active');
+  const btn = document.getElementById('btnSavedStates');
+  if (btn) {
+    btn.classList.remove('active');
+    try {
+      btn.style.background = '';
+      btn.style.color = '';
+    } catch (e) {}
+  }
 }
 
 export function showSuccessModal(message) {

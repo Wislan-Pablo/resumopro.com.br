@@ -133,6 +133,30 @@ export function loadCaptureGallery() {
   updateImageCountInfoCaptures();
 }
 
+// Pré-carrega as imagens de upload do servidor e atualiza contador
+export async function preloadUploads() {
+  try {
+    if (!Array.isArray(state.uploadedImages) || state.uploadedImages.length === 0) {
+      const response = await fetch('/api/uploads/list');
+      if (response.ok) {
+        const data = await response.json();
+        if (Array.isArray(data.images) && data.images.length > 0) {
+          state.uploadedImages = data.images.map((img, index) => ({
+            id: `server_${index}_${Date.now()}`,
+            name: img.filename,
+            url: img.url,
+            serverFilename: img.filename
+          }));
+        }
+      }
+    }
+  } catch (error) {
+    console.error('Erro ao pré-carregar imagens de upload:', error);
+  } finally {
+    try { renderGallerySwitchLabelCount(); } catch (_) {}
+  }
+}
+
 // Galeria de Uploads (arquivos enviados pelo usuário)
 export async function loadUploadsGallery() {
   const gallery = document.getElementById('imageGallery');
@@ -156,6 +180,7 @@ export async function loadUploadsGallery() {
             url: img.url,
             serverFilename: img.filename
           }));
+          try { renderGallerySwitchLabelCount(); } catch (_) {}
         }
       }
     } catch (error) {
@@ -213,6 +238,8 @@ export async function loadUploadsGallery() {
   });
 
   updateImageCountInfoUploads();
+  // Mantém o contador do select sincronizado com a galeria de uploads
+  renderGallerySwitchLabelCount();
 }
 
 export function updateImageCountInfoUploads() {

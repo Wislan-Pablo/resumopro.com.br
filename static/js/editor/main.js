@@ -23,6 +23,7 @@ import {
   deleteUploadImage,
   copyUploadImage,
   initUploadControls
+  , preloadUploads
 } from './gallery.js';
 import {
   openProjectSaveModal,
@@ -245,10 +246,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Drop zones e switch da galeria já expostos globalmente
   try { setupDropZones(); } catch (_) {}
-  try { initGallerySwitch(); } catch (_) {}
-  // Inicializar controles de upload de imagens
-  try { initUploadControls(); } catch (_) {}
-  try { setGalleryMode('pdf'); } catch (_) {}
+  // Pré-carregar uploads para sincronizar contador do select
+  try {
+    Promise.resolve(preloadUploads()).finally(() => {
+      try { initGallerySwitch(); } catch (_) {}
+      try { initUploadControls(); } catch (_) {}
+    });
+  } catch (_) {
+    try { initGallerySwitch(); } catch (_) {}
+    try { initUploadControls(); } catch (_) {}
+  }
 
   // Inicializar captura de tela e listener de colagem
   try { initCaptureButton(); } catch (_) {}
