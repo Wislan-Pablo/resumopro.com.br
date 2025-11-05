@@ -176,7 +176,24 @@ export function initEditorTabs() {
     }
   }
 
-  tabEditor.addEventListener('click', () => activate('editor'));
+  // Ao clicar em Editor, garantir que a sidebar esteja expandida e ativar a aba
+  tabEditor.addEventListener('click', () => {
+    try {
+      const sidebar = document.getElementById('sidebar');
+      const toggleBtn = document.getElementById('sidebarToggle');
+      const containerEl = document.querySelector('.container');
+      if (sidebar && sidebar.classList.contains('collapsed')) {
+        sidebar.classList.remove('collapsed');
+        if (containerEl) containerEl.classList.remove('sidebar-collapsed');
+        if (toggleBtn) {
+          toggleBtn.innerHTML = '<img src="../images/close_small.svg" alt="Retrair Galeria" width="56" height="56" style="transform: rotate(180deg);" />';
+          toggleBtn.title = 'Retrair Galeria';
+          toggleBtn.setAttribute('aria-label', 'Retrair Galeria');
+        }
+      }
+    } catch (_) {}
+    activate('editor');
+  });
 
   if (btnCapture) {
     btnCapture.disabled = false;

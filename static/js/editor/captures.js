@@ -1,6 +1,5 @@
 import { state } from './state.js';
 import { setGalleryMode, loadCaptureGallery } from './gallery.js';
-import { updateStatus } from './utils.js';
 
 export function initCaptureButton() {
   const btnCaptureImage = document.getElementById('btnCaptureImage');
@@ -15,7 +14,6 @@ export function initCaptureButton() {
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
-      updateStatus('Conclua a captura e cole (Ctrl+V) no editor para salvar na galeria.');
     } catch (e) {
       console.warn('Screen Snip não pôde ser iniciado:', e);
     }

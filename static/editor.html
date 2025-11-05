@@ -17,7 +17,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/editor.css">
+    <link rel="stylesheet" href="/static/css/editor.css">
 </head>
 
 <body>
@@ -29,6 +29,10 @@
                 <button id="sidebarToggle" class="sidebar-toggle" aria-label="Retrair Galeria" title="Retrair Galeria">
     <img src="../images/close_small.svg" alt="Retrair Galeria" width="56" height="56" style="transform: rotate(180deg);" />
 </button>
+            </div>
+            <div id="sidebarLogoCollapsed" class="sidebar-logo-collapsed" aria-hidden="true">
+                <img src="../images/Logo_Favicon_ResumoFull.svg" alt="Logo ResumeFull" class="sidebar-logo-icon" title="resumofull.com.br" />
+                <div class="sidebar-version-label" aria-hidden="true">Versão: 1.0</div>
             </div>
             <div id="galleryLoading" class="pdf-loading">
                 <div class="pdf-loading-spinner"></div>
@@ -49,7 +53,7 @@
                 </div>
                 <div id="uploadsControls" class="uploads-controls" style="display:none;">
                     <button id="btnUploadImages" class="btn btn-secondary" title="Enviar imagens" aria-label="Enviar imagens">
-                        <img src="../images/upload_file.svg" alt="Enviar imagens" class="btn-icon-24" />
+                        <img src="../images/upload_image.svg" alt="Enviar imagens" class="btn-icon-24" />
                         <span>Enviar Imagens</span>
                     </button>
                     <input id="inpUploadImages" type="file" accept="image/*" multiple style="display:none;" />
@@ -63,7 +67,14 @@
                         Você não tem mais imagens do PDF na galeria. Capture novas imagens usando o painel de captura ou clique no botão abaixo para recapturar automaticamente as imagens iniciais do PDF.
                     </div>
                     <div class="gallery-empty-controls">
-                        <button class="btn btn-primary" id="btnRecoverInitialImages">Recuperar imagens iniciais do PDF</button>
+                        <button class="btn btn-secondary" id="btnRecoverInitialImages" title="Recuperar imagens iniciais do PDF" aria-label="Recuperar imagens iniciais do PDF">
+                            <img src="../images/recovery_images_pdf.svg" alt="Recuperar imagens iniciais do PDF" class="btn-icon-24" />
+                            <span>Recuperar imagens do PDF</span>
+                        </button>
+                        <button class="btn btn-secondary" id="btnRecoverCaptures" title="Capturar Imagem no PDF" aria-label="Capturar Imagem no PDF" style="display:none;">
+                            <img src="../images/view_pdf.svg" alt="Capturar Imagem no PDF" class="btn-icon-24" />
+                            <span>Capturar Imagem no PDF</span>
+                        </button>
                     </div>
                 </div>
                 <div class="image-gallery" id="imageGallery">
@@ -95,7 +106,7 @@
                     </button>
                     <button id="upload_file" class="btn btn-secondary tab-btn">
                         <img src="../images/upload_file.svg" alt="Carregar PDF" class="btn-icon" />
-                        Novo Arquivo
+                        Novo PDF
                     </button>
                 </div>
                 <div class="editor-actions">
@@ -149,7 +160,6 @@
             <div class="status-bar">
                 <div class="status-info">
                     <span>Imagens posicionadas: <span id="imageCount">0</span></span>
-                    <span>Status: <span id="status">Pronto para editar</span></span>
                 </div>
             </div>
         </div>
@@ -208,7 +218,7 @@
             <div id="successMessage" style="margin: 10px 0;">Operação concluída com sucesso.</div>
         </div>
     </div>
-    <script type="module" src="js/editor/main.js?v=7&t=1761947123"></script>
+    <script type="module" src="/static/js/editor/main.js?v=8"></script>
 </body>
 
 </html>

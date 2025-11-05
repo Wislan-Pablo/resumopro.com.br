@@ -1135,8 +1135,10 @@ async def uploads_delete_all():
     try:
         dest_dir = os.path.join(UPLOAD_DIR, "Imagens_de_Uploads")
         if os.path.isdir(dest_dir):
+            # Alinhar os tipos de arquivo com a listagem de uploads
+            allowed_exts = (".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp", ".svg")
             for f in os.listdir(dest_dir):
-                if f.lower().endswith((".png", ".jpg", ".jpeg", ".gif", ".webp")):
+                if f.lower().endswith(allowed_exts):
                     try:
                         os.remove(os.path.join(dest_dir, f))
                     except Exception:

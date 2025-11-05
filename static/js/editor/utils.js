@@ -40,15 +40,27 @@ export function setCurrentPdfLabel(name) {
   } catch (e) {}
 }
 
-export function updateStatus(message) {
-  const el = document.getElementById('status');
-  if (el) el.textContent = message || '';
-}
-
 export function updateImageCount() {
   const count = state.imagensPosicionadas.length;
   const el = document.getElementById('imageCount');
   if (el) el.textContent = String(count);
+}
+
+// Conta imagens posicionadas diretamente a partir do DOM do editor,
+// somando placeholders (.image-placeholder) e imagens diretas (<img>)
+// que não estejam dentro de um placeholder. Funciona tanto no Jodit
+// (conteúdo dentro do iframe) quanto no modo Documento.
+export function updateImageCountFromDOM() {
+  try {
+    const doc = state.joditEditor && state.joditEditor.editorDocument;
+    const root = (doc && doc.body) ? doc.body : document.getElementById('structuredSummary');
+    if (!root) return;
+    const placeholders = root.querySelectorAll('.image-placeholder');
+    const directImgs = Array.from(root.querySelectorAll('img')).filter(img => !img.closest('.image-placeholder'));
+    const total = placeholders.length + directImgs.length;
+    const el = document.getElementById('imageCount');
+    if (el) el.textContent = String(total);
+  } catch (_) {}
 }
 
 export function getTextNodes(element) {

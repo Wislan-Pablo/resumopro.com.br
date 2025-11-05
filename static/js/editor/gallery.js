@@ -1,5 +1,5 @@
 import { state, setGalleryMode as setGalleryModeState } from './state.js';
-import { updateStatus, getTextNodes, getSortedImages, buildImagemInfoLookup, getImagePageInfo, updateImageCount } from './utils.js';
+import { getTextNodes, getSortedImages, buildImagemInfoLookup, getImagePageInfo, updateImageCount, updateImageCountFromDOM } from './utils.js?v=8';
 
 export function loadImageGallery() {
   const gallery = document.getElementById('imageGallery');
@@ -10,6 +10,8 @@ export function loadImageGallery() {
     updateImageCountInfo();
     // Atualiza contador no rótulo quando não há imagens
     renderGallerySwitchLabelCount();
+    // Exibe estado vazio consistente com o modo atual
+    try { showGalleryEmptyState(); } catch (_) {}
     return;
   }
 
@@ -33,7 +35,7 @@ export function loadImageGallery() {
     imageItem.innerHTML = `
       <img src="/temp_uploads/imagens_extraidas/${imageName}?v=${state.galleryCacheBust}" alt="${imageName}">
       <button class="copy-btn" title="Copiar imagem" onclick="copyGalleryImage('${imageName}')" onmousedown="event.stopPropagation()">
-        <img src="../images/copy_image_gallery.svg" alt="Copiar" width="18" height="18" />
+        <img src="../images/copy_image_gallery.svg" alt="Copiar" width="54" height="54" />
       </button>
       <button class="view-btn" title="Visualizar imagem" onclick="openImageModal('${imageName}')" onmousedown="event.stopPropagation()">
         <svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -42,7 +44,7 @@ export function loadImageGallery() {
         </svg>
       </button>
       <div class="copy-feedback" aria-live="polite">
-        <img src="../images/copy_image_gallery.svg" alt="" width="20" height="20" />
+        <img src="../images/copy_image_gallery.svg" alt="" width="54" height="54" />
         <span>Imagem foi copiada para a área de transferência</span>
       </div>
       <div class="image-name">${displayName}</div>
@@ -60,15 +62,10 @@ export function loadImageGallery() {
   updateImageCountInfo();
   // Atualiza contador no rótulo após recarregar a galeria
   renderGallerySwitchLabelCount();
-
-  const actions = document.querySelector('.gallery-actions');
-  const emptyState = document.getElementById('galleryEmptyState');
   if (sorted.length === 0) {
-    if (actions) actions.style.display = 'none';
-    if (emptyState) emptyState.style.display = '';
+    try { showGalleryEmptyState(); } catch (_) {}
   } else {
-    if (actions) actions.style.display = '';
-    if (emptyState) emptyState.style.display = 'none';
+    try { hideGalleryEmptyState(); } catch (_) {}
   }
 }
 
@@ -82,13 +79,7 @@ export function loadCaptureGallery() {
 
   if (!Array.isArray(state.capturedImages) || state.capturedImages.length === 0) {
     if (actions) actions.style.display = 'none';
-    if (emptyState) {
-      emptyState.style.display = '';
-      const msg = emptyState.querySelector('.gallery-empty-message');
-      const ctrls = emptyState.querySelector('.gallery-empty-controls');
-  if (msg) msg.textContent = 'Nenhuma captura de tela salva. Use o botão CAPTURAR IMAGEM e depois cole (Ctrl+V) no editor para salvar aqui 😊';
-      if (ctrls) ctrls.style.display = 'none';
-    }
+    try { showGalleryEmptyState(); } catch (_) {}
     updateImageCountInfoCaptures();
     // Atualiza contador no rótulo quando não há capturas
     renderGallerySwitchLabelCount();
@@ -108,7 +99,7 @@ export function loadCaptureGallery() {
     imageItem.innerHTML = `
       <img src="${item.url}" alt="${displayName}">
       <button class=\"copy-btn\" title=\"Copiar imagem\" onclick=\"copyCaptureImage('${item.id}')\" onmousedown=\"event.stopPropagation()\">
-        <img src=\"../images/copy_image_gallery.svg\" alt=\"Copiar\" width=\"18\" height=\"18\" />
+        <img src=\"../images/copy_image_gallery.svg\" alt=\"Copiar\" width=\"54\" height=\"54\" />
       </button>
       <button class=\"view-btn\" title=\"Visualizar imagem\" onclick=\"openCaptureModal('${item.id}')\" onmousedown=\"event.stopPropagation()\">
         <svg viewBox=\"0 0 24 24\" width=\"30\" height=\"30\" fill=\"none\" stroke=\"white\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\">
@@ -117,7 +108,7 @@ export function loadCaptureGallery() {
         </svg>
       </button>
       <div class=\"copy-feedback\" aria-live=\"polite\">
-        <img src=\"../images/copy_image_gallery.svg\" alt=\"\" width=\"20\" height=\"20\" />
+        <img src=\"../images/copy_image_gallery.svg\" alt=\"\" width=\"54\" height=\"54\" />
         <span>Imagem foi copiada para a área de transferência</span>
       </div>
       <div class=\"image-name\">${displayName}</div>
@@ -131,23 +122,48 @@ export function loadCaptureGallery() {
   });
 
   updateImageCountInfoCaptures();
+  try { hideGalleryEmptyState(); } catch (_) {}
 }
 
 // Pré-carrega as imagens de upload do servidor e atualiza contador
 export async function preloadUploads() {
   try {
     if (!Array.isArray(state.uploadedImages) || state.uploadedImages.length === 0) {
-      const response = await fetch('/api/uploads/list');
-      if (response.ok) {
-        const data = await response.json();
-        if (Array.isArray(data.images) && data.images.length > 0) {
-          state.uploadedImages = data.images.map((img, index) => ({
-            id: `server_${index}_${Date.now()}`,
-            name: img.filename,
-            url: img.url,
-            serverFilename: img.filename
-          }));
+      // Tenta endpoint do backend
+      try {
+        const response = await fetch('/api/uploads/list');
+        if (response.ok) {
+          const data = await response.json();
+          if (Array.isArray(data.images) && data.images.length > 0) {
+            state.uploadedImages = data.images.map((img, index) => ({
+              id: `server_${index}_${Date.now()}`,
+              name: img.filename,
+              url: img.url,
+              serverFilename: img.filename
+            }));
+          }
         }
+      } catch (_) {}
+      // Fallback: listar diretório estático quando backend não está disponível
+      if (!Array.isArray(state.uploadedImages) || state.uploadedImages.length === 0) {
+        try {
+          const dirHtml = await fetch('/temp_uploads/Imagens_de_Uploads/').then(r => r.text());
+          const parser = new DOMParser();
+          const doc = parser.parseFromString(dirHtml, 'text/html');
+          const links = Array.from(doc.querySelectorAll('a[href]'));
+          const imgs = links
+            .map(a => a.getAttribute('href'))
+            .filter(href => /\.(png|jpg|jpeg|gif|svg)$/i.test(href || ''))
+            .map((href, index) => ({
+              id: `dir_${index}_${Date.now()}`,
+              name: href.split(/[\\\/]/).pop(),
+              url: `/temp_uploads/Imagens_de_Uploads/${href.replace(/^\/?/, '')}`,
+              serverFilename: href.split(/[\\\/]/).pop()
+            }));
+          if (imgs.length) {
+            state.uploadedImages = imgs;
+          }
+        } catch (_) {}
       }
     }
   } catch (error) {
@@ -186,17 +202,33 @@ export async function loadUploadsGallery() {
     } catch (error) {
       console.error('Erro ao carregar imagens do servidor:', error);
     }
+    // Fallback: listar diretório estático quando backend não está disponível
+    if (!Array.isArray(state.uploadedImages) || state.uploadedImages.length === 0) {
+      try {
+        const dirHtml = await fetch('/temp_uploads/Imagens_de_Uploads/').then(r => r.text());
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(dirHtml, 'text/html');
+        const links = Array.from(doc.querySelectorAll('a[href]'));
+        const imgs = links
+          .map(a => a.getAttribute('href'))
+          .filter(href => /\.(png|jpg|jpeg|gif|svg)$/i.test(href || ''))
+          .map((href, index) => ({
+            id: `dir_${index}_${Date.now()}`,
+            name: href.split(/[\\\/]/).pop(),
+            url: `/temp_uploads/Imagens_de_Uploads/${href.replace(/^\/?/, '')}`,
+            serverFilename: href.split(/[\\\/]/).pop()
+          }));
+        if (imgs.length) {
+          state.uploadedImages = imgs;
+          try { renderGallerySwitchLabelCount(); } catch (_) {}
+        }
+      } catch (_) {}
+    }
   }
 
   if (!Array.isArray(state.uploadedImages) || state.uploadedImages.length === 0) {
     if (actions) actions.style.display = 'none';
-    if (emptyState) {
-      emptyState.style.display = '';
-      const msg = emptyState.querySelector('.gallery-empty-message');
-      const ctrls = emptyState.querySelector('.gallery-empty-controls');
-      if (msg) msg.textContent = 'Nenhuma imagem enviada. Clique em "Enviar Imagens" acima ou cole diretamente no editor para salvar aqui.';
-      if (ctrls) ctrls.style.display = 'none';
-    }
+    try { showGalleryEmptyState(); } catch (_) {}
     updateImageCountInfoUploads();
     renderGallerySwitchLabelCount();
     return;
@@ -215,7 +247,7 @@ export async function loadUploadsGallery() {
     imageItem.innerHTML = `
       <img src="${item.url}" alt="${displayName}">
       <button class=\"copy-btn\" title=\"Copiar imagem\" onclick=\"copyUploadImage('${item.id}')\" onmousedown=\"event.stopPropagation()\">
-        <img src=\"../images/copy_image_gallery.svg\" alt=\"Copiar\" width=\"18\" height=\"18\" />
+        <img src=\"../images/copy_image_gallery.svg\" alt=\"Copiar\" width=\"54\" height=\"54\" />
       </button>
       <button class=\"view-btn\" title=\"Visualizar imagem\" onclick=\"openUploadModal('${item.id}')\" onmousedown=\"event.stopPropagation()\">
         <svg viewBox=\"0 0 24 24\" width=\"30\" height=\"30\" fill=\"none\" stroke=\"white\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\">
@@ -224,7 +256,7 @@ export async function loadUploadsGallery() {
         </svg>
       </button>
       <div class=\"copy-feedback\" aria-live=\"polite\">
-        <img src=\"../images/copy_image_gallery.svg\" alt=\"\" width=\"20\" height=\"20\" />
+        <img src=\"../images/copy_image_gallery.svg\" alt=\"\" width=\"54\" height=\"54\" />
         <span>Imagem foi copiada para a área de transferência</span>
       </div>
       <div class=\"image-name\">${displayName}</div>
@@ -247,7 +279,7 @@ export function updateImageCountInfoUploads() {
   const infoMessage = document.getElementById('galleryInfoMessage');
   if (imageCountInfo) {
     const n = Array.isArray(state.uploadedImages) ? state.uploadedImages.length : 0;
-    imageCountInfo.innerHTML = `Você tem <strong>${n} upload(s)</strong> nesta sessão. Arraste e solte no Editor ou use o ícone de copiar para colar no texto (Ctrl + V).`;
+    imageCountInfo.innerHTML = `Você tem <strong>${n} upload(s) de imagem</strong> nesta sessão. Arraste e solte no Editor ou use o ícone de copiar para colar no texto (Ctrl + V).`;
     if (infoMessage) {
       if (state.galleryInfoClosed) {
         infoMessage.style.display = 'none';
@@ -294,7 +326,7 @@ export function loadClipboardGallery() {
     imageItem.innerHTML = `
       <img src="${item.url}" alt="${displayName}">
       <button class=\"copy-btn\" title=\"Copiar imagem\" onclick=\"copyClipboardImage('${item.id}')\" onmousedown=\"event.stopPropagation()\">
-        <img src=\"../images/copy_image_gallery.svg\" alt=\"Copiar\" width=\"18\" height=\"18\" />
+        <img src=\"../images/copy_image_gallery.svg\" alt=\"Copiar\" width=\"54\" height=\"54\" />
       </button>
       <button class=\"view-btn\" title=\"Visualizar imagem\" onclick=\"openClipboardModal('${item.id}')\" onmousedown=\"event.stopPropagation()\">
         <svg viewBox=\"0 0 24 24\" width=\"30\" height=\"30\" fill=\"none\" stroke=\"white\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\">
@@ -303,7 +335,7 @@ export function loadClipboardGallery() {
         </svg>
       </button>
       <div class=\"copy-feedback\" aria-live=\"polite\">
-        <img src=\"../images/copy_image_gallery.svg\" alt=\"\" width=\"20\" height=\"20\" />
+        <img src=\"../images/copy_image_gallery.svg\" alt=\"\" width=\"54\" height=\"54\" />
         <span>Imagem foi copiada para a área de transferência</span>
       </div>
       <div class=\"image-name\">${displayName}</div>
@@ -468,7 +500,6 @@ export async function deleteClipboardImage(id) {
       try { if (item.url && String(item.url).startsWith('blob:')) URL.revokeObjectURL(item.url); } catch (_) {}
       state.clipboardImages.splice(idx, 1);
       loadClipboardGallery();
-      updateStatus('Imagem copiada removida');
     }
   } catch (e) { console.error(e); }
 }
@@ -492,14 +523,12 @@ export async function copyClipboardImage(id) {
           }
         } catch (_) {}
         await navigator.clipboard.write([clip]);
-        updateStatus('Imagem copiada para a área de transferência');
         showClipboardCopyFeedback(id);
         return;
       }
     }
     // Fallback: copiar URL
     await navigator.clipboard.writeText(item.url);
-    updateStatus('Link da imagem copiada para a área de transferência');
     showClipboardCopyFeedback(id);
   } catch (e) { console.error(e); }
 }
@@ -543,16 +572,13 @@ export function copyCaptureImage(id) {
           }
         } catch (_) {}
         await navigator.clipboard.write([clipboardItem]);
-        updateStatus('Imagem de captura copiada para a área de transferência');
         showCaptureCopyFeedback(id);
         return;
       }
 
       await navigator.clipboard.writeText(item.url);
-      updateStatus('Link da imagem de captura copiado para a área de transferência');
     } catch (err) {
       console.error('Erro ao copiar captura:', err);
-      updateStatus('Não foi possível copiar a captura');
     }
   })();
 }
@@ -580,16 +606,13 @@ export function copyUploadImage(id) {
           }
         } catch (_) {}
         await navigator.clipboard.write([clipboardItem]);
-        updateStatus('Imagem enviada copiada para a área de transferência');
         showUploadCopyFeedback(id);
         return;
       }
 
       await navigator.clipboard.writeText(item.url);
-      updateStatus('Link da imagem enviada copiado para a área de transferência');
     } catch (err) {
       console.error('Erro ao copiar upload:', err);
-      updateStatus('Não foi possível copiar o upload');
     }
   })();
 }
@@ -807,7 +830,6 @@ export async function deleteUploadImage(id) {
     } catch (_) {}
     state.uploadedImages.splice(index, 1);
     await loadUploadsGallery();
-    updateStatus('Upload removido da galeria');
   } catch (e) { console.error(e); }
 }
 
@@ -879,7 +901,6 @@ export async function deleteCaptureImage(id) {
       try { URL.revokeObjectURL(item.url); } catch (e) {}
       state.capturedImages.splice(idx, 1);
       loadCaptureGallery();
-      updateStatus('Captura removida da galeria');
     }
   } catch (e) { console.error(e); }
 }
@@ -940,7 +961,6 @@ export function initGallerySwitch() {
 // Atualiza os textos das opções do select com o contador no final
 export function renderGallerySwitchLabelCount() {
   const selectEl = document.getElementById('gallerySelect');
-  if (!selectEl) return;
   const pdfCount = (state.estruturaEdicao && Array.isArray(state.estruturaEdicao.images)) ? state.estruturaEdicao.images.length : 0;
   const capCount = Array.isArray(state.capturedImages) ? state.capturedImages.length : 0;
   const uplCount = Array.isArray(state.uploadedImages) ? state.uploadedImages.length : 0;
@@ -950,12 +970,27 @@ export function renderGallerySwitchLabelCount() {
     uploads: 'Imagens Enviadas/Uploads'
   };
   const counts = { pdf: pdfCount, captures: capCount, uploads: uplCount };
-  Array.from(selectEl.options).forEach((opt) => {
-    const v = opt.value;
-    const text = baseText[v] || opt.textContent;
-    const n = counts[v] ?? 0;
-    opt.textContent = `${text} (${n})`;
-  });
+  if (selectEl) {
+    Array.from(selectEl.options).forEach((opt) => {
+      const v = opt.value;
+      const text = baseText[v] || opt.textContent;
+      const n = counts[v] ?? 0;
+      opt.textContent = `${text} (${n})`;
+    });
+  }
+
+  // Também atualiza o cabeçalho da sidebar com o total da galeria
+  updateSidebarGalleryHeaderCount(pdfCount + capCount + uplCount);
+}
+
+// Atualiza o título "Galeria" do cabeçalho da sidebar com o total
+export function updateSidebarGalleryHeaderCount(total) {
+  try {
+    const headerTitle = document.querySelector('.sidebar-header h2');
+    if (!headerTitle) return;
+    const n = (typeof total === 'number' && isFinite(total) && total >= 0) ? total : 0;
+    headerTitle.textContent = `Galeria (${n})`;
+  } catch (_) {}
 }
 
 export function handleDragStart(e) {
@@ -1087,8 +1122,7 @@ export function insertImageAtPosition(imageName, mouseX, mouseY) {
     const br = document.createElement('br');
     parent.insertBefore(br, imagePlaceholder.nextSibling);
     state.imagensPosicionadas.push(imageName);
-    updateImageCount();
-    updateStatus(`Imagem ${imageName} inserida`);
+    try { updateImageCountFromDOM(); } catch (_) {}
   }
 }
 
@@ -1124,7 +1158,7 @@ export function insertCaptureImageAtPosition(srcUrl, mouseX, mouseY) {
   } else {
     structuredSummary.appendChild(img);
   }
-  updateStatus('Imagem de captura inserida');
+  try { updateImageCountFromDOM(); } catch (_) {}
 }
 
 export function createImagePlaceholder(imageName) {
@@ -1146,8 +1180,7 @@ export function removeImage(button) {
     state.imagensPosicionadas.splice(index, 1);
   }
   placeholder.remove();
-  updateImageCount();
-  updateStatus(`Imagem ${imageName} removida`);
+  try { updateImageCountFromDOM(); } catch (_) {}
 }
 
 export function clearAllImages() {
@@ -1155,8 +1188,7 @@ export function clearAllImages() {
   const placeholders = structuredSummary ? structuredSummary.querySelectorAll('.image-placeholder') : [];
   Array.from(placeholders).forEach(ph => ph.remove());
   state.imagensPosicionadas = [];
-  updateImageCount();
-  updateStatus('Todas as imagens removidas');
+  try { updateImageCountFromDOM(); } catch (_) {}
 }
 
 export async function deleteGalleryImage(imageName) {
@@ -1170,7 +1202,6 @@ export async function deleteGalleryImage(imageName) {
     }
     loadImageGallery();
     updateImageCountInfo();
-    updateStatus(`Imagem ${imageName} removida da galeria`);
   }
 }
 
@@ -1192,25 +1223,20 @@ export async function copyGalleryImage(imageName) {
         }
       } catch (_) {}
       await navigator.clipboard.write([item]);
-      updateStatus(`Imagem ${imageName} copiada para a área de transferência`);
       showCopyFeedback(imageName);
       return;
     }
     const success = await copyImageViaSelection(url);
     if (success) {
-      updateStatus(`Imagem ${imageName} copiada via seleção`);
       showCopyFeedback(imageName);
       return;
     }
     await navigator.clipboard.writeText(url);
-    updateStatus(`Link da imagem ${imageName} copiado para a área de transferência`);
   } catch (err) {
     console.error('Erro ao copiar imagem:', err);
     try {
       await navigator.clipboard.writeText(new URL(`/temp_uploads/imagens_extraidas/${imageName}`, window.location.origin).href);
-      updateStatus(`Link da imagem ${imageName} copiado`);
     } catch (e) {
-      updateStatus(`Não foi possível copiar a imagem ${imageName}`);
     }
   }
 }
@@ -1267,7 +1293,6 @@ export async function deleteAllGalleryImages() {
   if (state.galleryMode === 'pdf') {
     if (confirm('Tem certeza que deseja excluir todas as imagens da Galeria?')) {
       try {
-        updateStatus('Removendo todas as imagens da pasta...');
         const resp = await fetch('/api/delete-all-images', { method: 'POST' });
         if (!resp.ok) throw new Error('Falha ao deletar imagens no servidor');
       } catch (err) {
@@ -1277,7 +1302,6 @@ export async function deleteAllGalleryImages() {
       window.__imageInfoLookup = {};
       loadImageGallery();
       updateImageCountInfo();
-      updateStatus('Todas as imagens removidas da galeria');
       try { showGalleryEmptyState(); } catch (e) {}
     }
   } else if (state.galleryMode === 'captures') {
@@ -1290,7 +1314,6 @@ export async function deleteAllGalleryImages() {
         state.capturedImages.forEach(ci => { try { URL.revokeObjectURL(ci.url); } catch (e) {} });
         state.capturedImages = [];
         loadCaptureGallery();
-      updateStatus('Todas as capturas removidas');
     } catch (err) { console.error(err); }
     }
   } else {
@@ -1303,7 +1326,6 @@ export async function deleteAllGalleryImages() {
         state.uploadedImages.forEach(u => { try { URL.revokeObjectURL(u.url); } catch (e) {} });
         state.uploadedImages = [];
         await loadUploadsGallery();
-        updateStatus('Todos os uploads removidos');
       } catch (err) { console.error(err); }
     }
   }
@@ -1317,15 +1339,40 @@ export function showGalleryEmptyState() {
     empty.style.display = '';
     const msg = empty.querySelector('.gallery-empty-message');
     const ctrls = empty.querySelector('.gallery-empty-controls');
+    const uploadsCtrls = document.getElementById('uploadsControls');
+    const uploadBtn = document.getElementById('btnUploadImages');
+    const recoverBtn = document.getElementById('btnRecoverInitialImages');
+    const recoverCapturesBtn = document.getElementById('btnRecoverCaptures');
     if (state.galleryMode === 'pdf') {
-      if (msg) msg.textContent = 'Você não tem mais imagens do PDF na galeria. Capture novas imagens usando o painel de captura ou clique no botão abaixo para recapturar automaticamente as imagens iniciais do PDF.';
+      if (msg) msg.textContent = 'Você não tem mais imagens pré-carregadas automaticamente na galeria. clique no botão abaixo para recuperar automaticamente os elementos de imagens do PDF.';
       if (ctrls) ctrls.style.display = '';
+      // Garantir que o botão de recuperar esteja visível e o de upload volte ao contêiner original
+      if (recoverBtn) recoverBtn.style.display = '';
+      if (recoverCapturesBtn) recoverCapturesBtn.style.display = 'none';
+      if (uploadBtn && uploadsCtrls && uploadBtn.parentElement === ctrls) {
+        uploadsCtrls.appendChild(uploadBtn);
+      }
+      if (uploadsCtrls && state.galleryMode !== 'uploads') uploadsCtrls.style.display = 'none';
     } else if (state.galleryMode === 'captures') {
-      if (msg) msg.textContent = 'Nenhuma captura de tela salva. Use CAPTURAR IMAGEM e depois cole (Ctrl+V) para salvar aqui.';
-      if (ctrls) ctrls.style.display = 'none';
+      if (msg) msg.textContent = 'Nenhuma captura de tela salva. Use o botão abaixo para capturar uma nova imagem no PDF e depois cole (Ctrl+V) no Editor para salvar aqui.';
+      if (ctrls) ctrls.style.display = '';
+      // Restaurar botão de upload ao contêiner padrão caso tenha sido movido
+      if (uploadBtn && uploadsCtrls && uploadBtn.parentElement === ctrls) {
+        uploadsCtrls.appendChild(uploadBtn);
+      }
+      if (recoverBtn) recoverBtn.style.display = 'none';
+      if (recoverCapturesBtn) recoverCapturesBtn.style.display = '';
+      if (uploadsCtrls) uploadsCtrls.style.display = 'none';
     } else {
-      if (msg) msg.textContent = 'Nenhuma imagem enviada. Clique em "Enviar Imagens" acima para salvar aqui.';
-      if (ctrls) ctrls.style.display = 'none';
+      if (msg) msg.textContent = 'Nenhuma imagem enviada. Use o botão abaixo para enviar novas imagens.';
+      if (ctrls) ctrls.style.display = '';
+      // Ocultar botão de recuperar neste modo e mostrar o de upload sob a mensagem
+      if (recoverBtn) recoverBtn.style.display = 'none';
+      if (recoverCapturesBtn) recoverCapturesBtn.style.display = 'none';
+      if (uploadsCtrls) uploadsCtrls.style.display = 'none';
+      if (uploadBtn && ctrls && uploadBtn.parentElement !== ctrls) {
+        ctrls.appendChild(uploadBtn);
+      }
     }
   }
 }
@@ -1333,8 +1380,20 @@ export function showGalleryEmptyState() {
 export function hideGalleryEmptyState() {
   const actions = document.querySelector('.gallery-actions');
   const empty = document.getElementById('galleryEmptyState');
+  const uploadsCtrls = document.getElementById('uploadsControls');
+  const uploadBtn = document.getElementById('btnUploadImages');
+  const ctrls = empty ? empty.querySelector('.gallery-empty-controls') : null;
   if (actions) actions.style.display = '';
   if (empty) empty.style.display = 'none';
+  // Restaurar o botão de upload ao contêiner original se estiver dentro dos controles do estado vazio
+  if (uploadBtn && uploadsCtrls && ctrls && uploadBtn.parentElement === ctrls) {
+    uploadsCtrls.appendChild(uploadBtn);
+  }
+  // Mostrar novamente o botão de recuperar quando aplicável
+  try {
+    const recoverBtn = document.getElementById('btnRecoverInitialImages');
+    if (recoverBtn) recoverBtn.style.display = '';
+  } catch (_) {}
 }
 
 export function setGalleryLoading(message, show) {
@@ -1394,7 +1453,7 @@ export function initUploadControls() {
       try { setGalleryLoading('', false); } catch (_) {}
       await setGalleryMode('uploads');
       renderGallerySwitchLabelCount();
-      updateStatus('Uploads adicionados à galeria');
+      // Mensagem de status removida após descontinuação da barra de status
     });
   }
 }

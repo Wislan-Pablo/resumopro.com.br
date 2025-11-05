@@ -6,32 +6,47 @@
   },
   "img_2.png": {
     "caminho": "temp_uploads\\imagens_extraidas\\img_2.png",
-    "pagina": "3",
-    "hash": "c7e96bfc14f8c0f85d6c75c43bc81fd078e05b662727c54b936571d77cec4239"
+    "pagina": "5",
+    "hash": "9a3a19aab7a74e69439c5865785fe9cf9ab2d42cde81c0c89fddcb72cb8a8b27"
   },
   "img_3.png": {
     "caminho": "temp_uploads\\imagens_extraidas\\img_3.png",
-    "pagina": "3",
-    "hash": "1ad8760ab4f74a8780c285d6f5c6136d24070b59dcfee081c4bedfd0e45c3f1e"
+    "pagina": "5",
+    "hash": "83dc3c6a89ffc8cb291575a502f13bc18ce69f1f5c28bff95b95cfa1c1c9ea85"
   },
   "img_4.png": {
     "caminho": "temp_uploads\\imagens_extraidas\\img_4.png",
-    "pagina": "16",
-    "hash": "5231915e5a72336495f8d8dac320836e56cfcbf40600295c6c62d02703138dac"
+    "pagina": "10",
+    "hash": "f302276d57e30381fb3edafb75f08cca28f0843b604b06d9c1133e65bbe9466a"
   },
   "img_5.png": {
     "caminho": "temp_uploads\\imagens_extraidas\\img_5.png",
-    "pagina": "16",
-    "hash": "510195e2408aea68dcf2d3abe33c653f7f1c3d44b3a51bde4b47176636b97ea1"
+    "pagina": "14",
+    "hash": "43f31472b8a07485b30d9dad30cffb20b2e599431063a65ccb6ab8d1eedfab53"
   },
   "img_6.png": {
     "caminho": "temp_uploads\\imagens_extraidas\\img_6.png",
-    "pagina": "16",
-    "hash": "80b020bc0208651e3e570363485fa5aeffeefc452169d2cc62116e2d378d2376"
+    "pagina": "15",
+    "hash": "f6e7a3d950ad5b7eafe4998d1923e2a192b454194c513d237c19f4367825a659"
   },
   "img_7.png": {
     "caminho": "temp_uploads\\imagens_extraidas\\img_7.png",
-    "pagina": "18",
-    "hash": "4a04d9b65941482286aecd2bb6b27cf35ffd3f976da5e690f175b706b1cc99e4"
+    "pagina": "24",
+    "hash": "c61767e063fa058dd5bffaca0633d4f6cd73b9b075c76a5a34241e5edc733409"
+  },
+  "img_8.png": {
+    "caminho": "temp_uploads\\imagens_extraidas\\img_8.png",
+    "pagina": "25",
+    "hash": "330643c970d6af302a47c32152a10f1fa8e0d565d2df376446e49d0fe8e1dd83"
+  },
+  "img_9.png": {
+    "caminho": "temp_uploads\\imagens_extraidas\\img_9.png",
+    "pagina": "33",
+    "hash": "d60f16de3609f9911ef93611baba38a7df2dbd8942164c58eb7335bea1b59803"
+  },
+  "img_10.png": {
+    "caminho": "temp_uploads\\imagens_extraidas\\img_10.png",
+    "pagina": "47",
+    "hash": "4da0c70612cb35299e4be2a97334b9f42ad67376b5258b51dd6dc3ea7d8e5c2d"
   }
 }

@@ -1,5 +1,5 @@
 import { state, setJoditEditor } from './state.js';
-import { updateStatus, updateImageCount, debounce } from './utils.js';
+import { updateImageCount, debounce, updateImageCountFromDOM } from './utils.js?v=8';
 import { createImagePlaceholder, setGalleryMode, loadCaptureGallery } from './gallery.js';
 
 // Ajuste: quando a modal de Preview do Jodit aparecer, definir min-width do iframe para 100%
@@ -69,6 +69,13 @@ export async function saveCurrentSummaryHTML(origin) {
     } else if (el) {
       htmlContent = el.innerHTML;
     }
+    // Sanitizar antes de persistir: remover marcadores temporários do Jodit
+    try {
+      const tmp = document.createElement('div');
+      tmp.innerHTML = htmlContent || '';
+      tmp.querySelectorAll('span[data-jodit-temp="true"], span[data-jodit-selection_marker]').forEach((s) => { try { s.remove(); } catch (_) {} });
+      htmlContent = tmp.innerHTML;
+    } catch (_) {}
     await fetch('/api/save-structured-summary', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -76,10 +83,8 @@ export async function saveCurrentSummaryHTML(origin) {
       // Garantir persistência ao sair da página
       keepalive: origin === 'beforeunload'
     });
-    updateStatus('Resumo salvo');
   } catch (err) {
     console.error('Falha ao salvar resumo estruturado:', err);
-    updateStatus('Falha ao salvar resumo');
   }
 }
 
@@ -147,7 +152,7 @@ export function initJoditDocumentMode() {
 
   const editor = Jodit.make('#structuredSummary', {
     language: 'pt_br',
-    placeholder: 'Escreva ou cole seu texto aqui e use a Galeria no menu lateral para visualizar as imagens pré-carregadas do PDF ou capture novas imagens no PDF através do menu superior - Capturar Imagem no PDF. Copie as imagens através do ícone no canto superior esquerdo da imagem, ou clique (mantenha pressionado) e arraste para inseri-las aqui...',
+    placeholder: 'Cole ou escreva seu texto aqui e use a Galeria no menu lateral para visualizar as imagens pré-carregadas do PDF, capture novas imagens no PDF através do menu superior - Capturar Imagem no PDF, ou ainda, adicione uma local via upload. Copie as imagens através do ícone disponibilizado na Galeria, ou clique duas vezes (mantenha pressionado) e arraste para inseri-las aqui...',
     iframe: true,
     height: 500,
     toolbarButtonSize: 'small',
@@ -224,13 +229,119 @@ export function initJoditDocumentMode() {
             };
             fixToolbar();
             try {
-              const moToolbar = new MutationObserver(() => fixToolbar());
+              // Garantir que o botão de imagem exiba o título "Enviar imagem"
+              const setImageButtonTitle = () => {
+                try {
+                  if (!tbBox) return;
+                  const imgBtn = tbBox.querySelector('.jodit-toolbar-button_image, .jodit-ui-button_image');
+                  if (imgBtn) {
+                    imgBtn.setAttribute('title', 'Enviar imagem');
+                    imgBtn.setAttribute('aria-label', 'Enviar imagem');
+                  }
+                } catch (_) {}
+              };
+              setImageButtonTitle();
+              const moToolbar = new MutationObserver(() => { fixToolbar(); setImageButtonTitle(); });
               if (tbBox) moToolbar.observe(tbBox, { childList: true, subtree: true });
+            } catch (_) {}
+
+            // Hook: o botão "Inserir imagem" da toolbar deve disparar o mesmo fluxo do btnUploadImages
+            try {
+              const hookUploadFromToolbar = () => {
+                try {
+                  const containerEl = editorInstance && editorInstance.container ? editorInstance.container : null;
+                  const toolbarBox = containerEl ? containerEl.querySelector('.jodit-toolbar__box') : null;
+                  if (!toolbarBox) return;
+                  const attachOnceKey = '__rfai_image_upload_hook_attached';
+                  if (toolbarBox[attachOnceKey]) return;
+                  toolbarBox[attachOnceKey] = true;
+                  toolbarBox.addEventListener('click', (evt) => {
+                    try {
+                      const target = evt.target;
+                      const btn = target && (target.closest('[aria-label="Enviar imagem"], [title="Enviar imagem"], .jodit-toolbar-button_image, .jodit-ui-button_image'));
+                      if (!btn) return;
+                      evt.preventDefault();
+                      evt.stopImmediatePropagation();
+                      const inp = document.getElementById('inpUploadImages');
+                      if (inp) inp.click();
+                    } catch (_) {}
+                  }, true);
+                } catch (_) {}
+              };
+              // Executa imediatamente e observa mutações para reaplicar se a toolbar for recriada
+              hookUploadFromToolbar();
+              try {
+                const moHook = new MutationObserver(() => hookUploadFromToolbar());
+                if (tbBox) moHook.observe(tbBox, { childList: true, subtree: true });
+              } catch (_) {}
+            } catch (_) {}
+
+            // Hook: o botão "Tela cheia" da toolbar deve disparar o mesmo fluxo do btnFullscreen
+            try {
+              const hookFullscreenFromToolbar = () => {
+                try {
+                  const containerEl = editorInstance && editorInstance.container ? editorInstance.container : null;
+                  const toolbarBox = containerEl ? containerEl.querySelector('.jodit-toolbar__box') : null;
+                  if (!toolbarBox) return;
+                  const attachOnceKeyFs = '__rfai_fullscreen_hook_attached';
+                  if (toolbarBox[attachOnceKeyFs]) return;
+                  toolbarBox[attachOnceKeyFs] = true;
+                  toolbarBox.addEventListener('click', (evt) => {
+                    try {
+                      const target = evt.target;
+                      const btn = target && (target.closest('[aria-label*="tela cheia" i], [title*="tela cheia" i], [aria-label*="full" i], [title*="full" i], .jodit-toolbar-button_fullsize, .jodit-ui-button_fullsize'));
+                      if (!btn) return;
+                      evt.preventDefault();
+                      evt.stopImmediatePropagation();
+                      try { if (typeof window.toggleFullscreenMode === 'function') window.toggleFullscreenMode(); } catch (_) {}
+                      try { if (typeof window.updateHeaderHeightVar === 'function') window.updateHeaderHeightVar(); } catch (_) {}
+                      try { if (typeof window.updateGoTopVisibility === 'function') window.updateGoTopVisibility(); } catch (_) {}
+                    } catch (_) {}
+                  }, true);
+                } catch (_) {}
+              };
+              // Executa imediatamente e observa mutações para reaplicar se a toolbar for recriada
+              hookFullscreenFromToolbar();
+              try {
+                const moHookFs = new MutationObserver(() => hookFullscreenFromToolbar());
+                if (tbBox) moHookFs.observe(tbBox, { childList: true, subtree: true });
+              } catch (_) {}
             } catch (_) {}
           } catch (_) {}
 
           const doc = editorInstance.editorDocument;
           if (doc && doc.body) {
+            // Limpar parágrafo de placeholder e marcadores temporários se existirem
+            try {
+              const isPlaceholderText = (txt) => {
+                const norm = String(txt || '').replace(/\s+/g, ' ').trim().toLowerCase();
+                return norm === 'resumo temporário para extração de imagens.' || /resumo\s+temporário.*extração de imagens\.?/i.test(txt || '');
+              };
+              // Remover spans temporários dentro do body, por segurança
+              doc.body.querySelectorAll('span[data-jodit-temp="true"], span[data-jodit-selection_marker]').forEach((s) => {
+                // Não remover indiscriminadamente durante edição; apenas ocultar se não for necessário
+                try { s.style.display = 'none'; s.removeAttribute('aria-label'); } catch (_) {}
+              });
+              // Remover parágrafos que correspondam ao texto placeholder
+              const ps = Array.from(doc.body.querySelectorAll('p'));
+              ps.forEach((p) => {
+                const t = (p.textContent || '').trim();
+                if (isPlaceholderText(t)) {
+                  try { p.remove(); } catch (_) { p.innerHTML = ''; }
+                }
+              });
+              // Se o container original fora do iframe tiver esse placeholder, limpar também
+              try {
+                const hostEl = document.getElementById('structuredSummary');
+                if (hostEl) {
+                  hostEl.querySelectorAll('span[data-jodit-temp="true"], span[data-jodit-selection_marker]').forEach((s) => { try { s.remove(); } catch (_) {} });
+                  hostEl.querySelectorAll('p').forEach((p) => {
+                    const tx = (p.textContent || '').trim();
+                    if (isPlaceholderText(tx)) { try { p.remove(); } catch (_) { p.innerHTML = ''; } }
+                  });
+                }
+              } catch (_) {}
+            } catch (_) {}
             try { state.lastSavedHtml = doc.body.innerHTML || ''; } catch (_) {}
             try { updateSaveButtonsDisabled(); } catch (_) {}
             doc.body.addEventListener('dragover', function (e) { e.preventDefault(); });
@@ -249,7 +360,6 @@ export function initJoditDocumentMode() {
                       const html = `<img src="${url}" alt="Imagem" style="max-width:100%;display:block;"/><br />`;
                       editorInstance.selection.insertHTML(html);
                     });
-                    updateStatus('Imagem inserida via arrastar e soltar');
                     try { updateSaveButtonsDisabled(); } catch (_) {}
                   } catch (_) {}
                   return;
@@ -269,7 +379,7 @@ export function initJoditDocumentMode() {
                   const html = `<img src="${value}" alt="Captura" style="max-width:100%;display:block;"/><br />`;
                   editorInstance.selection.focus();
                   editorInstance.selection.insertHTML(html);
-                  updateStatus('Imagem inserida');
+                  try { updateImageCountFromDOM(); } catch (_) {}
                   try { updateSaveButtonsDisabled(); } catch (_) {}
                 } catch (_) {}
               } else if (isImageName) {
@@ -279,8 +389,7 @@ export function initJoditDocumentMode() {
                   editorInstance.selection.focus();
                   editorInstance.selection.insertHTML(html);
                   state.imagensPosicionadas.push(value);
-                  updateImageCount();
-                  updateStatus(`Imagem ${value} inserida`);
+                  try { updateImageCountFromDOM(); } catch (_) {}
                   try { updateSaveButtonsDisabled(); } catch (_) {}
                 } catch (_) {}
               } else {
@@ -288,7 +397,6 @@ export function initJoditDocumentMode() {
                 try {
                   editorInstance.selection.focus();
                   editorInstance.selection.insertHTML(value);
-                  updateStatus('Conteúdo arrastado como texto');
                   try { updateSaveButtonsDisabled(); } catch (_) {}
                 } catch (_) {}
               }
@@ -310,7 +418,7 @@ export function initJoditDocumentMode() {
             // Executa imediatamente e observa mutações futuras
             try { scrubEnterIcons(); } catch (_) {}
             try {
-              const mo = new MutationObserver(() => scrubEnterIcons());
+              const mo = new MutationObserver(() => { try { scrubEnterIcons(); } catch (_) {} try { updateImageCountFromDOM(); } catch (_) {} });
               mo.observe(doc.body, { childList: true, subtree: true });
             } catch (_) {}
           }
@@ -359,13 +467,12 @@ export function initJoditDocumentMode() {
                     editorInstance.selection.focus();
                     const html = `<img src="${serverUrl}" alt="Captura" style="max-width:100%;display:block;"/><br />`;
                     editorInstance.selection.insertHTML(html);
+                    try { updateImageCountFromDOM(); } catch (_) {}
                   }
                 } catch (_) {}
-                updateStatus('Captura colada: persistida e inserida no editor');
                 try { updateSaveButtonsDisabled(); } catch (_) {}
               } catch (uploadErr) {
                 console.error('Falha ao persistir captura:', uploadErr);
-                updateStatus('Falha ao persistir captura');
               }
               state.captureTriggeredByButton = false;
               try { saveCurrentSummaryHTMLDebounced(); } catch (_) {}

@@ -1,6 +1,6 @@
 import { setEstruturaEdicao, setGalleryCacheBust, state } from './state.js';
 import { loadImageGallery, setGalleryLoading, hideGalleryEmptyState } from './gallery.js';
-import { convertMarkdownToHtml, buildImagemInfoLookup, setCurrentPdfLabel, updateStatus } from './utils.js';
+import { convertMarkdownToHtml, buildImagemInfoLookup, setCurrentPdfLabel } from './utils.js';
 import { refreshPdfAvailability } from './pdf-source.js';
 
 // Carregar dados da estrutura de edição e preparar galeria/conteúdo
@@ -77,6 +77,38 @@ export async function loadEditorData() {
       console.log('Convertendo resumo de Markdown para HTML');
     }
 
+    // Sanitizar conteúdo inicial: remover placeholder e marcadores temporários do Jodit
+    const sanitizeInitialHtml = (html) => {
+      try {
+        const container = document.createElement('div');
+        container.innerHTML = html || '';
+        // Remover spans de seleção temporários, caso tenham sido persistidos por engano
+        container.querySelectorAll('span[data-jodit-temp="true"], span[data-jodit-selection_marker]').forEach((s) => {
+          try { s.remove(); } catch (_) { s.style.display = 'none'; }
+        });
+        const isPlaceholderText = (txt) => {
+          const norm = String(txt || '').replace(/\s+/g, ' ').trim().toLowerCase();
+          return norm === 'resumo temporário para extração de imagens.' || /resumo\s+temporário.*extração de imagens\.?/i.test(txt || '');
+        };
+        // Remover parágrafos que contenham o texto placeholder
+        container.querySelectorAll('p').forEach((p) => {
+          const t = (p.textContent || '').trim();
+          if (isPlaceholderText(t)) {
+            try { p.remove(); } catch (_) { p.innerHTML = ''; }
+          }
+        });
+        // Também remover o texto solto se não estiver em <p>
+        const fullText = (container.textContent || '').trim();
+        if (isPlaceholderText(fullText) && container.children.length === 0) {
+          container.innerHTML = '';
+        }
+        return container.innerHTML;
+      } catch (_) {
+        return html || '';
+      }
+    };
+    htmlContent = sanitizeInitialHtml(htmlContent);
+
     // Carregar o conteúdo na div structuredSummary (Jodit será inicializado depois)
     const el = document.getElementById('structuredSummary');
     if (el) el.innerHTML = htmlContent;
@@ -104,7 +136,6 @@ export async function loadEditorData() {
       try { setGalleryMode('pdf'); } catch (_) {}
     } catch (_) {}
 
-    updateStatus('Dados carregados com sucesso');
     // Atualizar disponibilidade de PDF para recaptura
     try { await refreshPdfAvailability(); } catch (_) {}
   } catch (error) {
@@ -114,7 +145,6 @@ export async function loadEditorData() {
       galleryEl.innerHTML = '<p>Não foi possível carregar a galeria.</p>';
     }
     try { setGalleryLoading('', false); } catch (_) {}
-    updateStatus('Erro ao carregar dados');
     try { await refreshPdfAvailability(); } catch (_) {}
   }
 }

@@ -1,4 +1,4 @@
-import { openImageModal, closeImageModal, updateModalImage, nextModalImage, prevModalImage, deleteCurrentModalImage } from './modal.js';
+import { openImageModal, closeImageModal, updateModalImage, nextModalImage, prevModalImage, deleteCurrentModalImage } from './modal.js?v=8';
 import {
   deleteGalleryImage,
   copyGalleryImage,
@@ -24,7 +24,7 @@ import {
   copyUploadImage,
   initUploadControls
   , preloadUploads
-} from './gallery.js';
+} from './gallery.js?v=8';
 import {
   openProjectSaveModal,
   closeProjectSaveModal,
@@ -39,15 +39,15 @@ import {
   continueEditingState,
   deleteSavedState,
   getCurrentProject
-} from './projects.js';
-import { initEditorTabs, loadPdfForCapture, initAdobeViewer, toggleFullscreenMode, resetAdobeViewer } from './tabs.js';
-import { initJoditDocumentMode, saveCurrentSummaryHTMLDebounced, saveCurrentSummaryHTML } from './jodit.js';
-import { setEstruturaEdicao, state } from './state.js';
-import { refreshPdfAvailability, reloadInitialPdfImages, uploadPdfAndReload, recoverInitialImages } from './pdf-source.js';
-import { initCaptureButton, initPasteCaptureListener } from './captures.js';
-import { initGoToTop, initHeaderHeightSync, updateGoTopVisibility, updateHeaderHeightVar } from './ui.js';
-import { generateFinalPDF } from './pdf.js';
-import { loadEditorData } from './data.js';
+} from './projects.js?v=8';
+import { initEditorTabs, loadPdfForCapture, initAdobeViewer, toggleFullscreenMode, resetAdobeViewer } from './tabs.js?v=8';
+import { initJoditDocumentMode, saveCurrentSummaryHTMLDebounced, saveCurrentSummaryHTML } from './jodit.js?v=8';
+import { setEstruturaEdicao, state } from './state.js?v=8';
+import { refreshPdfAvailability, reloadInitialPdfImages, uploadPdfAndReload, recoverInitialImages } from './pdf-source.js?v=8';
+import { initCaptureButton, initPasteCaptureListener } from './captures.js?v=8';
+import { initGoToTop, initHeaderHeightSync, updateGoTopVisibility, updateHeaderHeightVar } from './ui.js?v=8';
+import { generateFinalPDF } from './pdf.js?v=8';
+import { loadEditorData } from './data.js?v=8';
 
 // Expor funções para compatibilidade com atributos onclick existentes
 window.openImageModal = openImageModal;
@@ -199,6 +199,28 @@ document.addEventListener('DOMContentLoaded', () => {
     const clone = btnRecover.cloneNode(true);
     btnRecover.replaceWith(clone);
     clone.addEventListener('click', () => { try { recoverInitialImages(); } catch (e) { console.error(e); } });
+  }
+
+  // Botão: Recuperar sessão de Capturas (abre o fluxo de captura do PDF)
+  const btnRecoverCaptures = document.getElementById('btnRecoverCaptures');
+  if (btnRecoverCaptures) {
+    const clone = btnRecoverCaptures.cloneNode(true);
+    btnRecoverCaptures.replaceWith(clone);
+    clone.addEventListener('click', () => {
+      try {
+        const btn = document.getElementById('btnCapture');
+        if (btn && typeof btn.click === 'function') {
+          btn.click();
+        } else {
+          const editorSection = document.getElementById('editorSection');
+          const pdfSection = document.getElementById('pdfCaptureSection');
+          if (editorSection && pdfSection) {
+            editorSection.style.display = 'none';
+            pdfSection.style.display = '';
+          }
+        }
+      } catch (e) { console.error(e); }
+    });
   }
 
   // Toggle de retração/expansão da galeria (sidebar)

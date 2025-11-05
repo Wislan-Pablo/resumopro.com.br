@@ -1,6 +1,6 @@
 import { state } from './state.js';
 import { markDocumentSavedBaseline } from './jodit.js';
-import { updateStatus, updateImageCount, setCurrentPdfLabel } from './utils.js';
+import { updateImageCount, setCurrentPdfLabel, updateImageCountFromDOM } from './utils.js?v=8';
 
 export function openProjectSaveModal() {
   const modal = document.getElementById('projectSaveModal');
@@ -152,11 +152,10 @@ export async function saveProjectState() {
     const input = document.getElementById('projectNameInput');
     const projectName = input ? input.value.trim() : '';
     if (!projectName) {
-      updateStatus('Informe um nome para o projeto');
+      alert('Informe um nome para o projeto');
       return;
     }
     const slug = slugifyProjectName(projectName);
-    updateStatus('Preparando imagens e conteúdo para salvar...');
     const prepared = await prepareHtmlForProjectSave(slug);
     const pdfName = (() => {
       try { const s = localStorage.getItem('selectedPdfName'); if (s) return s; } catch (e) {}
@@ -169,14 +168,12 @@ export async function saveProjectState() {
     });
     if (!resp.ok) throw new Error('Falha ao salvar projeto');
     const data = await resp.json();
-    updateStatus('Projeto salvo com sucesso');
     setCurrentProject(data.slug || slug, projectName);
     showSuccessModal('Projeto salvo com sucesso');
     closeProjectSaveModal();
     try { markDocumentSavedBaseline(); } catch (e) {}
   } catch (err) {
     console.error(err);
-    updateStatus('Erro ao salvar projeto');
   }
 }
 
@@ -184,7 +181,6 @@ export async function saveProjectStateImmediate(current) {
   try {
     const name = current && current.name ? current.name : '';
     const slug = current && current.slug ? current.slug : slugifyProjectName(name || ('projeto-' + Date.now()));
-    updateStatus('Preparando imagens e conteúdo para salvar...');
     const prepared = await prepareHtmlForProjectSave(slug);
     const pdfName = (() => {
       try { const s = localStorage.getItem('selectedPdfName'); if (s) return s; } catch (e) {}
@@ -197,12 +193,10 @@ export async function saveProjectStateImmediate(current) {
     if (!resp.ok) throw new Error('Falha ao salvar projeto');
     const data = await resp.json();
     setCurrentProject(data.slug || slug, name || slug);
-    updateStatus('Projeto salvo com sucesso');
     showSuccessModal('Projeto salvo com sucesso');
     try { markDocumentSavedBaseline(); } catch (e) {}
   } catch (err) {
     console.error(err);
-    updateStatus('Erro ao salvar projeto');
   }
 }
 
@@ -274,7 +268,7 @@ function rebuildImagensPosicionadasFromDOM() {
     state.imagensPosicionadas = Array.from(placeholders)
       .map(ph => ph && ph.dataset ? ph.dataset.imageName : null)
       .filter(Boolean);
-    updateImageCount();
+    try { updateImageCountFromDOM(); } catch (_) {}
   } catch (e) {}
 }
 
@@ -303,13 +297,11 @@ export async function continueEditingState(slug) {
     }
     const projName = data && data.meta && data.meta.name ? data.meta.name : slug;
     setCurrentProject(slug, projName);
-    updateStatus('Projeto carregado');
     showSuccessModal('Projeto carregado com sucesso');
     closeSavedStatesModal();
     try { markDocumentSavedBaseline(); } catch (e) {}
   } catch (e) {
     console.error(e);
-    updateStatus('Erro ao carregar projeto salvo');
   }
 }
 
@@ -320,7 +312,6 @@ export async function deleteSavedState(slug) {
     if (!ok) return;
     const resp = await fetch('/api/editor-state/' + encodeURIComponent(slug), { method: 'DELETE' });
     if (!resp.ok) throw new Error('Falha ao excluir projeto');
-    updateStatus('Projeto excluído');
     const current = getCurrentProject();
     if (current && current.slug === slug) clearCurrentProject();
     showSuccessModal('Projeto excluído com sucesso');
@@ -342,6 +333,5 @@ export async function deleteSavedState(slug) {
     }
   } catch (e) {
     console.error(e);
-    updateStatus('Erro ao excluir projeto');
   }
 }

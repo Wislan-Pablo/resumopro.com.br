@@ -1,9 +1,7 @@
 import { state } from './state.js';
-import { updateStatus } from './utils.js';
 
 export async function generateFinalPDF() {
   try {
-    updateStatus('Gerando PDF final...');
     const resumoHtml = (state.joditEditor && state.joditEditor.editorDocument && state.joditEditor.editorDocument.body)
       ? state.joditEditor.editorDocument.body.innerHTML
       : (document.getElementById('structuredSummary')?.innerHTML || '');
@@ -35,10 +33,8 @@ export async function generateFinalPDF() {
     } finally {
       setTimeout(() => window.URL.revokeObjectURL(url), 60000);
     }
-    updateStatus('PDF gerado com sucesso!');
   } catch (error) {
     console.error('Erro ao gerar PDF:', error);
-    updateStatus('Erro ao gerar PDF');
   }
 }
 

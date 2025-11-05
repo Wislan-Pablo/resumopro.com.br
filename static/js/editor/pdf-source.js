@@ -1,6 +1,6 @@
 import { state, setGalleryCacheBust } from './state.js';
 import { loadImageGallery, updateImageCountInfo, hideGalleryEmptyState, setGalleryLoading } from './gallery.js';
-import { updateStatus, buildImagemInfoLookup, setCurrentPdfLabel } from './utils.js';
+import { buildImagemInfoLookup, setCurrentPdfLabel } from './utils.js?v=8';
 
 export async function refreshPdfAvailability() {
   try {
@@ -10,16 +10,37 @@ export async function refreshPdfAvailability() {
     const data = await res.json();
     const pdfs = Array.isArray(data.pdfs) ? data.pdfs : [];
     const hasPdf = pdfs.length > 0;
+
     if (btnRecover) {
       btnRecover.disabled = !hasPdf;
       btnRecover.title = hasPdf ? '' : 'Nenhum PDF disponível em temp_uploads para recaptura';
     }
+
     let selected = null;
-    try { selected = localStorage.getItem('selectedPdfName'); } catch (e) {}
-    if (!selected && hasPdf) {
-      selected = pdfs[0];
-      try { localStorage.setItem('selectedPdfName', selected); } catch (e) {}
+    try { selected = localStorage.getItem('selectedPdfName'); } catch (_) {}
+
+    // Se há um selected armazenado, garantir que ele exista na lista atual de PDFs
+    if (selected && selected.trim()) {
+      const match = pdfs.includes(selected.trim());
+      if (!match) {
+        if (hasPdf) {
+          // Corrigir para o primeiro PDF disponível e persistir
+          selected = pdfs[0];
+          try { localStorage.setItem('selectedPdfName', selected); } catch (_) {}
+        } else {
+          // Lista vazia: limpar seleção e mostrar rótulo padrão
+          selected = null;
+          try { localStorage.removeItem('selectedPdfName'); } catch (_) {}
+        }
+      }
     }
+
+    // Se não há selected e existem PDFs, selecionar o primeiro
+    if ((!selected || !selected.trim()) && hasPdf) {
+      selected = pdfs[0];
+      try { localStorage.setItem('selectedPdfName', selected); } catch (_) {}
+    }
+
     setCurrentPdfLabel(selected);
   } catch (e) {
     console.warn('refreshPdfAvailability falhou:', e);
@@ -55,7 +76,6 @@ export async function reloadInitialPdfImages() {
     if (state.galleryMode === 'pdf') loadImageGallery();
     updateImageCountInfo();
     hideGalleryEmptyState();
-    updateStatus('Imagens iniciais do PDF recuperadas');
     try { setCurrentPdfLabel(localStorage.getItem('selectedPdfName') || (state.estruturaEdicao && state.estruturaEdicao.pdf_name)); } catch (e) {}
     await refreshPdfAvailability();
 
@@ -69,7 +89,6 @@ export async function reloadInitialPdfImages() {
     }
   } catch (err) {
     console.error(err);
-    updateStatus('Não foi possível recuperar as imagens iniciais (verifique o PDF)');
   }
 }
 
@@ -138,7 +157,6 @@ export async function recoverInitialImages() {
     })();
     const loadingMsg = `Recuperando imagens do PDF [${pdfName}]...`;
     setGalleryLoading(loadingMsg, true);
-    updateStatus(loadingMsg);
     const payload = { pdf_name: pdfName };
     const resp = await fetch('/api/recover-initial-images', {
       method: 'POST',
@@ -149,12 +167,10 @@ export async function recoverInitialImages() {
     await reloadInitialPdfImages();
     hideGalleryEmptyState();
     setGalleryLoading('', false);
-    updateStatus('Imagens iniciais recapturadas com sucesso');
     await refreshPdfAvailability();
   } catch (err) {
     console.error(err);
     setGalleryLoading('', false);
-    updateStatus('Não foi possível recapturar as imagens iniciais (verifique se há um PDF em temp_uploads)');
   } finally {
     if (btnRecoverInitialImages) btnRecoverInitialImages.disabled = false;
   }
