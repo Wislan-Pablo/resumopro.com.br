@@ -72,6 +72,15 @@ export function initAdobeViewer(url, fileName) {
           })
           .catch((e) => {
             console.error('Falha ao inicializar Adobe Viewer:', e);
+            try {
+              const safeUrl = url;
+              containerDiv.innerHTML = `
+                <div class="pdf-error">
+                  <p>Não foi possível carregar o Visualizador Adobe.</p>
+                  <p><a href="${safeUrl}" target="_blank" rel="noopener noreferrer">Abrir PDF diretamente</a></p>
+                </div>
+              `;
+            } catch (_) {}
           });
       } catch (e) {
         console.error('Erro ao criar AdobeDC.View:', e);
@@ -79,6 +88,15 @@ export function initAdobeViewer(url, fileName) {
     })
     .catch((e) => {
       console.warn('AdobeDC View SDK não carregado.', e);
+      try {
+        const safeUrl = url;
+        containerDiv.innerHTML = `
+          <div class="pdf-error">
+            <p>Não foi possível carregar o Visualizador Adobe.</p>
+            <p><a href="${safeUrl}" target="_blank" rel="noopener noreferrer">Abrir PDF diretamente</a></p>
+          </div>
+        `;
+      } catch (_) {}
     });
 }
 

@@ -6,18 +6,16 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Editor Semântico - ResumeFull.AI</title>
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/marked@9.1.6/marked.min.js"></script>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/jodit@3.24.5/build/jodit.min.css">
-    <script src="https://cdn.jsdelivr.net/npm/jodit@3.24.5/build/jodit.min.js"></script>
-    <!-- Idioma Pt-BR para Jodit -->
-    <script src="https://cdn.jsdelivr.net/npm/jodit@3.24.5/build/langs/pt_br.js"></script>
     
-    <!-- Fonte Noto Sans -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/static/css/editor.css">
+    <!-- Jodit local -->
+    <link rel="stylesheet" href="/static/vendor/jodit/jodit.min.css">
+    <!-- Local ACE and js-beautify for Jodit Source/Beautify -->
+    <script src="/static/vendor/ace/ace.js"></script>
+    <script src="/static/vendor/js-beautify/beautify-html.min.js"></script>
+    <!-- Local Jodit core and pt-BR language pack -->
+    <script src="/static/vendor/jodit/jodit.min.js"></script>
+    <script src="/static/vendor/jodit/langs/pt_br.js"></script>
 </head>
 
 <body>
@@ -118,6 +116,7 @@
                         <img src="../images/save_project.svg" alt="Salvar Projeto" class="btn-icon" />
                         Salvar Projeto
                     </button>
+                    
                 </div>
             </div>
 
@@ -150,7 +149,6 @@
                          </div>
                          <div id="pdfCaptureContainer" class="pdf-capture-container">
                             <div id="adobe-dc-view" style="height: 1255px; width: 100%;"></div>
-                            <script src="https://acrobatservices.adobe.com/view-sdk/viewer.js"></script>
                          </div>
                      </div>
                 </div>

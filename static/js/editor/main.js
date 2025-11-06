@@ -139,6 +139,28 @@ document.addEventListener('DOMContentLoaded', () => {
     clone.addEventListener('click', openSavedStatesModal);
   }
 
+  // Botão: gerar PDF final
+  const btnGenerateFinal = document.getElementById('btnGenerateFinalPdf');
+  if (btnGenerateFinal) {
+    const clone = btnGenerateFinal.cloneNode(true);
+    btnGenerateFinal.replaceWith(clone);
+    clone.addEventListener('click', async () => {
+      try {
+        const spanEl = clone.querySelector('span');
+        const prevText = spanEl ? spanEl.textContent : '';
+        clone.disabled = true;
+        if (spanEl) spanEl.textContent = 'Gerando...';
+        await generateFinalPDF();
+      } catch (e) {
+        console.error('Falha ao gerar PDF final:', e);
+      } finally {
+        clone.disabled = false;
+        const spanEl2 = clone.querySelector('span');
+        if (spanEl2) spanEl2.textContent = prevText || 'Gerar PDF Final';
+      }
+    });
+  }
+
   // Botão: confirmar salvar projeto na modal
   const confirmSaveProjectBtn = document.getElementById('confirmSaveProjectBtn');
   if (confirmSaveProjectBtn) {

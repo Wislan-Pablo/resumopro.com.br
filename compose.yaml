@@ -1,0 +1,28 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: resumefull-ai:latest
+    ports:
+      - "8001:8001"
+    # Usa variáveis do arquivo .env e permite override direto no compose
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: sqlite:///data/app.db
+    volumes:
+      - ./data:/app/data
+      - ./temp_uploads:/app/temp_uploads
+    restart: unless-stopped
+
+  nginx:
+    image: nginx:alpine
+    depends_on:
+      - app
+    ports:
+      - "80:80"
+    volumes:
+      - ./deploy/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./static:/usr/share/nginx/html/static:ro
+    restart: unless-stopped

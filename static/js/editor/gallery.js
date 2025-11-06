@@ -147,7 +147,11 @@ export async function preloadUploads() {
       // Fallback: listar diretório estático quando backend não está disponível
       if (!Array.isArray(state.uploadedImages) || state.uploadedImages.length === 0) {
         try {
-          const dirHtml = await fetch('/temp_uploads/Imagens_de_Uploads/').then(r => r.text());
+          const dirResp = await fetch('/temp_uploads/Imagens_de_Uploads/');
+          if (!dirResp.ok) {
+            throw new Error('Uploads directory listing not available');
+          }
+          const dirHtml = await dirResp.text();
           const parser = new DOMParser();
           const doc = parser.parseFromString(dirHtml, 'text/html');
           const links = Array.from(doc.querySelectorAll('a[href]'));
@@ -205,7 +209,11 @@ export async function loadUploadsGallery() {
     // Fallback: listar diretório estático quando backend não está disponível
     if (!Array.isArray(state.uploadedImages) || state.uploadedImages.length === 0) {
       try {
-        const dirHtml = await fetch('/temp_uploads/Imagens_de_Uploads/').then(r => r.text());
+        const dirResp = await fetch('/temp_uploads/Imagens_de_Uploads/');
+        if (!dirResp.ok) {
+          throw new Error('Uploads directory listing not available');
+        }
+        const dirHtml = await dirResp.text();
         const parser = new DOMParser();
         const doc = parser.parseFromString(dirHtml, 'text/html');
         const links = Array.from(doc.querySelectorAll('a[href]'));
