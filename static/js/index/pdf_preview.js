@@ -87,7 +87,7 @@ export function initPdfPreviewHandlers({ $pdfInput, $pdfPreviewSection, $pdfPrev
 
     // Configure pdf.js worker
     if (window.pdfjsLib && window.pdfjsLib.GlobalWorkerOptions) {
-      window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+      window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
     }
 
     const reader = new FileReader();

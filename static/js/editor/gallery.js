@@ -1,4 +1,4 @@
-import { state, setGalleryMode as setGalleryModeState } from './state.js';
+import { state, setGalleryMode as setGalleryModeState } from './state.js?v=8';
 import { getTextNodes, getSortedImages, buildImagemInfoLookup, getImagePageInfo, updateImageCount, updateImageCountFromDOM } from './utils.js?v=8';
 
 export function loadImageGallery() {

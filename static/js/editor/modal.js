@@ -1,5 +1,5 @@
-import { state } from './state.js';
-import { getSortedImages, getImagePageInfo } from './utils.js';
+import { state } from './state.js?v=8';
+import { getSortedImages, getImagePageInfo } from './utils.js?v=8';
 
 export function openImageModal(imageName) {
   const images = getSortedImages();

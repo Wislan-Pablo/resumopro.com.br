@@ -1,4 +1,4 @@
-import { state, setJoditEditor } from './state.js';
+import { state, setJoditEditor } from './state.js?v=8';
 import { updateImageCount, debounce, updateImageCountFromDOM } from './utils.js?v=8';
 import { createImagePlaceholder, setGalleryMode, loadCaptureGallery } from './gallery.js';
 

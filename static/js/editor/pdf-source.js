@@ -1,4 +1,4 @@
-import { state, setGalleryCacheBust } from './state.js';
+import { state, setGalleryCacheBust } from './state.js?v=8';
 import { loadImageGallery, updateImageCountInfo, hideGalleryEmptyState, setGalleryLoading } from './gallery.js';
 import { buildImagemInfoLookup, setCurrentPdfLabel } from './utils.js?v=8';
 

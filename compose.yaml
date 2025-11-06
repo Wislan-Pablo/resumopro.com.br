@@ -6,9 +6,6 @@ services:
     image: resumefull-ai:latest
     ports:
       - "8001:8001"
-    # Usa variáveis do arquivo .env e permite override direto no compose
-    env_file:
-      - .env
     environment:
       DATABASE_URL: sqlite:///data/app.db
     volumes:

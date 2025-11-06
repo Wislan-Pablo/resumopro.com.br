@@ -1,4 +1,4 @@
-import { state, setPdfLoadedForCapture, setAdobeView } from './state.js';
+import { state, setPdfLoadedForCapture, setAdobeView } from './state.js?v=8';
 import { ensureAdobeSdkLoaded } from './adobe-sdk.js';
 
 export function initAdobeViewer(url, fileName) {

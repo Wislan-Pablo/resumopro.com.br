@@ -1,4 +1,4 @@
-import { state } from './state.js';
+import { state } from './state.js?v=8';
 import { markDocumentSavedBaseline } from './jodit.js';
 import { updateImageCount, setCurrentPdfLabel, updateImageCountFromDOM } from './utils.js?v=8';
 

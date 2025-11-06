@@ -1,6 +1,6 @@
-import { setEstruturaEdicao, setGalleryCacheBust, state } from './state.js';
+import { setEstruturaEdicao, setGalleryCacheBust, state } from './state.js?v=8';
 import { loadImageGallery, setGalleryLoading, hideGalleryEmptyState } from './gallery.js';
-import { convertMarkdownToHtml, buildImagemInfoLookup, setCurrentPdfLabel } from './utils.js';
+import { convertMarkdownToHtml, buildImagemInfoLookup, setCurrentPdfLabel } from './utils.js?v=8';
 import { refreshPdfAvailability } from './pdf-source.js';
 
 // Carregar dados da estrutura de edição e preparar galeria/conteúdo

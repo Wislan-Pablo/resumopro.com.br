@@ -1,4 +1,4 @@
-import { state } from './state.js';
+import { state } from './state.js?v=8';
 import { setGalleryMode, loadCaptureGallery } from './gallery.js';
 
 export function initCaptureButton() {
