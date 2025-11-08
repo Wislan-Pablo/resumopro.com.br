@@ -275,7 +275,6 @@ body {
 .pdf-loading-spinner { border: 3px solid #f3f3f3; border-top: 3px solid #007bff; border-radius: 50%; width: 60px; height: 60px; animation: spin 1s linear infinite; margin: 0 auto 15px; }
 @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 .formatted-summary { background-color: #fff; margin: 20px 20px 20px 20px; padding: 10px; border: none; flex: 1; overflow: visible; }
-.formatted-summary.simple-editor { min-height: 500px; border: 1px solid #ddd; border-radius: 4px; background-color: #fff; padding: 10px; }
 .formatted-summary h1 { color: #333; font-size: 1em; font-weight: normal; margin-bottom: 15px; border-bottom: 2px solid #007bff; padding-bottom: 10px; }
 .formatted-summary h2 { color: #333; font-size: 1em; font-weight: normal; margin-top: 20px; margin-bottom: 10px; }
 .formatted-summary h3 { color: #333; font-size: 1em; font-weight: normal; margin-top: 15px; margin-bottom: 8px; }

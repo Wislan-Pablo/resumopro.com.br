@@ -9,5 +9,3 @@ python-dotenv     # Para carregar variáveis de ambiente
 PyMuPDF          # Para manipulação de PDFs
 weasyprint       # Para conversão HTML para PDF
 markdown-it-py   # Para processamento de Markdown
-sqlmodel>=0.0.14
-alembic>=1.12.0

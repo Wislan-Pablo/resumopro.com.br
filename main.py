@@ -2,7 +2,7 @@ import os
 import shutil
 import re
 import json
-from fastapi import FastAPI, UploadFile, File, Form, HTTPException, BackgroundTasks, WebSocket, WebSocketDisconnect, Request
+from fastapi import FastAPI, UploadFile, File, Form, HTTPException, BackgroundTasks, WebSocket, WebSocketDisconnect
 from fastapi.responses import HTMLResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
@@ -12,8 +12,6 @@ import time
 from fastapi import Body
 from main_pipeline import start_full_processing, extrair_titulo_do_resumo, setup_logging
 from websocket_manager import ConnectionManager
-from db.utils import get_or_create_project, add_file_asset, add_editor_state, delete_asset_by_path, delete_assets_by_prefix
-from api.db_routes import router as db_router
 
 # Carregar variáveis do arquivo .env (se existir)
 load_dotenv(os.path.join(os.path.dirname(__file__), '.env'))
@@ -48,39 +46,6 @@ app.add_middleware(
 app.mount("/images", StaticFiles(directory="images"), name="images")
 app.mount("/static", StaticFiles(directory="static"), name="static")
 app.mount("/temp_uploads", StaticFiles(directory="temp_uploads"), name="temp_uploads")
-app.include_router(db_router, prefix="/api", tags=["db"])
-
-# Content Security Policy: permitir Document Cloud da Adobe e recursos necessários
-@app.middleware("http")
-async def add_csp_headers(request: Request, call_next):
-    response = await call_next(request)
-    csp = (
-        "default-src 'self'; "
-        "script-src 'self' 'unsafe-inline' https://code.jquery.com https://cdn.jsdelivr.net https://documentcloud.adobe.com; "
-        "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com; "
-        "font-src 'self' data: https://fonts.gstatic.com; "
-        "img-src 'self' data: blob:; "
-        "connect-src 'self' ws: wss: https://documentcloud.adobe.com; "
-        "frame-src 'self' https://documentcloud.adobe.com; "
-        "child-src 'self' https://documentcloud.adobe.com; "
-        "worker-src 'self' blob:; "
-        "object-src 'none'; "
-        "base-uri 'self'; "
-        "form-action 'self'"
-    )
-    response.headers['Content-Security-Policy'] = csp
-    # Cabeçalhos adicionais de segurança
-    response.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
-    response.headers['X-Content-Type-Options'] = 'nosniff'
-    response.headers['X-Frame-Options'] = 'SAMEORIGIN'
-    response.headers['Permissions-Policy'] = (
-        "geolocation=(), microphone=(), camera=(), payment=(), usb=(), midi=(), "
-        "accelerometer=(), gyroscope=(), magnetometer=(), xr-spatial-tracking=(), "
-        "clipboard-read=(self), clipboard-write=(self), interest-cohort=()"
-    )
-    # Opcional: política de recursos de origem (pode ser ajustada conforme necessidade)
-    response.headers['Cross-Origin-Resource-Policy'] = 'same-origin'
-    return response
 
 UPLOAD_DIR = "temp_uploads"
 if not os.path.exists(UPLOAD_DIR):
@@ -92,20 +57,6 @@ ARQUIVO_PDF_FINAL = "Resumo_Final_Com_Prints.pdf"
 EDITOR_STATES_DIR = os.path.join(UPLOAD_DIR, "editor_states")
 if not os.path.exists(EDITOR_STATES_DIR):
     os.makedirs(EDITOR_STATES_DIR, exist_ok=True)
-
-# --- Inicialização de Banco de Dados (SQLModel) ---
-try:
-    from db.session import create_db_and_tables, init_engine
-
-    @app.on_event("startup")
-    async def _init_db():
-        # Inicializa engine e cria tabelas conforme modelos SQLModel
-        init_engine()
-        create_db_and_tables()
-        print("[DB] Tabelas SQLModel verificadas/criadas.")
-except Exception as e:
-    # Não bloquear a aplicação se DB falhar no MVP; apenas logar.
-    print(f"[DB] Falha ao inicializar DB: {e}")
 
 def _slugify_name(name: str) -> str:
     """Cria um slug seguro para nomes de projeto (apenas letras, números, hífens e underscore)."""
@@ -563,24 +514,6 @@ async def editor_state_save_image(file: UploadFile = File(...), project: str = F
             f.write(data)
 
         rel_path = f"/{UPLOAD_DIR}/editor_states/{slug}/captures/{base_name}"
-
-        # Persistir no DB
-        try:
-            proj = get_or_create_project(slug)
-            mime = "image/png" if base_name.lower().endswith(".png") else (
-                "image/jpeg" if base_name.lower().endswith(('.jpg', '.jpeg')) else None
-            )
-            add_file_asset(
-                project_id=proj.id,
-                filename=base_name,
-                file_type="capture",
-                path=rel_path,
-                size=len(data),
-                mime_type=mime,
-            )
-        except Exception as db_e:
-            print(f"[DB] Aviso: falha ao registrar captura no DB: {db_e}")
-
         return {"status": "ok", "filename": base_name, "path": rel_path}
     except Exception as e:
         print(f"Erro ao salvar imagem do estado do editor: {e}")
@@ -637,18 +570,6 @@ async def editor_state_save(request_data: dict = Body(...)):
         state_path = os.path.join(project_dir, "state.json")
         with open(state_path, 'w', encoding='utf-8') as f:
             json.dump(state, f, ensure_ascii=False, indent=2)
-
-        # Persistir no DB
-        try:
-            proj = get_or_create_project(slug, pdf_name=pdf_name)
-            add_editor_state(
-                project_id=proj.id,
-                state_path=state_path,
-                resumo_path=html_path,
-                current_pdf_label=pdf_name,
-            )
-        except Exception as db_e:
-            print(f"[DB] Aviso: falha ao registrar estado do editor no DB: {db_e}")
 
         return {"status": "ok", "slug": slug, "project_path": f"/{UPLOAD_DIR}/editor_states/{slug}"}
     except HTTPException:
@@ -967,12 +888,6 @@ async def delete_capture(request_data: dict = Body(default={})):  # { filename: 
         target = os.path.join(cap_dir, safe)
         if os.path.exists(target):
             os.remove(target)
-        # Remover captura no DB
-        try:
-            rel_path = f"/{UPLOAD_DIR}/capturas_de_tela/{safe}"
-            delete_asset_by_path(rel_path)
-        except Exception as db_e:
-            print(f"[DB] Aviso: falha ao remover captura no DB: {db_e}")
         # Atualizar estrutura_edicao.json
         estrutura_path = os.path.join(UPLOAD_DIR, "estrutura_edicao.json")
         try:
@@ -1003,12 +918,6 @@ async def delete_all_captures():
                         os.remove(os.path.join(cap_dir, f))
                     except Exception:
                         pass
-        # Remover todas as capturas no DB
-        try:
-            prefix = f"/{UPLOAD_DIR}/capturas_de_tela/"
-            delete_assets_by_prefix(prefix)
-        except Exception as db_e:
-            print(f"[DB] Aviso: falha ao remover capturas no DB: {db_e}")
         # Atualizar estrutura_edicao.json
         estrutura_path = os.path.join(UPLOAD_DIR, "estrutura_edicao.json")
         try:
@@ -1127,23 +1036,6 @@ async def upload_pdf(originalPdf: UploadFile = File(...)):
             manager=manager
         )
 
-        # Persistir no DB (Project + PDF como FileAsset)
-        try:
-            slug = _slugify_name(base_name)
-            proj = get_or_create_project(slug, pdf_name=candidate_name)
-            rel_path = f"/{UPLOAD_DIR}/{candidate_name}"
-            size_bytes = os.path.getsize(pdf_path) if os.path.exists(pdf_path) else None
-            add_file_asset(
-                project_id=proj.id,
-                filename=candidate_name,
-                file_type="pdf",
-                path=rel_path,
-                size=size_bytes,
-                mime_type="application/pdf",
-            )
-        except Exception as db_e:
-            print(f"[DB] Aviso: falha ao registrar PDF no DB: {db_e}")
-
         return {"status": "success", "filename": candidate_name, "path": f"/temp_uploads/{candidate_name}"}
     except Exception as e:
         print(f"[ERRO] upload-pdf: {e}")
@@ -1184,22 +1076,6 @@ async def upload_captured_image(file: UploadFile = File(...), filename: Optional
                 json.dump(estrutura, f, ensure_ascii=False, indent=2)
         except Exception as e:
             print(f"Erro ao salvar estrutura_edicao.json: {e}")
-        # Persistir no DB (associar ao projeto quando possível)
-        try:
-            pdf_name = estrutura.get("pdf_name") if isinstance(estrutura, dict) else None
-            slug = _slugify_name(os.path.splitext(pdf_name)[0]) if pdf_name else "uploads"
-            proj = get_or_create_project(slug, pdf_name=pdf_name if pdf_name else None)
-            rel_path = f"/{UPLOAD_DIR}/capturas_de_tela/{base_name}"
-            add_file_asset(
-                project_id=proj.id,
-                filename=base_name,
-                file_type="capture",
-                path=rel_path,
-                size=len(data),
-                mime_type="image/png",
-            )
-        except Exception as db_e:
-            print(f"[DB] Aviso: falha ao registrar captura no DB: {db_e}")
         return {"filename": base_name, "url": f"/{UPLOAD_DIR}/capturas_de_tela/{base_name}"}
     except Exception as e:
         print(f"Erro no upload de captura: {e}")
@@ -1231,38 +1107,6 @@ async def uploads_upload(file: UploadFile = File(...)):
             pass
         with open(save_path, 'wb') as f:
             shutil.copyfileobj(file.file, f)
-        # Persistir no DB
-        try:
-            estrutura_path = os.path.join(UPLOAD_DIR, "estrutura_edicao.json")
-            pdf_name = None
-            if os.path.exists(estrutura_path):
-                try:
-                    with open(estrutura_path, 'r', encoding='utf-8') as f:
-                        estrutura = json.load(f)
-                        pdf_name = estrutura.get("pdf_name")
-                except Exception:
-                    pdf_name = None
-            slug = _slugify_name(os.path.splitext(pdf_name)[0]) if pdf_name else "uploads"
-            proj = get_or_create_project(slug, pdf_name=pdf_name if pdf_name else None)
-            rel_path = f"/{UPLOAD_DIR}/Imagens_de_Uploads/{candidate}"
-            lower = candidate.lower()
-            mime = (
-                "image/png" if lower.endswith(".png") else
-                ("image/jpeg" if lower.endswith((".jpg", ".jpeg")) else (
-                    "image/gif" if lower.endswith('.gif') else None
-                ))
-            )
-            size_bytes = os.path.getsize(save_path) if os.path.exists(save_path) else None
-            add_file_asset(
-                project_id=proj.id,
-                filename=candidate,
-                file_type="upload",
-                path=rel_path,
-                size=size_bytes,
-                mime_type=mime,
-            )
-        except Exception as db_e:
-            print(f"[DB] Aviso: falha ao registrar upload no DB: {db_e}")
         return {"filename": candidate, "url": f"/{UPLOAD_DIR}/Imagens_de_Uploads/{candidate}"}
     except Exception as e:
         print(f"Erro no upload de imagem enviada: {e}")
@@ -1279,12 +1123,6 @@ async def uploads_delete(request_data: dict = Body(default={})):  # { filename: 
         target = os.path.join(dest_dir, safe)
         if os.path.exists(target):
             os.remove(target)
-        # Remover do DB
-        try:
-            rel_path = f"/{UPLOAD_DIR}/Imagens_de_Uploads/{safe}"
-            delete_asset_by_path(rel_path)
-        except Exception as db_e:
-            print(f"[DB] Aviso: falha ao remover asset de upload no DB: {db_e}")
         return {"status": "ok"}
     except HTTPException:
         raise
@@ -1305,12 +1143,6 @@ async def uploads_delete_all():
                         os.remove(os.path.join(dest_dir, f))
                     except Exception:
                         pass
-        # Remover todos os assets de upload no DB
-        try:
-            prefix = f"/{UPLOAD_DIR}/Imagens_de_Uploads/"
-            delete_assets_by_prefix(prefix)
-        except Exception as db_e:
-            print(f"[DB] Aviso: falha ao remover assets de upload no DB: {db_e}")
         return {"status": "ok"}
     except Exception as e:
         print(f"Erro ao excluir todos os uploads: {e}")

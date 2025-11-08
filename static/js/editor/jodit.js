@@ -146,100 +146,7 @@ export function initJoditDocumentMode() {
   if (!el) return;
   if (state.joditEditor) return;
   if (typeof Jodit === 'undefined' || !Jodit || !Jodit.make) {
-    console.warn('Jodit não disponível no contexto global. Aplicando modo simples.');
-    try {
-      el.setAttribute('contenteditable', 'true');
-      el.classList.add('simple-editor');
-      // Eventos básicos para persistência e estados de UI
-      el.addEventListener('input', () => {
-        try { saveCurrentSummaryHTMLDebounced(); } catch (_) {}
-        try { updateSaveButtonsDisabled(); } catch (_) {}
-      });
-      // Helper para inserir imagem no final
-      const insertImageAtEnd = (src) => {
-        if (!src) return;
-        try {
-          const img = document.createElement('img');
-          img.src = src;
-          img.alt = 'Imagem';
-          img.style.maxWidth = '100%';
-          img.style.display = 'block';
-          el.appendChild(img);
-          el.appendChild(document.createElement('br'));
-          try { updateImageCountFromDOM(); } catch (_) {}
-          try { updateSaveButtonsDisabled(); } catch (_) {}
-        } catch (_) {}
-      };
-      // Paste: tratar imagens e URLs
-      el.addEventListener('paste', (e) => {
-        try {
-          const dt = e.clipboardData || window.clipboardData;
-          const items = dt && dt.items;
-          let file = null;
-          if (items && items.length) {
-            for (let i = 0; i < items.length; i++) {
-              const it = items[i];
-              if (it && it.type && (it.type.startsWith('image/png') || it.type.startsWith('image/jpeg'))) {
-                file = it.getAsFile();
-                break;
-              }
-            }
-          }
-          if (file) {
-            e.preventDefault();
-            const url = URL.createObjectURL(file);
-            insertImageAtEnd(url);
-            return;
-          }
-          const uri = (dt && dt.getData && dt.getData('text/uri-list')) || '';
-          const plain = (dt && dt.getData && dt.getData('text/plain')) || '';
-          const value = uri || plain;
-          if (value) {
-            const isUrlLike = /^(blob:|data:|https?:|file:|\/)/.test(value) || value.startsWith('/');
-            const isImageName = /^[^\/\\]+?\.(png|jpe?g|gif|webp|bmp|svg)$/i.test(value);
-            if (isUrlLike || isImageName) {
-              e.preventDefault();
-              insertImageAtEnd(value);
-            }
-          }
-        } catch (_) {}
-      });
-      // Drag & drop: imagens
-      el.addEventListener('dragenter', (e) => { try { e.preventDefault(); el.classList.add('drag-over'); } catch (_) {} });
-      el.addEventListener('dragleave', (e) => { try { el.classList.remove('drag-over'); } catch (_) {} });
-      el.addEventListener('dragover', (e) => { try { e.preventDefault(); } catch (_) {} });
-      el.addEventListener('drop', (e) => {
-        try {
-          e.preventDefault();
-          try { el.classList.remove('drag-over'); } catch (_) {}
-          const dt = e.dataTransfer;
-          const files = dt && dt.files ? Array.from(dt.files) : [];
-          if (files.length) {
-            const imgFiles = files.filter(f => f && typeof f.type === 'string' && f.type.startsWith('image/'));
-            if (imgFiles.length) {
-              imgFiles.forEach(file => {
-                try {
-                  const url = URL.createObjectURL(file);
-                  insertImageAtEnd(url);
-                } catch (_) {}
-              });
-              return;
-            }
-          }
-          const uri = (dt && dt.getData && dt.getData('text/uri-list')) || '';
-          const plain = (dt && dt.getData && dt.getData('text/plain')) || '';
-          const value = uri || plain;
-          if (value) {
-            const isUrlLike = /^(blob:|data:|https?:|file:|\/)/.test(value) || value.startsWith('/');
-            const isImageName = /^[^\/\\]+?\.(png|jpe?g|gif|webp|bmp|svg)$/i.test(value);
-            if (isUrlLike || isImageName) insertImageAtEnd(value);
-          }
-        } catch (_) {}
-      });
-      // Baseline de conteúdo salvo
-      try { state.lastSavedHtml = el.innerHTML || ''; } catch (_) {}
-      try { updateSaveButtonsDisabled(); } catch (_) {}
-    } catch (_) {}
+    console.warn('Jodit não disponível no contexto global.');
     return;
   }
 
@@ -256,11 +163,11 @@ export function initJoditDocumentMode() {
     askBeforePasteHTML: false,
     askBeforePasteFromWord: false,
     defaultActionOnPaste: 'insert_as_html',
-    // Reativar modo Source com ACE (carregado localmente) e Beautify
-    sourceEditor: 'ace',
-    beautifyHTML: true,
+    iframeCSSLinks: [
+      'https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;700&display=swap'
+    ],
     iframeStyle: `
-      body.jodit-wysiwyg { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; color:#222; line-height:1.5; padding: 10px; margin: 0; }
+      body.jodit-wysiwyg { font-family: 'Noto Sans', Arial, sans-serif; color:#222; line-height:1.5; padding: 10px; margin: 0; }
       /* Remover deslocamento vertical inicial do primeiro parágrafo */
       p { margin: 0 0 1em 0; }
       /* Ocultar possíveis ícones ou spans de "Enter" inseridos pelo editor dentro do iframe */
@@ -276,27 +183,6 @@ export function initJoditDocumentMode() {
       th, td { border: 1px solid #444; text-align: center; }
       thead tr, th { background-color: #cfe0ff; }
     `,
-    // Acrescentar grupo de tipografia e formato após os botões padrão
-    buttons: [
-      ...(Jodit.defaultOptions.buttons || []),
-      '|',
-      'font', 'fontsize', 'paragraph', 'lineHeight'
-    ],
-    buttonsMD: [
-      ...(Jodit.defaultOptions.buttonsMD || Jodit.defaultOptions.buttons || []),
-      '|',
-      'font', 'fontsize', 'paragraph', 'lineHeight'
-    ],
-    buttonsSM: [
-      ...(Jodit.defaultOptions.buttonsSM || Jodit.defaultOptions.buttonsMD || Jodit.defaultOptions.buttons || []),
-      '|',
-      'font', 'fontsize', 'paragraph', 'lineHeight'
-    ],
-    buttonsXS: [
-      ...(Jodit.defaultOptions.buttonsXS || Jodit.defaultOptions.buttonsSM || Jodit.defaultOptions.buttonsMD || Jodit.defaultOptions.buttons || []),
-      '|',
-      'font', 'fontsize', 'paragraph', 'lineHeight'
-    ],
     // Remover botões indesejados da toolbar
     removeButtons: ['file', 'video', 'class', 'className', 'addClass', 'youtube'],
     // Esconder controles explicitamente (por segurança, caso algum plugin os re-insira)
