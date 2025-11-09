@@ -1,0 +1,14 @@
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.gcp/
+.env
+.git/
+.gitignore
+temp_uploads/
+data/
+ws/
+*.log
+*.tmp

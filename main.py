@@ -7,6 +7,14 @@ from fastapi.responses import HTMLResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
+from storage import (
+    upload_uploadfile,
+    upload_local_file,
+    list_prefix,
+    delete_blob,
+    delete_prefix,
+    stream_blob,
+)
 from typing import List, Optional
 import time
 from fastapi import Body
@@ -37,7 +45,12 @@ app.add_middleware(
         "http://www.resumefull.com.br",
         "https://www.resumefull.com.br",
         "http://www.resumefull.com.br:8001",
-        "http://www.resumefull.com.br:8002"
+        "http://www.resumefull.com.br:8002",
+        # Domínios resumopro (produção)
+        "http://resumopro.com.br",
+        "https://resumopro.com.br",
+        "http://www.resumopro.com.br",
+        "https://www.resumopro.com.br"
     ],
     allow_credentials=True,
     allow_methods=["*"],
@@ -45,7 +58,11 @@ app.add_middleware(
 )
 app.mount("/images", StaticFiles(directory="images"), name="images")
 app.mount("/static", StaticFiles(directory="static"), name="static")
-app.mount("/temp_uploads", StaticFiles(directory="temp_uploads"), name="temp_uploads")
+# app.mount("/temp_uploads", StaticFiles(directory="temp_uploads"), name="temp_uploads")
+
+@app.get("/healthz")
+async def healthz():
+    return {"status": "ok"}
 
 UPLOAD_DIR = "temp_uploads"
 if not os.path.exists(UPLOAD_DIR):
@@ -250,6 +267,11 @@ def _is_structured_data(line: str) -> bool:
     
     return False
 
+if __name__ == "__main__":
+    import uvicorn
+    port = int(os.getenv("PORT", "8001"))
+    uvicorn.run(app, host="0.0.0.0", port=port)
+
 def _is_numbered_list_sequence(lines: list) -> bool:
     """Verifica se as linhas formam uma sequência de lista numerada."""
     if len(lines) < 2:
@@ -435,6 +457,19 @@ async def serve_frontend():
 @app.get("/editor", response_class=HTMLResponse)
 async def serve_editor():
     return FileResponse("static/editor.html", media_type="text/html")
+
+
+# Streaming dinâmico de arquivos de temp_uploads via Cloud Storage, com fallback local
+@app.get("/temp_uploads/{path:path}")
+async def stream_temp_uploads(path: str):
+    gcs_path = f"temp_uploads/{path}"
+    try:
+        return stream_blob(gcs_path)
+    except HTTPException:
+        local_path = os.path.join(UPLOAD_DIR, path)
+        if os.path.isfile(local_path):
+            return FileResponse(local_path)
+        raise HTTPException(status_code=404, detail="Arquivo não encontrado.")
 
 
 @app.websocket("/ws/progress")
@@ -884,10 +919,19 @@ async def delete_capture(request_data: dict = Body(default={})):  # { filename: 
             raise HTTPException(status_code=400, detail="filename inválido")
         # Garantir que é um nome simples, sem path traversal
         safe = os.path.basename(filename)
+        # Excluir no GCS
+        try:
+            delete_blob(f"temp_uploads/capturas_de_tela/{safe}")
+        except HTTPException as e:
+            print(f"[WARN] Falha ao excluir captura no GCS: {e}")
+        # Fallback local
         cap_dir = os.path.join(UPLOAD_DIR, "capturas_de_tela")
         target = os.path.join(cap_dir, safe)
         if os.path.exists(target):
-            os.remove(target)
+            try:
+                os.remove(target)
+            except Exception:
+                pass
         # Atualizar estrutura_edicao.json
         estrutura_path = os.path.join(UPLOAD_DIR, "estrutura_edicao.json")
         try:
@@ -910,6 +954,12 @@ async def delete_capture(request_data: dict = Body(default={})):  # { filename: 
 @app.post("/api/captures/delete-all")
 async def delete_all_captures():
     try:
+        # Excluir no GCS
+        try:
+            delete_prefix("temp_uploads/capturas_de_tela")
+        except HTTPException as e:
+            print(f"[WARN] Falha ao excluir capturas no GCS: {e}")
+        # Fallback local
         cap_dir = os.path.join(UPLOAD_DIR, "capturas_de_tela")
         if os.path.isdir(cap_dir):
             for f in os.listdir(cap_dir):
@@ -1045,18 +1095,26 @@ async def upload_pdf(originalPdf: UploadFile = File(...)):
 @app.post("/api/upload-captured-image")
 async def upload_captured_image(file: UploadFile = File(...), filename: Optional[str] = Form(None)):
     try:
-        # Salvar em temp_uploads/capturas_de_tela
-        dest_dir = os.path.join(UPLOAD_DIR, "capturas_de_tela")
-        os.makedirs(dest_dir, exist_ok=True)
         base_name = filename or f"img_capture_{int(time.time()*1000)}.png"
         if not base_name.lower().endswith('.png'):
             base_name = base_name + ".png"
-        save_path = os.path.join(dest_dir, base_name)
-        data = await file.read()
-        with open(save_path, 'wb') as f:
-            f.write(data)
+        # Primeiro tenta enviar para Cloud Storage
+        try:
+            await upload_uploadfile("temp_uploads/capturas_de_tela", file, dest_name=base_name)
+        except HTTPException as e:
+            # Fallback: salvar em disco local
+            print(f"[WARN] Cloud Storage indisponível; usando disco local: {e}")
+            dest_dir = os.path.join(UPLOAD_DIR, "capturas_de_tela")
+            os.makedirs(dest_dir, exist_ok=True)
+            save_path = os.path.join(dest_dir, base_name)
+            try:
+                file.file.seek(0)
+            except Exception:
+                pass
+            with open(save_path, 'wb') as f:
+                shutil.copyfileobj(file.file, f)
 
-        # Atualizar estrutura_edicao.json com lista de captured_images (não poluir images do PDF)
+        # Atualizar estrutura_edicao.json (compatibilidade até migrar para SQL)
         estrutura_path = os.path.join(UPLOAD_DIR, "estrutura_edicao.json")
         estrutura = {}
         if os.path.exists(estrutura_path):
@@ -1076,7 +1134,9 @@ async def upload_captured_image(file: UploadFile = File(...), filename: Optional
                 json.dump(estrutura, f, ensure_ascii=False, indent=2)
         except Exception as e:
             print(f"Erro ao salvar estrutura_edicao.json: {e}")
-        return {"filename": base_name, "url": f"/{UPLOAD_DIR}/capturas_de_tela/{base_name}"}
+        return {"filename": base_name, "url": f"/temp_uploads/capturas_de_tela/{base_name}"}
+    except HTTPException:
+        raise
     except Exception as e:
         print(f"Erro no upload de captura: {e}")
         raise HTTPException(status_code=500, detail="Falha ao salvar imagem capturada")
@@ -1085,29 +1145,45 @@ async def upload_captured_image(file: UploadFile = File(...), filename: Optional
 @app.post("/api/uploads/upload")
 async def uploads_upload(file: UploadFile = File(...)):
     try:
-        dest_dir = os.path.join(UPLOAD_DIR, "Imagens_de_Uploads")
-        os.makedirs(dest_dir, exist_ok=True)
+        # Normalizar nome e aplicar duplicação por conflito
         safe_name = (file.filename or f"upload_{int(time.time()*1000)}").replace('\\', '_').replace('/', '_')
         base, ext = os.path.splitext(safe_name)
         if not ext:
             ext = ".png"
         candidate = f"{base}{ext}"
-        save_path = os.path.join(dest_dir, candidate)
-        if os.path.exists(save_path):
-            idx = 1
-            while True:
-                candidate = f"{base} ({idx}){ext}"
-                save_path = os.path.join(dest_dir, candidate)
-                if not os.path.exists(save_path):
-                    break
-                idx += 1
+        # Verificar conflitos no GCS
         try:
-            file.file.seek(0)
-        except Exception:
-            pass
-        with open(save_path, 'wb') as f:
-            shutil.copyfileobj(file.file, f)
-        return {"filename": candidate, "url": f"/{UPLOAD_DIR}/Imagens_de_Uploads/{candidate}"}
+            existing = {os.path.basename(n) for (n, _) in list_prefix("temp_uploads/Imagens_de_Uploads")}
+            if candidate in existing:
+                idx = 1
+                while True:
+                    cand2 = f"{base} ({idx}){ext}"
+                    if cand2 not in existing:
+                        candidate = cand2
+                        break
+                    idx += 1
+        except HTTPException as e:
+            # Se GCS indisponível, apenas segue e tenta fallback/local
+            print(f"[WARN] Falha ao listar GCS para evitar conflito: {e}")
+
+        # Tenta enviar para GCS
+        try:
+            await upload_uploadfile("temp_uploads/Imagens_de_Uploads", file, dest_name=candidate)
+        except HTTPException as e:
+            print(f"[WARN] Cloud Storage indisponível; salvando localmente: {e}")
+            dest_dir = os.path.join(UPLOAD_DIR, "Imagens_de_Uploads")
+            os.makedirs(dest_dir, exist_ok=True)
+            save_path = os.path.join(dest_dir, candidate)
+            try:
+                file.file.seek(0)
+            except Exception:
+                pass
+            with open(save_path, 'wb') as f:
+                shutil.copyfileobj(file.file, f)
+
+        return {"filename": candidate, "url": f"/temp_uploads/Imagens_de_Uploads/{candidate}"}
+    except HTTPException:
+        raise
     except Exception as e:
         print(f"Erro no upload de imagem enviada: {e}")
         raise HTTPException(status_code=500, detail="Falha ao salvar imagem enviada")
@@ -1118,11 +1194,20 @@ async def uploads_delete(request_data: dict = Body(default={})):  # { filename: 
         filename = (request_data or {}).get("filename")
         if not filename or not isinstance(filename, str):
             raise HTTPException(status_code=400, detail="filename inválido")
-        dest_dir = os.path.join(UPLOAD_DIR, "Imagens_de_Uploads")
         safe = os.path.basename(filename)
+        # Excluir no GCS
+        try:
+            delete_blob(f"temp_uploads/Imagens_de_Uploads/{safe}")
+        except HTTPException as e:
+            print(f"[WARN] Falha ao excluir no GCS: {e}")
+        # Fallback local
+        dest_dir = os.path.join(UPLOAD_DIR, "Imagens_de_Uploads")
         target = os.path.join(dest_dir, safe)
         if os.path.exists(target):
-            os.remove(target)
+            try:
+                os.remove(target)
+            except Exception:
+                pass
         return {"status": "ok"}
     except HTTPException:
         raise
@@ -1133,6 +1218,12 @@ async def uploads_delete(request_data: dict = Body(default={})):  # { filename: 
 @app.post("/api/uploads/delete-all")
 async def uploads_delete_all():
     try:
+        # Excluir no GCS
+        try:
+            delete_prefix("temp_uploads/Imagens_de_Uploads")
+        except HTTPException as e:
+            print(f"[WARN] Falha ao excluir prefixo no GCS: {e}")
+        # Fallback local
         dest_dir = os.path.join(UPLOAD_DIR, "Imagens_de_Uploads")
         if os.path.isdir(dest_dir):
             # Alinhar os tipos de arquivo com a listagem de uploads
@@ -1150,7 +1241,7 @@ async def uploads_delete_all():
 
 # --- ROTA: Reprocessar imagens iniciais do PDF (Somente Fase de Captura) ---
 @app.post("/api/recover-initial-images")
-async def recover_initial_images(request_data: dict = Body(default={})):  # aceita JSON com { pdf_name?: str }
+async def recover_initial_images(request_data: dict = Body(default={})):  # aceita JSON com { pdf_name?: str, force?: bool }
     try:
         # Determinar PDF de origem
         pdf_name = (request_data or {}).get("pdf_name")
@@ -1170,16 +1261,35 @@ async def recover_initial_images(request_data: dict = Body(default={})):  # acei
         # Preparar diretórios/arquivos
         imagens_dir = os.path.join(UPLOAD_DIR, "imagens_extraidas")
         os.makedirs(imagens_dir, exist_ok=True)
-        # Limpar imagens anteriores para evitar conflitos de nomes
+        
+        # Limpeza condicional: só limpar quando forçarmos ou ao mudar de PDF
+        force = bool((request_data or {}).get("force"))
         try:
-            for f in os.listdir(imagens_dir):
-                if f.lower().endswith('.png') or f == 'imagens_info.json':
-                    try:
-                        os.remove(os.path.join(imagens_dir, f))
-                    except Exception:
-                        pass
+            # Determinar PDF anterior salvo (se houver) para evitar limpeza desnecessária
+            last_pdf = None
+            estrutura_path = os.path.join(UPLOAD_DIR, "estrutura_edicao.json")
+            try:
+                if os.path.exists(estrutura_path):
+                    with open(estrutura_path, 'r', encoding='utf-8') as f:
+                        prev = json.load(f)
+                        last_pdf = (prev.get('pdf_name') or prev.get('pdf_path'))
+                        if isinstance(last_pdf, str):
+                            last_pdf = os.path.basename(last_pdf)
+            except Exception:
+                last_pdf = None
+
+            current_pdf_base = os.path.basename(pdf_path)
+            pdf_changed = (last_pdf and last_pdf != current_pdf_base)
+
+            if force or pdf_changed:
+                for f in os.listdir(imagens_dir):
+                    if f.lower().endswith('.png') or f == 'imagens_info.json':
+                        try:
+                            os.remove(os.path.join(imagens_dir, f))
+                        except Exception:
+                            pass
         except Exception as e:
-            print(f"Falha ao limpar imagens anteriores: {e}")
+            print(f"Falha ao avaliar/limpar imagens anteriores: {e}")
 
         # Converter PDF -> HTML temporário
         from pdf_for_html import converter_pdf_para_html_simples
@@ -1207,6 +1317,8 @@ async def recover_initial_images(request_data: dict = Body(default={})):  # acei
             imagens = [f for f in os.listdir(imagens_dir) if f.lower().endswith('.png')]
             estrutura["images"] = imagens
             estrutura["upload_dir"] = UPLOAD_DIR
+            estrutura["pdf_name"] = os.path.basename(pdf_path)
+            estrutura["pdf_path"] = pdf_path
             info_file_path = os.path.join(imagens_dir, 'imagens_info.json')
             if os.path.exists(info_file_path):
                 with open(info_file_path, 'r', encoding='utf-8') as f:
@@ -1264,18 +1376,29 @@ async def api_delete_all_images():
 @app.get("/api/uploads/list")
 async def uploads_list():
     try:
-        dest_dir = os.path.join(UPLOAD_DIR, "Imagens_de_Uploads")
-        os.makedirs(dest_dir, exist_ok=True)
-        
         images = []
-        if os.path.exists(dest_dir):
-            for filename in os.listdir(dest_dir):
-                file_path = os.path.join(dest_dir, filename)
-                if os.path.isfile(file_path) and any(filename.lower().endswith(ext) for ext in ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.svg']):
+        # Primeiro tenta listar via GCS
+        try:
+            for name, _ in list_prefix("temp_uploads/Imagens_de_Uploads"):
+                base = os.path.basename(name)
+                if any(base.lower().endswith(ext) for ext in ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.svg']):
                     images.append({
-                        "filename": filename,
-                        "url": f"/temp_uploads/Imagens_de_Uploads/{filename}"
+                        "filename": base,
+                        "url": f"/temp_uploads/Imagens_de_Uploads/{base}"
                     })
+        except HTTPException as e:
+            print(f"[WARN] Falha ao listar uploads no GCS: {e}")
+            # Fallback local
+            dest_dir = os.path.join(UPLOAD_DIR, "Imagens_de_Uploads")
+            os.makedirs(dest_dir, exist_ok=True)
+            if os.path.exists(dest_dir):
+                for filename in os.listdir(dest_dir):
+                    file_path = os.path.join(dest_dir, filename)
+                    if os.path.isfile(file_path) and any(filename.lower().endswith(ext) for ext in ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.svg']):
+                        images.append({
+                            "filename": filename,
+                            "url": f"/temp_uploads/Imagens_de_Uploads/{filename}"
+                        })
         
         return {"images": images, "count": len(images)}
     except Exception as e:
@@ -1286,7 +1409,15 @@ async def uploads_list():
 @app.get("/api/list-pdfs")
 async def list_pdfs():
     try:
-        pdfs = [f for f in os.listdir(UPLOAD_DIR) if f.lower().endswith('.pdf')]
+        pdfs: List[str] = []
+        try:
+            for name, _ in list_prefix("temp_uploads"):
+                base = os.path.basename(name)
+                if base.lower().endswith('.pdf'):
+                    pdfs.append(base)
+        except HTTPException as e:
+            print(f"[WARN] Falha ao listar PDFs no GCS: {e}")
+            pdfs = [f for f in os.listdir(UPLOAD_DIR) if f.lower().endswith('.pdf')]
         return {"pdfs": pdfs, "count": len(pdfs)}
     except Exception as e:
         print(f"Erro ao listar PDFs: {e}")

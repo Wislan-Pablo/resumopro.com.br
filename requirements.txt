@@ -9,3 +9,6 @@ python-dotenv     # Para carregar variáveis de ambiente
 PyMuPDF          # Para manipulação de PDFs
 weasyprint       # Para conversão HTML para PDF
 markdown-it-py   # Para processamento de Markdown
+google-cloud-storage  # Cliente do Google Cloud Storage para uploads/streaming
+SQLAlchemy>=2.0.0     # ORM para persistência (Cloud SQL via SQLAlchemy assíncrono)
+psycopg[binary]>=3.1  # Driver PostgreSQL (psycopg3) com wheels binários
