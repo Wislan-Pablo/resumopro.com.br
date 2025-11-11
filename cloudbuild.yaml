@@ -1,22 +1,21 @@
 steps:
-# O passo abaixo executa o mesmo comando 'docker build' que você estava usando.
 - name: 'gcr.io/cloud-builders/docker'
-  args: 
+  args:
     - 'build'
     - '-t'
-    # Use exatamente a mesma URL de destino da sua imagem
-    - 'southamerica-east1-docker.pkg.dev/affable-grin-477621-f0/projetollm/app:$COMMIT_SHA'
+    # Primeira tag: com o SHA do commit
+    - 'southamerica-east1-docker.pkg.dev/$PROJECT_ID/projetollm/app:$COMMIT_SHA'
+    - '-t'
+    # Segunda tag: com "latest"
     - 'southamerica-east1-docker.pkg.dev/$PROJECT_ID/projetollm/app:latest'
     - '-f'
     - 'Dockerfile'
     - '.'
 
-# Configura a imagem final que será enviada ao Artifact Registry
 images:
-- 'southamerica-east1-docker.pkg.dev/affable-grin-477621-f0/projetollm/app:$COMMIT_SHA'
+# O Cloud Build automaticamente empurra as imagens listadas aqui
+- 'southamerica-east1-docker.pkg.dev/$PROJECT_ID/projetollm/app:$COMMIT_SHA'
 - 'southamerica-east1-docker.pkg.dev/$PROJECT_ID/projetollm/app:latest'
 
-# ESTA É A CORREÇÃO:
-# A opção 'logging: CLOUD_LOGGING_ONLY' resolve o erro (Opção C)
 options:
   logging: CLOUD_LOGGING_ONLY
