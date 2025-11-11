@@ -1,6 +1,6 @@
 Param(
   [string]$ProjectId = "affable-grin-477621-f0",
-  [string]$Region = "us-central1",
+  [string]$Region = "southamerica-east1",
   [string]$Network = "default",
   [string]$Subnet = "serverless-subnet",
   [string]$VpcConnector = "serverless-conn",
@@ -19,7 +19,6 @@ gcloud compute networks subnets create $Subnet `
 Write-Host "Creating VPC Connector $VpcConnector" -ForegroundColor Cyan
 gcloud compute networks vpc-access connectors create $VpcConnector `
   --region $Region `
-  --network $Network `
   --subnet $Subnet
 
 Write-Host "Checking VPC Connector state" -ForegroundColor Green

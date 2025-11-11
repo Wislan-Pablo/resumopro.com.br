@@ -1,22 +1,55 @@
 steps:
-# O passo abaixo executa o mesmo comando 'docker build' que você estava usando.
-- name: 'gcr.io/cloud-builders/docker'
-  args: 
-    - 'build'
-    - '-t'
-    # Use exatamente a mesma URL de destino da sua imagem
-    - 'southamerica-east1-docker.pkg.dev/affable-grin-477621-f0/projetollm/app:$COMMIT_SHA'
-    - 'southamerica-east1-docker.pkg.dev/$PROJECT_ID/projetollm/app:latest'
-    - '-f'
-    - 'Dockerfile'
-    - '.'
+  # Passo 1: Build da imagem Docker
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'build'
+      - '-t'
+      - 'southamerica-east1-docker.pkg.dev/$PROJECT_ID/projetollm/app:$COMMIT_SHA'
+      - '-t'
+      - 'southamerica-east1-docker.pkg.dev/$PROJECT_ID/projetollm/app:latest'
+      - '-f'
+      - 'Dockerfile'
+      - '.'
 
-# Configura a imagem final que será enviada ao Artifact Registry
+  # Passo 2: Deploy no Cloud Run
+  - name: 'gcr.io/cloud-builders/gcloud'
+    args:
+      - 'run'
+      - 'deploy'
+      - '${_SERVICE_NAME}'
+      - '--image'
+      - 'southamerica-east1-docker.pkg.dev/$PROJECT_ID/projetollm/app:$COMMIT_SHA'
+      - '--region'
+      - '${_REGION}'
+      - '--allow-unauthenticated'
+      - '--service-account'
+      - '${_SERVICE_ACCOUNT}'
+      - '--set-env-vars'
+      - 'PORT=8080,GCS_BUCKET=${_BUCKET},UPLOADS_BUCKET=${_BUCKET},DB_USER=${_DB_USER},DB_NAME=${_DB_NAME},DB_HOST=${_DB_HOST}'
+      - '--update-secrets'
+      - 'DB_PASSWORD=${_DB_SECRET}:latest'
+      - '--vpc-connector'
+      - '${_VPC_CONNECTOR}'
+      - '--egress-settings'
+      - 'all-traffic'
+
+# Imagens a serem enviadas para o Artifact Registry
 images:
-- 'southamerica-east1-docker.pkg.dev/affable-grin-477621-f0/projetollm/app:$COMMIT_SHA'
-- 'southamerica-east1-docker.pkg.dev/$PROJECT_ID/projetollm/app:latest'
+  - 'southamerica-east1-docker.pkg.dev/$PROJECT_ID/projetollm/app:$COMMIT_SHA'
+  - 'southamerica-east1-docker.pkg.dev/$PROJECT_ID/projetollm/app:latest'
 
-# ESTA É A CORREÇÃO:
-# A opção 'logging: CLOUD_LOGGING_ONLY' resolve o erro (Opção C)
+# Opções de build
 options:
   logging: CLOUD_LOGGING_ONLY
+
+# Variáveis de substituição
+substitutions:
+  _SERVICE_NAME: 'resumopro-service'
+  _REGION: 'southamerica-east1'
+  _SERVICE_ACCOUNT: 'resumopro-run-sa'
+  _BUCKET: 'resumopro-storage-bucket'
+  _DB_USER: 'wislanpablo'
+  _DB_NAME: 'resumopro-db'
+  _DB_HOST: '10.54.192.3'
+  _DB_SECRET: 'resumopro-db-secret'
+  _VPC_CONNECTOR: 'serverless-conn'

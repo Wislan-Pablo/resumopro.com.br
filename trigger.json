@@ -1,0 +1,31 @@
+{
+  "name": "resumopro-main-trigger",
+  "github": {
+    "owner": "Wislan-Pablo",
+    "name": "resumopro.com.br",
+    "push": {
+      "branch": "^main$"
+    }
+  },
+  "build_config": {
+    "build": {
+      "source": {
+        "repoSource": {
+          "repoName": "resumopro.com.br",
+          "branchName": "main"
+        }
+      },
+      "steps": [
+        {
+          "name": "gcr.io/cloud-builders/docker",
+          "args": [
+            "build",
+            "-t",
+            "southamerica-east1-docker.pkg.dev/affable-grin-477621-f0/projetollm/app:latest",
+            "."
+          ]
+        }
+      ]
+    }
+  }
+}

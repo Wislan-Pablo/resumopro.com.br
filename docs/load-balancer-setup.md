@@ -10,10 +10,10 @@ Este guia descreve como expor o Cloud Assist (serviço Cloud Run) via Global HTT
 
 ## Passo a passo
 1. Backend service (serverless NEG)
-   - Crie um NEG serverless apontando para o serviço Cloud Run:
+   - Crie um NEG serverless apontando para o serviço Cloud Run (na mesma região do Cloud Run, ex.: `southamerica-east1`):
      ```sh
      gcloud compute network-endpoint-groups create resumopro-neg \
-       --region=us-central1 \
+       --region=southamerica-east1 \
        --network-endpoint-type=serverless \
        --cloud-run-service=resumopro-service
      ```
@@ -24,7 +24,7 @@ Este guia descreve como expor o Cloud Assist (serviço Cloud Run) via Global HTT
      ```sh
      gcloud compute backend-services create resumopro-backend --global --protocol=HTTP
      gcloud compute backend-services add-backend resumopro-backend --global \
-       --network-endpoint-group=resumopro-neg --network-endpoint-group-region=us-central1
+       --network-endpoint-group=resumopro-neg --network-endpoint-group-region=southamerica-east1
      ```
 
 3. Host e certificado (opcional)

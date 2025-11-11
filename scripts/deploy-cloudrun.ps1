@@ -1,9 +1,9 @@
 Param(
   [string]$ProjectId = "affable-grin-477621-f0",
-  [string]$Region = "us-central1",
+  [string]$Region = "southamerica-east1",
   [string]$ServiceName = "resumopro-service",
   [string]$Repo = "projetollm",
-  [string]$ImageTag = "us-central1-docker.pkg.dev/$ProjectId/$Repo/app:latest",
+  [string]$ImageTag = "southamerica-east1-docker.pkg.dev/$ProjectId/$Repo/app:latest",
   [string]$ServiceAccount = "resumopro-run-sa",
   [string]$Bucket = "resumopro-storage-bucket",
   [string]$DbUser = "wislanpablo",
