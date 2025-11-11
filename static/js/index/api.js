@@ -13,7 +13,8 @@ export async function uploadPdf(file) {
 
 export function structureSummary(summaryText) {
   return new Promise((resolve, reject) => {
-    const wsProtocol = window.location.protocol === 'https' ? 'wss' : 'ws';
+    const isHttps = window.location.protocol === 'https:' || window.location.protocol.includes('https');
+    const wsProtocol = isHttps ? 'wss' : 'ws';
     const wsUrl = `${wsProtocol}://${window.location.host}/ws/progress`;
     const socket = new WebSocket(wsUrl);
 
