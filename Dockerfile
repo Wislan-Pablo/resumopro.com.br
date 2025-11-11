@@ -1,4 +1,4 @@
-# Adicionando um comentário para acionar o build
+# Adicionando um comentário para acionar o build novamente
 
 FROM python:3.12-slim
 ENV PYTHONDONTWRITEBYTECODE=1 \
