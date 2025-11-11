@@ -34,60 +34,52 @@ export function setupSubmitFlow({
       $wordCountDisplay.addClass('word-count-green');
     }
 
-    // 1. Show textarea loading overlay for 4 seconds
-    $textareaLoadingContainer.css('display', 'block');
-    $textareaLoadingOverlay.show();
+    // 1. Show loading indicators immediately
+    $textareaLoadingContainer.hide(); // Not used anymore
+    $textareaLoadingOverlay.hide(); // Not used anymore
     $submitButton.prop('disabled', true).text('ESTRUTURANDO...');
+    $iaSummaryText.hide();
+    $loadingArea.show();
+    $resultArea.hide();
 
-    setTimeout(async () => {
-      // Hide overlay
-      $textareaLoadingOverlay.hide();
-      $textareaLoadingContainer.css('display', 'none');
+    try {
+      const structuredMarkdown = await structureSummary(iaSummaryText);
+      const htmlContent = window.marked.parse(structuredMarkdown, {
+        breaks: true,
+        gfm: true,
+        tables: true,
+        pedantic: false,
+        sanitize: false,
+        smartLists: true,
+        smartypants: false
+      });
 
-      // Hide textarea; show loading area
-      $iaSummaryText.hide();
-      $loadingArea.show();
-      $resultArea.hide();
+      try { await saveStructuredSummary(structuredMarkdown, htmlContent); } catch (e) { console.error('Erro ao salvar resumo estruturado:', e); }
 
-      try {
-        const structuredMarkdown = await structureSummary(iaSummaryText);
-        const htmlContent = window.marked.parse(structuredMarkdown, {
-          breaks: true,
-          gfm: true,
-          tables: true,
-          pedantic: false,
-          sanitize: false,
-          smartLists: true,
-          smartypants: false
-        });
+      // Show result
+      $loadingArea.hide();
+      $structuredSummary.html(htmlContent);
+      $resultArea.show();
 
-        try { await saveStructuredSummary(structuredMarkdown, htmlContent); } catch (e) { console.error('Erro ao salvar resumo estruturado:', e); }
+      // Update button
+      $submitButton.prop('disabled', false).text(newButtonText);
 
-        // Show result
-        $loadingArea.hide();
-        $structuredSummary.html(htmlContent);
-        $resultArea.show();
+      // Rebind click to start full processing and redirect
+      $submitButton.off('click').on('click', function (evt) {
+        evt.preventDefault();
+        const originalPdfInput = document.getElementById('originalPdf');
+        const originalPdfFile = originalPdfInput && originalPdfInput.files && originalPdfInput.files[0];
+        processamentoFull(originalPdfFile, iaSummaryText)
+          .catch(() => { /* Ignorar falhas e seguir com redirecionamento */ })
+          .finally(() => { window.location.href = '/static/editor.html'; });
+      });
 
-        // Update button
-        $submitButton.prop('disabled', false).text(newButtonText);
-
-        // Rebind click to start full processing and redirect
-        $submitButton.off('click').on('click', function (evt) {
-          evt.preventDefault();
-          const originalPdfInput = document.getElementById('originalPdf');
-          const originalPdfFile = originalPdfInput && originalPdfInput.files && originalPdfInput.files[0];
-          processamentoFull(originalPdfFile, iaSummaryText)
-            .catch(() => { /* Ignorar falhas e seguir com redirecionamento */ })
-            .finally(() => { window.location.href = '/static/editor.html'; });
-        });
-
-      } catch (error) {
-        console.error('Erro ao estruturar resumo:', error);
-        alert('Erro ao estruturar o resumo. Tente novamente.');
-        $loadingArea.hide();
-        $iaSummaryText.show();
-        $submitButton.prop('disabled', false).text(originalSubmitButtonText);
-      }
-    }, 4000);
+    } catch (error) {
+      console.error('Erro ao estruturar resumo:', error);
+      alert('Erro ao estruturar o resumo. Tente novamente.');
+      $loadingArea.hide();
+      $iaSummaryText.show();
+      $submitButton.prop('disabled', false).text(originalSubmitButtonText);
+    }
   });
 }

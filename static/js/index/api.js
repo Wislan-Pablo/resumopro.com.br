@@ -11,20 +11,54 @@ export async function uploadPdf(file) {
   return data;
 }
 
-export async function structureSummary(summaryText) {
-  try {
-    const response = await fetch('/api/normalize-text', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text: summaryText })
-    });
-    if (!response.ok) throw new Error('Erro na normalização do texto');
-    const data = await response.json();
-    return data.normalized_text;
-  } catch (error) {
-    console.error('Erro ao normalizar texto:', error);
-    return summaryText; // fallback
-  }
+export function structureSummary(summaryText) {
+  return new Promise((resolve, reject) => {
+    const wsProtocol = window.location.protocol === 'https' ? 'wss' : 'ws';
+    const wsUrl = `${wsProtocol}://${window.location.host}/ws/progress`;
+    const socket = new WebSocket(wsUrl);
+
+    socket.onopen = () => {
+      console.log('WebSocket connection established for structuring summary.');
+      socket.send(JSON.stringify({
+        type: 'start_structuring',
+        data: { text: summaryText }
+      }));
+    };
+
+    socket.onmessage = (event) => {
+      try {
+        const message = JSON.parse(event.data);
+        if (message.type === 'structured_summary') {
+          console.log('Structured summary received.');
+          resolve(message.data.normalized_text);
+          socket.close();
+        } else if (message.type === 'error') {
+          console.error('Error from server:', message.data.error);
+          reject(new Error(message.data.error));
+          socket.close();
+        }
+      } catch (e) {
+        console.error('Error parsing WebSocket message:', e);
+        // Em caso de erro de parsing, podemos rejeitar ou tentar um fallback
+        reject(new Error('Failed to parse server response.'));
+      }
+    };
+
+    socket.onerror = (error) => {
+      console.error('WebSocket error:', error);
+      reject(new Error('WebSocket connection failed.'));
+    };
+
+    socket.onclose = (event) => {
+      if (event.wasClean) {
+        console.log(`WebSocket connection closed cleanly, code=${event.code}, reason=${event.reason}`);
+      } else {
+        // Ex: server process killed or network down
+        console.error('WebSocket connection died');
+        reject(new Error('WebSocket connection died unexpectedly.'));
+      }
+    };
+  });
 }
 
 export async function saveStructuredSummary(markdownContent, htmlContent) {
