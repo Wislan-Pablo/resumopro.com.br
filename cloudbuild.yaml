@@ -11,7 +11,15 @@ steps:
       - 'Dockerfile'
       - '.'
 
-  # Passo 2: Deploy no Cloud Run
+  # Passo 2: Push da imagem com a tag do commit
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', 'southamerica-east1-docker.pkg.dev/$PROJECT_ID/projetollm/app:$COMMIT_SHA']
+
+  # Passo 3: Push da imagem com a tag "latest"
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', 'southamerica-east1-docker.pkg.dev/$PROJECT_ID/projetollm/app:latest']
+
+  # Passo 4: Deploy no Cloud Run
   - name: 'gcr.io/cloud-builders/gcloud'
     args:
       - 'run'
