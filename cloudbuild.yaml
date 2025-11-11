@@ -30,8 +30,8 @@ steps:
       - 'DB_PASSWORD=${_DB_SECRET}:latest'
       - '--vpc-connector'
       - '${_VPC_CONNECTOR}'
-      - '--egress-settings'
-      - 'all-traffic'
+      - '--vpc-egress'
+      - 'all'
 
 # Imagens a serem enviadas para o Artifact Registry
 images:
