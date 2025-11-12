@@ -1697,8 +1697,8 @@ async def me(request: Request):
         raise HTTPException(status_code=401, detail="Não autenticado")
     return {"user_id": payload.get("sub"), "email": payload.get("email")}
 def _get_oauth_client():
-    client_id = os.getenv("GOOGLE_CLIENT_ID")
-    client_secret = os.getenv("GOOGLE_CLIENT_SECRET")
+    client_id = (os.getenv("GOOGLE_CLIENT_ID") or "").strip()
+    client_secret = (os.getenv("GOOGLE_CLIENT_SECRET") or "").strip()
     if not client_id or not client_secret:
         raise HTTPException(status_code=500, detail="Google OAuth não configurado")
     return client_id, client_secret
