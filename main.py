@@ -20,6 +20,11 @@ import time
 from fastapi import Body
 from main_pipeline import start_full_processing, extrair_titulo_do_resumo, setup_logging
 from websocket_manager import ConnectionManager
+from sqlalchemy.ext.asyncio import AsyncSession
+from db import SessionLocal, init_db, User, RefreshToken
+from auth import hash_password, verify_password, create_access_token, decode_access_token, generate_refresh_token, verify_refresh_token
+from email.utils import parseaddr
+import datetime
 
 # Carregar variáveis do arquivo .env (se existir)
 load_dotenv(os.path.join(os.path.dirname(__file__), '.env'))
@@ -1506,3 +1511,127 @@ async def list_pdfs():
     except Exception as e:
         print(f"Erro ao listar PDFs: {e}")
         raise HTTPException(status_code=500, detail="Erro ao listar PDFs")
+# --- Auth dependencies and helpers ---
+async def get_db_session() -> AsyncSession:
+    return SessionLocal()
+
+
+def _is_valid_email(email: str) -> bool:
+    name, addr = parseaddr(email or "")
+    return "@" in addr and "." in addr
+
+
+def _cookie_settings():
+    return {
+        "secure": True,
+        "httponly": True,
+        "samesite": "lax"
+    }
+
+
+@app.on_event("startup")
+async def on_startup():
+    try:
+        await init_db()
+    except Exception as e:
+        print(f"DB init failed: {e}")
+
+
+@app.post("/auth/signup")
+async def auth_signup(email: str = Form(...), password: str = Form(...), name: str = Form(None)):
+    if not _is_valid_email(email):
+        raise HTTPException(status_code=400, detail="Email inválido")
+    if not password or len(password) < 6:
+        raise HTTPException(status_code=400, detail="Senha muito curta")
+    async with SessionLocal() as session:
+        # Checar se já existe
+        from sqlalchemy import select
+        existing = await session.execute(select(User).where(User.email == email))
+        if existing.scalar_one_or_none():
+            raise HTTPException(status_code=409, detail="Email já cadastrado")
+        user = User(email=email, name=name or email.split('@')[0], password_hash=hash_password(password))
+        session.add(user)
+        await session.commit()
+        await session.refresh(user)
+        return {"status": "ok", "user_id": user.id}
+
+
+@app.post("/auth/login")
+async def auth_login(response: Response, email: str = Form(...), password: str = Form(...)):
+    async with SessionLocal() as session:
+        from sqlalchemy import select
+        result = await session.execute(select(User).where(User.email == email))
+        user = result.scalar_one_or_none()
+        if not user or not user.password_hash or not verify_password(password, user.password_hash):
+            raise HTTPException(status_code=401, detail="Credenciais inválidas")
+        user.last_login = datetime.datetime.utcnow()
+        await session.commit()
+        access = create_access_token(user_id=user.id, email=user.email)
+        raw_refresh, hashed_refresh = generate_refresh_token()
+        rt = RefreshToken(user_id=user.id, token_hash=hashed_refresh, expires_at=datetime.datetime.utcnow() + datetime.timedelta(days=30))
+        session.add(rt)
+        await session.commit()
+        # Cookies
+        cs = _cookie_settings()
+        response.set_cookie("access_token", access, **cs)
+        response.set_cookie("refresh_token", raw_refresh, **cs)
+        return {"status": "ok"}
+
+
+@app.post("/auth/refresh")
+async def auth_refresh(response: Response, refresh_token: str = Form(...)):
+    async with SessionLocal() as session:
+        from sqlalchemy import select
+        # Buscar tokens não revogados
+        result = await session.execute(select(RefreshToken).where(RefreshToken.revoked == False))
+        tokens = result.scalars().all()
+        matched = None
+        for t in tokens:
+            if t.expires_at and t.expires_at < datetime.datetime.utcnow():
+                continue
+            if verify_refresh_token(refresh_token, t.token_hash):
+                matched = t
+                break
+        if not matched:
+            raise HTTPException(status_code=401, detail="Refresh inválido")
+        # Carregar usuário
+        ures = await session.execute(select(User).where(User.id == matched.user_id))
+        user = ures.scalar_one_or_none()
+        if not user:
+            raise HTTPException(status_code=401, detail="Usuário não encontrado")
+        access = create_access_token(user_id=user.id, email=user.email)
+        cs = _cookie_settings()
+        response.set_cookie("access_token", access, **cs)
+        return {"status": "ok"}
+
+
+@app.post("/auth/logout")
+async def auth_logout(response: Response, refresh_token: str = Form(...)):
+    async with SessionLocal() as session:
+        from sqlalchemy import select
+        result = await session.execute(select(RefreshToken))
+        tokens = result.scalars().all()
+        for t in tokens:
+            if verify_refresh_token(refresh_token, t.token_hash):
+                t.revoked = True
+        await session.commit()
+    # Limpar cookies
+    response.delete_cookie("access_token")
+    response.delete_cookie("refresh_token")
+    return {"status": "ok"}
+
+
+def _get_current_user_from_cookie(access_token: Optional[str]) -> Optional[dict]:
+    if not access_token:
+        return None
+    payload = decode_access_token(access_token)
+    return payload
+
+
+@app.get("/me")
+async def me(access_token: Optional[str] = None):
+    # Pode ser lido de cookie via front-end; aqui aceitamos como parâmetro para simplificar
+    payload = _get_current_user_from_cookie(access_token)
+    if not payload:
+        raise HTTPException(status_code=401, detail="Não autenticado")
+    return {"user_id": payload.get("sub"), "email": payload.get("email")}

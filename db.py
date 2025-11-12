@@ -2,10 +2,11 @@ import os
 import time
 from typing import List, Optional, Dict, Any
 
-from sqlalchemy import Column, Integer, String, Text, BigInteger, DateTime, JSON, select, delete
+from sqlalchemy import Column, Integer, String, Text, BigInteger, DateTime, JSON, Boolean, ForeignKey, select, delete
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import DeclarativeBase
 from sqlalchemy.sql import func
+from sqlalchemy.orm import relationship
 
 
 class Base(DeclarativeBase):
@@ -24,6 +25,48 @@ class EditorState(Base):
     images_copied = Column(JSON, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+
+# --- Auth Models ---
+class User(Base):
+    __tablename__ = "users"
+
+    id = Column(Integer, primary_key=True)
+    email = Column(String(256), unique=True, nullable=False, index=True)
+    name = Column(String(256), nullable=True)
+    password_hash = Column(String(512), nullable=True)
+    is_active = Column(Boolean, nullable=False, server_default="true")
+    role = Column(String(64), nullable=True)  # e.g., 'user', 'admin' (restrições serão modeladas depois)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    last_login = Column(DateTime(timezone=True), nullable=True)
+
+    oauth_accounts = relationship("OAuthAccount", back_populates="user")
+    refresh_tokens = relationship("RefreshToken", back_populates="user")
+
+
+class OAuthAccount(Base):
+    __tablename__ = "oauth_accounts"
+
+    id = Column(Integer, primary_key=True)
+    provider = Column(String(64), nullable=False)  # 'google'
+    subject = Column(String(256), nullable=False)  # provider unique id (sub)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    user = relationship("User", back_populates="oauth_accounts")
+
+
+class RefreshToken(Base):
+    __tablename__ = "refresh_tokens"
+
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    token_hash = Column(String(512), nullable=False)
+    expires_at = Column(DateTime(timezone=True), nullable=False)
+    revoked = Column(Boolean, nullable=False, server_default="false")
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    user = relationship("User", back_populates="refresh_tokens")
 
 
 def _build_db_url() -> str:
