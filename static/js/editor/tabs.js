@@ -130,6 +130,19 @@ export function loadPdfForCapture() {
             ? selectedName.trim()
             : (url.split('/').pop() || 'documento.pdf');
           initAdobeViewer(url, fileName);
+        } else if (resp.status === 405) {
+          // Alguns servidores não permitem HEAD; tentar um GET leve com Range
+          return fetch(url, { method: 'GET', headers: { 'Range': 'bytes=0-0' } })
+            .then((r) => {
+              if (r.ok) {
+                const fileName = selectedName && selectedName.trim()
+                  ? selectedName.trim()
+                  : (url.split('/').pop() || 'documento.pdf');
+                initAdobeViewer(url, fileName);
+              } else {
+                throw new Error('PDF não encontrado');
+              }
+            });
         } else {
           throw new Error('PDF não encontrado');
         }

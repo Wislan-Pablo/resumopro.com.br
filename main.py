@@ -465,6 +465,14 @@ async def redirect_legacy_index():
     # Redirecionar qualquer acesso antigo para a homepage
     return RedirectResponse(url="/")
 
+@app.get("/favicon.ico")
+async def favicon():
+    # Servir favicon para evitar 404 no console
+    try:
+        return FileResponse("images/Logo_Favicon_ResumoFull.svg", media_type="image/svg+xml")
+    except Exception:
+        raise HTTPException(status_code=404, detail="Favicon não encontrado")
+
 
 # Streaming dinâmico de arquivos de temp_uploads via Cloud Storage, com fallback local
 @app.get("/temp_uploads/{path:path}")

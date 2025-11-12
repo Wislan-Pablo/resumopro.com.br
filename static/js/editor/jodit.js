@@ -151,7 +151,7 @@ export function initJoditDocumentMode() {
   }
 
   const editor = Jodit.make('#structuredSummary', {
-    language: 'pt_br',
+    language: 'pt',
     placeholder: 'Cole ou escreva seu texto aqui e use a Galeria no menu lateral para visualizar as imagens pré-carregadas do PDF, capture novas imagens no PDF através do menu superior - Capturar Imagem no PDF, ou ainda, adicione uma local via upload. Copie as imagens através do ícone disponibilizado na Galeria, ou clique duas vezes (mantenha pressionado) e arraste para inseri-las aqui...',
     iframe: true,
     height: 500,
