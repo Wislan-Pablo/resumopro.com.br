@@ -469,13 +469,16 @@ async def redirect_legacy_index():
 # Streaming dinâmico de arquivos de temp_uploads via Cloud Storage, com fallback local
 @app.get("/temp_uploads/{path:path}")
 async def stream_temp_uploads(path: str):
+    # Priorizar arquivo local para reduzir latência e evitar timeouts
+    local_path = os.path.join(UPLOAD_DIR, path)
+    if os.path.isfile(local_path):
+        return FileResponse(local_path)
+
+    # Complementar com GCS quando não há arquivo local
     gcs_path = f"temp_uploads/{path}"
     try:
         return stream_blob(gcs_path)
     except HTTPException:
-        local_path = os.path.join(UPLOAD_DIR, path)
-        if os.path.isfile(local_path):
-            return FileResponse(local_path)
         raise HTTPException(status_code=404, detail="Arquivo não encontrado.")
 
 
