@@ -473,6 +473,47 @@ async def favicon():
     except Exception:
         raise HTTPException(status_code=404, detail="Favicon não encontrado")
 
+@app.get("/browse/uploads", response_class=HTMLResponse)
+async def browse_uploads():
+    """Retorna uma listagem HTML simples dos arquivos em Imagens_de_Uploads."""
+    try:
+        dest_dir = os.path.join(UPLOAD_DIR, "Imagens_de_Uploads")
+        os.makedirs(dest_dir, exist_ok=True)
+        items = []
+        if os.path.isdir(dest_dir):
+            for filename in sorted(os.listdir(dest_dir)):
+                file_path = os.path.join(dest_dir, filename)
+                if os.path.isfile(file_path):
+                    items.append(filename)
+        html_items = "\n".join(
+            f'<li><a href="/temp_uploads/Imagens_de_Uploads/{fn}" target="_blank">{fn}</a></li>' for fn in items
+        ) or '<li>Nenhum arquivo encontrado.</li>'
+        html = f"""
+        <!DOCTYPE html>
+        <html lang=\"pt-BR\">
+          <head>
+            <meta charset=\"utf-8\" />
+            <title>Uploads</title>
+            <style>
+              body {{ font-family: Arial, sans-serif; padding: 16px; }}
+              ul {{ list-style: none; padding: 0; }}
+              li {{ margin: 6px 0; }}
+              a {{ color: #1a73e8; text-decoration: none; }}
+              a:hover {{ text-decoration: underline; }}
+            </style>
+          </head>
+          <body>
+            <h2>Imagens de Uploads</h2>
+            <ul>
+              {html_items}
+            </ul>
+          </body>
+        </html>
+        """
+        return HTMLResponse(content=html, status_code=200)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Falha ao listar uploads: {e}")
+
 
 # Streaming dinâmico de arquivos de temp_uploads via Cloud Storage, com fallback local
 @app.get("/temp_uploads/{path:path}")
