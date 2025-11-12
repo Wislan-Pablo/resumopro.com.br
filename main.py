@@ -1703,11 +1703,19 @@ def _get_oauth_client():
         raise HTTPException(status_code=500, detail="Google OAuth não configurado")
     return client_id, client_secret
 
+def _get_redirect_uri(request: Request) -> str:
+    base = (os.getenv("OAUTH_REDIRECT_BASE") or "").strip()
+    if base:
+        # Permite forçar o domínio público (ex.: https://resumopro.com.br)
+        return f"{base.rstrip('/')}/oauth/google/callback"
+    # Padrão: usar a URL da própria revisão do Cloud Run
+    return str(request.url_for("oauth_google_callback"))
+
 
 @app.get("/oauth/google/start")
 async def oauth_google_start(request: Request):
     client_id, _ = _get_oauth_client()
-    redirect_uri = str(request.url_for("oauth_google_callback"))
+    redirect_uri = _get_redirect_uri(request)
     state = secrets.token_urlsafe(24)
     # Salvar state em cookie
     cs = _cookie_settings()
@@ -1732,7 +1740,7 @@ async def oauth_google_callback(request: Request, code: str, state: str):
     if not cookie_state or cookie_state != state:
         raise HTTPException(status_code=400, detail="State inválido")
     client_id, client_secret = _get_oauth_client()
-    redirect_uri = str(request.url_for("oauth_google_callback"))
+    redirect_uri = _get_redirect_uri(request)
     # Trocar code por tokens
     async with httpx.AsyncClient(timeout=15.0) as client:
         token_res = await client.post(
