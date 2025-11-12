@@ -452,7 +452,8 @@ async def cleanup_temp_files(manifest_path: str):
 
 @app.get("/", response_class=HTMLResponse)
 async def serve_frontend():
-    return FileResponse("static/index.html", media_type="text/html")
+    # Servir diretamente o painel principal
+    return FileResponse("static/editor.html", media_type="text/html")
 
 @app.get("/editor", response_class=HTMLResponse)
 async def serve_editor():
