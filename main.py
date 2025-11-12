@@ -1384,18 +1384,8 @@ async def api_delete_all_images():
 async def uploads_list():
     try:
         images = []
-        # Primeiro tenta listar via GCS
+        # Primeiro listar localmente para evitar timeouts
         try:
-            for name, _ in list_prefix("temp_uploads/Imagens_de_Uploads"):
-                base = os.path.basename(name)
-                if any(base.lower().endswith(ext) for ext in ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.svg']):
-                    images.append({
-                        "filename": base,
-                        "url": f"/temp_uploads/Imagens_de_Uploads/{base}"
-                    })
-        except HTTPException as e:
-            print(f"[WARN] Falha ao listar uploads no GCS: {e}")
-            # Fallback local
             dest_dir = os.path.join(UPLOAD_DIR, "Imagens_de_Uploads")
             os.makedirs(dest_dir, exist_ok=True)
             if os.path.exists(dest_dir):
@@ -1406,6 +1396,21 @@ async def uploads_list():
                             "filename": filename,
                             "url": f"/temp_uploads/Imagens_de_Uploads/{filename}"
                         })
+        except Exception as e:
+            print(f"[WARN] Falha ao listar uploads localmente: {e}")
+
+        # Complementar com GCS quando disponível
+        try:
+            for name, _ in list_prefix("temp_uploads/Imagens_de_Uploads"):
+                base = os.path.basename(name)
+                if any(base.lower().endswith(ext) for ext in ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.svg']):
+                    if not any(img.get("filename") == base for img in images):
+                        images.append({
+                            "filename": base,
+                            "url": f"/temp_uploads/Imagens_de_Uploads/{base}"
+                        })
+        except HTTPException as e:
+            print(f"[WARN] Falha ao listar uploads no GCS: {e}")
         
         return {"images": images, "count": len(images)}
     except Exception as e:
@@ -1416,15 +1421,21 @@ async def uploads_list():
 @app.get("/api/list-pdfs")
 async def list_pdfs():
     try:
-        pdfs: List[str] = []
+        # Priorizar listagem local para evitar timeouts quando egress estiver restrito
+        try:
+            local_pdfs = [f for f in os.listdir(UPLOAD_DIR) if f.lower().endswith('.pdf')]
+        except Exception:
+            local_pdfs = []
+
+        pdfs: List[str] = list(local_pdfs)
+        # Tentar complementar com GCS apenas se necessário
         try:
             for name, _ in list_prefix("temp_uploads"):
                 base = os.path.basename(name)
-                if base.lower().endswith('.pdf'):
+                if base.lower().endswith('.pdf') and base not in pdfs:
                     pdfs.append(base)
         except HTTPException as e:
             print(f"[WARN] Falha ao listar PDFs no GCS: {e}")
-            pdfs = [f for f in os.listdir(UPLOAD_DIR) if f.lower().endswith('.pdf')]
         return {"pdfs": pdfs, "count": len(pdfs)}
     except Exception as e:
         print(f"Erro ao listar PDFs: {e}")

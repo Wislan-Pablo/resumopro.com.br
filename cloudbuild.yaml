@@ -39,7 +39,7 @@ steps:
       - '--vpc-connector'
       - '${_VPC_CONNECTOR}'
       - '--vpc-egress'
-      - 'all'
+      - 'private-ranges-only'
 
 # Imagens a serem enviadas para o Artifact Registry
 images:
