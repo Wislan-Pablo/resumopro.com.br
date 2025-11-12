@@ -3,7 +3,7 @@ import shutil
 import re
 import json
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException, BackgroundTasks, WebSocket, WebSocketDisconnect
-from fastapi.responses import HTMLResponse, FileResponse
+from fastapi.responses import HTMLResponse, FileResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
@@ -457,7 +457,13 @@ async def serve_frontend():
 
 @app.get("/editor", response_class=HTMLResponse)
 async def serve_editor():
-    return FileResponse("static/editor.html", media_type="text/html")
+    # Redirecionar para a raiz, que serve editor.html
+    return RedirectResponse(url="/")
+
+@app.get("/index.html", response_class=HTMLResponse)
+async def redirect_legacy_index():
+    # Redirecionar qualquer acesso antigo para a homepage
+    return RedirectResponse(url="/")
 
 
 # Streaming dinâmico de arquivos de temp_uploads via Cloud Storage, com fallback local
