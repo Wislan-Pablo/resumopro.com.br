@@ -18,6 +18,15 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/static/css/editor.css">
+    <style>
+      /* Simple styles for auth modal */
+      .auth-modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); display: none; align-items: center; justify-content: center; z-index: 1000; }
+      .auth-modal { background: #fff; padding: 20px; border-radius: 8px; width: 420px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
+      .auth-modal h3 { margin: 0 0 10px 0; }
+      .auth-field { width: 100%; padding: 10px; border: 1px solid #8d9092; border-radius: 6px; margin: 8px 0; }
+      .auth-actions { display:flex; gap:8px; justify-content:flex-end; margin-top: 12px; }
+      .btn-outline { background:#fff; border:1px solid #8d9092; color:#222; padding: 6px 10px; border-radius:6px; cursor:pointer; }
+    </style>
     <link rel="icon" href="/images/Logo_Favicon_ResumoFull.svg" type="image/svg+xml">
 </head>
 
@@ -111,6 +120,14 @@
                     </button>
                 </div>
                 <div class="editor-actions">
+                    <button id="btnLogin" class="btn btn-secondary" title="Entrar" aria-label="Entrar">
+                        <img src="/images/account_circle.svg" alt="Entrar" class="btn-icon" />
+                        Entrar
+                    </button>
+                    <button id="btnLogout" class="btn btn-secondary" title="Sair" aria-label="Sair" style="display:none;">
+                        <img src="/images/close.svg" alt="Sair" class="btn-icon" />
+                        Sair
+                    </button>
                     <button id="btnSavedStates" class="btn btn-secondary" title="Projetos Salvos" aria-label="Projetos Salvos">
                         <img src="../images/folder_projects.svg" alt="Projetos Salvos" class="btn-icon" />
                         Projetos Salvos
@@ -219,7 +236,24 @@
             <div id="successMessage" style="margin: 10px 0;">Operação concluída com sucesso.</div>
         </div>
     </div>
+
+    <!-- Auth Modal -->
+    <div id="authModalOverlay" class="auth-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="authModalTitle">
+      <div class="auth-modal">
+        <h3 id="authModalTitle">Entrar</h3>
+        <input id="authEmail" type="email" class="auth-field" placeholder="Email" />
+        <input id="authPassword" type="password" class="auth-field" placeholder="Senha" />
+        <input id="authName" type="text" class="auth-field" placeholder="Nome (para cadastro)" style="display:none;" />
+        <div class="auth-actions">
+          <button id="authSwitchMode" class="btn-outline">Cadastrar</button>
+          <button id="authCancel" class="btn btn-secondary">Cancelar</button>
+          <button id="authSubmit" class="btn btn-primary">Entrar</button>
+        </div>
+        <div id="authError" style="color:#c00; margin-top:8px; display:none;" aria-live="polite"></div>
+      </div>
+    </div>
     <script type="module" src="/static/js/editor/main.js"></script>
+    <script type="module" src="/static/js/editor/auth.js"></script>
 </body>
 
 </html>

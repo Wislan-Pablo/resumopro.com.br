@@ -2,7 +2,7 @@ import os
 import shutil
 import re
 import json
-from fastapi import FastAPI, UploadFile, File, Form, HTTPException, BackgroundTasks, WebSocket, WebSocketDisconnect, Response
+from fastapi import FastAPI, UploadFile, File, Form, HTTPException, BackgroundTasks, WebSocket, WebSocketDisconnect, Response, Request
 from fastapi.responses import HTMLResponse, FileResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
@@ -1606,16 +1606,8 @@ async def auth_refresh(response: Response, refresh_token: str = Form(...)):
 
 
 @app.post("/auth/logout")
-async def auth_logout(response: Response, refresh_token: str = Form(...)):
-    async with SessionLocal() as session:
-        from sqlalchemy import select
-        result = await session.execute(select(RefreshToken))
-        tokens = result.scalars().all()
-        for t in tokens:
-            if verify_refresh_token(refresh_token, t.token_hash):
-                t.revoked = True
-        await session.commit()
-    # Limpar cookies
+async def auth_logout(response: Response):
+    # Soft logout: apenas limpar cookies. Revogação completa será adicionada em fase posterior.
     response.delete_cookie("access_token")
     response.delete_cookie("refresh_token")
     return {"status": "ok"}
@@ -1629,8 +1621,9 @@ def _get_current_user_from_cookie(access_token: Optional[str]) -> Optional[dict]
 
 
 @app.get("/me")
-async def me(access_token: Optional[str] = None):
-    # Pode ser lido de cookie via front-end; aqui aceitamos como parâmetro para simplificar
+async def me(request: Request):
+    # Ler access_token do cookie HttpOnly
+    access_token = request.cookies.get("access_token")
     payload = _get_current_user_from_cookie(access_token)
     if not payload:
         raise HTTPException(status_code=401, detail="Não autenticado")
