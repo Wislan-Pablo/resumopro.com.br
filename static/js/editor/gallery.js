@@ -19,6 +19,7 @@ export function loadImageGallery() {
     a.localeCompare(b, 'pt-BR', { numeric: true, sensitivity: 'base' })
   );
 
+  const baseUrl = (state.estruturaEdicao && state.estruturaEdicao.base_images_url) ? state.estruturaEdicao.base_images_url : '/temp_uploads/imagens_extraidas/';
   sorted.forEach((imageName) => {
     const imageItem = document.createElement('div');
     imageItem.className = 'image-item';
@@ -33,7 +34,7 @@ export function loadImageGallery() {
       : formattedName;
 
     imageItem.innerHTML = `
-      <img src="/temp_uploads/imagens_extraidas/${imageName}?v=${state.galleryCacheBust}" alt="${imageName}">
+      <img src="${baseUrl}${imageName}?v=${state.galleryCacheBust}" alt="${imageName}">
       <button class="copy-btn" title="Copiar imagem" onclick="copyGalleryImage('${imageName}')" onmousedown="event.stopPropagation()">
         <img src="../images/copy_image_gallery.svg" alt="Copiar" width="54" height="54" />
       </button>

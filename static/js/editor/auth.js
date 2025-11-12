@@ -39,6 +39,7 @@ async function checkAuth() {
       const data = await res.json();
       if (btnLogin) btnLogin.style.display = 'none';
       if (btnLogout) btnLogout.style.display = '';
+      try { window.__currentUser = data; } catch (_) {}
       return true;
     }
   } catch (_) {}

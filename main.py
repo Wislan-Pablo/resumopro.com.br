@@ -25,6 +25,8 @@ from db import SessionLocal, init_db, User, RefreshToken
 from auth import hash_password, verify_password, create_access_token, decode_access_token, generate_refresh_token, verify_refresh_token
 from email.utils import parseaddr
 import datetime
+import secrets
+import httpx
 
 # Carregar variáveis do arquivo .env (se existir)
 load_dotenv(os.path.join(os.path.dirname(__file__), '.env'))
@@ -535,6 +537,13 @@ async def stream_temp_uploads(path: str):
     except HTTPException:
         raise HTTPException(status_code=404, detail="Arquivo não encontrado.")
 
+@app.get("/gcs/{path:path}")
+async def stream_gcs(path: str):
+    try:
+        return stream_blob(path)
+    except HTTPException:
+        raise HTTPException(status_code=404, detail="Arquivo não encontrado no GCS.")
+
 @app.head("/temp_uploads/{path:path}")
 async def head_temp_uploads(path: str):
     """Responder rapidamente a verificações de HEAD para PDFs e outros arquivos."""
@@ -896,6 +905,9 @@ async def get_preview_data():
 async def get_editor_data():
     """Retorna os dados necessários para a interface de edição."""
     try:
+        # Tentar identificar usuário autenticado
+        # Nota: sem restrições por plano ainda
+        user_id = None
         estrutura_path = os.path.join(UPLOAD_DIR, "estrutura_edicao.json")
         estrutura = None
         if os.path.exists(estrutura_path):
@@ -966,7 +978,28 @@ async def get_editor_data():
                     estrutura["captured_images"] = [f for f in os.listdir(cap_dir) if f.lower().endswith('.png')]
             except Exception:
                 pass
-            # tentar descobrir um PDF no diretório para ajudar a UI
+            # Preferir PDFs e imagens do GCS para persistência
+            try:
+                from storage import list_prefix
+                if user_id:
+                    pdfs_gcs = [os.path.basename(n) for n, _ in list_prefix(f"uploads/{user_id}/pdfs") if n.lower().endswith('.pdf')]
+                else:
+                    pdfs_gcs = [os.path.basename(n) for n, _ in list_prefix("uploads/anonymous/pdfs") if n.lower().endswith('.pdf')]
+            except Exception:
+                pdfs_gcs = []
+            base_name = None
+            if pdfs_gcs:
+                estrutura["pdf_name"] = pdfs_gcs[0]
+                base_name = os.path.splitext(estrutura["pdf_name"])[0]
+                base_prefix = f"uploads/{user_id or 'anonymous'}/imagens_extraidas/{base_name}"
+                try:
+                    imgs_gcs = [os.path.basename(n) for n, _ in list_prefix(base_prefix) if n.lower().endswith('.png')]
+                except Exception:
+                    imgs_gcs = []
+                if imgs_gcs:
+                    estrutura["images"] = imgs_gcs
+                    estrutura["base_images_url"] = f"/gcs/{base_prefix}/"
+            # tentar descobrir um PDF no diretório local para ajudar a UI
             try:
                 pdfs = [f for f in os.listdir(UPLOAD_DIR) if f.lower().endswith('.pdf')]
                 if pdfs:
@@ -1163,8 +1196,43 @@ async def upload_pdf(originalPdf: UploadFile = File(...)):
             arquivo_pdf_output_name=f"output_{base_name}.pdf",
             manager=manager
         )
+        # Persistir no GCS por usuário (ou 'anonymous' se não autenticado)
+        # Obter user_id do access_token se disponível
+        try:
+            # Nota: em upload via fetch, o cookie HttpOnly existe; aqui mantemos 'anonymous' se falhar
+            user_id = None
+        except Exception:
+            user_id = None
+        user_prefix = f"uploads/{user_id or 'anonymous'}"
+        # Enviar PDF
+        try:
+            upload_local_file(f"{user_prefix}/pdfs", pdf_path, dest_name=candidate_name)
+        except Exception as e:
+            print(f"[WARN] Falha ao enviar PDF para GCS: {e}")
+        # Enviar imagens extraídas e info, se existirem
+        try:
+            images_dir = os.path.join(UPLOAD_DIR, "imagens_extraidas")
+            if os.path.isdir(images_dir):
+                for fn in os.listdir(images_dir):
+                    if fn.lower().endswith('.png'):
+                        local_img = os.path.join(images_dir, fn)
+                        try:
+                            upload_local_file(f"{user_prefix}/imagens_extraidas/{base_name}", local_img, dest_name=fn)
+                        except Exception as ie:
+                            print(f"[WARN] Falha ao enviar imagem {fn} para GCS: {ie}")
+                info_path = os.path.join(images_dir, 'imagens_info.json')
+                if os.path.isfile(info_path):
+                    try:
+                        upload_local_file(f"{user_prefix}/imagens_extraidas/{base_name}", info_path, dest_name='imagens_info.json')
+                    except Exception as je:
+                        print(f"[WARN] Falha ao enviar imagens_info.json para GCS: {je}")
+        except Exception as e:
+            print(f"[WARN] Upload de imagens para GCS falhou: {e}")
 
-        return {"status": "success", "filename": candidate_name, "path": f"/temp_uploads/{candidate_name}"}
+        return {"status": "success", "filename": candidate_name,
+                "path": f"/temp_uploads/{candidate_name}",
+                "gcs_pdf": f"/gcs/{user_prefix}/pdfs/{candidate_name}",
+                "gcs_images_base": f"/gcs/{user_prefix}/imagens_extraidas/{base_name}/"}
     except Exception as e:
         print(f"[ERRO] upload-pdf: {e}")
         raise HTTPException(status_code=500, detail="Erro ao salvar o arquivo PDF.")
@@ -1628,3 +1696,116 @@ async def me(request: Request):
     if not payload:
         raise HTTPException(status_code=401, detail="Não autenticado")
     return {"user_id": payload.get("sub"), "email": payload.get("email")}
+def _get_oauth_client():
+    client_id = os.getenv("GOOGLE_CLIENT_ID")
+    client_secret = os.getenv("GOOGLE_CLIENT_SECRET")
+    if not client_id or not client_secret:
+        raise HTTPException(status_code=500, detail="Google OAuth não configurado")
+    return client_id, client_secret
+
+
+@app.get("/oauth/google/start")
+async def oauth_google_start(request: Request):
+    client_id, _ = _get_oauth_client()
+    redirect_uri = str(request.url_for("oauth_google_callback"))
+    state = secrets.token_urlsafe(24)
+    # Salvar state em cookie
+    cs = _cookie_settings()
+    response = RedirectResponse(url=(
+        "https://accounts.google.com/o/oauth2/v2/auth"
+        f"?client_id={client_id}"
+        f"&redirect_uri={redirect_uri}"
+        "&response_type=code"
+        "&scope=openid%20email%20profile"
+        "&access_type=offline"
+        "&prompt=consent"
+        f"&state={state}"
+    ))
+    response.set_cookie("oauth_state", state, **cs)
+    return response
+
+
+@app.get("/oauth/google/callback")
+async def oauth_google_callback(request: Request, code: str, state: str):
+    # Validar state
+    cookie_state = request.cookies.get("oauth_state")
+    if not cookie_state or cookie_state != state:
+        raise HTTPException(status_code=400, detail="State inválido")
+    client_id, client_secret = _get_oauth_client()
+    redirect_uri = str(request.url_for("oauth_google_callback"))
+    # Trocar code por tokens
+    async with httpx.AsyncClient(timeout=15.0) as client:
+        token_res = await client.post(
+            "https://oauth2.googleapis.com/token",
+            data={
+                "grant_type": "authorization_code",
+                "code": code,
+                "client_id": client_id,
+                "client_secret": client_secret,
+                "redirect_uri": redirect_uri,
+            },
+            headers={"Content-Type": "application/x-www-form-urlencoded"}
+        )
+        if token_res.status_code != 200:
+            raise HTTPException(status_code=401, detail="Falha ao obter tokens do Google")
+        tokens = token_res.json()
+    id_token = tokens.get("id_token")
+    payload = decode_access_token(id_token) if id_token else None
+    # Nota: idealmente, validar o id_token com chave pública do Google; aqui mantemos simplicidade inicial.
+    # Se não conseguirmos decodificar, tentar obter profile via userinfo
+    email = None
+    sub = None
+    name = None
+    if payload:
+        email = payload.get("email")
+        sub = payload.get("sub")
+        name = payload.get("name")
+    if not email:
+        # userinfo endpoint
+        async with httpx.AsyncClient(timeout=15.0) as client:
+            ui_res = await client.get("https://openidconnect.googleapis.com/v1/userinfo",
+                                      headers={"Authorization": f"Bearer {tokens.get('access_token')}"})
+            if ui_res.status_code == 200:
+                ui = ui_res.json()
+                email = ui.get("email")
+                sub = ui.get("sub")
+                name = ui.get("name")
+    if not email or not sub:
+        raise HTTPException(status_code=401, detail="Perfil do Google inválido")
+    # Criar/associar usuário
+    async with SessionLocal() as session:
+        from sqlalchemy import select
+        # Procurar conta OAuth
+        oa_res = await session.execute(select(User).join(User.oauth_accounts).where(User.email == email))
+        user = oa_res.scalar_one_or_none()
+        if not user:
+            # Procurar por email
+            ures = await session.execute(select(User).where(User.email == email))
+            user = ures.scalar_one_or_none()
+            if not user:
+                user = User(email=email, name=name or email.split('@')[0], password_hash=None)
+                session.add(user)
+                await session.commit()
+                await session.refresh(user)
+            # Criar vínculo OAuth
+            from db import OAuthAccount
+            oauth = OAuthAccount(provider="google", subject=sub, user_id=user.id)
+            session.add(oauth)
+            await session.commit()
+        user.last_login = datetime.datetime.utcnow()
+        await session.commit()
+    # Emitir cookies de sessão
+    access = create_access_token(user_id=user.id, email=user.email)
+    raw_refresh, hashed_refresh = generate_refresh_token()
+    async with SessionLocal() as session:
+        rt = RefreshToken(user_id=user.id, token_hash=hashed_refresh,
+                          expires_at=datetime.datetime.utcnow() + datetime.timedelta(days=30))
+        session.add(rt)
+        await session.commit()
+    cs = _cookie_settings()
+    resp = RedirectResponse(url="/")
+    resp.set_cookie("access_token", access, **cs)
+    resp.set_cookie("refresh_token", raw_refresh, **cs)
+    # limpar state
+    resp.delete_cookie("oauth_state")
+    return resp

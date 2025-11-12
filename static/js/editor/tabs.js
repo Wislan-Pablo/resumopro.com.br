@@ -102,6 +102,10 @@ export function loadPdfForCapture() {
     const encoded = encodeURIComponent(selectedName.trim());
     candidatePaths.push(`/${uploadDir}/${encoded}`);
     candidatePaths.push(`/temp_uploads/${encoded}`);
+    try {
+      const uid = (window.__currentUser && window.__currentUser.user_id) ? window.__currentUser.user_id : 'anonymous';
+      candidatePaths.push(`/gcs/uploads/${uid}/pdfs/${encoded}`);
+    } catch (_) {}
   }
   try {
     if (state.estruturaEdicao && state.estruturaEdicao.pdf_path) {
@@ -144,6 +148,19 @@ export function loadPdfForCapture() {
               }
             });
         } else {
+          if (resp.status === 405) {
+            return fetch(url, { method: 'GET', headers: { 'Range': 'bytes=0-0' } })
+              .then((r) => {
+                if (r.ok) {
+                  const fileName = selectedName && selectedName.trim()
+                    ? selectedName.trim()
+                    : (url.split('/').pop() || 'documento.pdf');
+                  initAdobeViewer(url, fileName);
+                } else {
+                  throw new Error('PDF não encontrado');
+                }
+              });
+          }
           throw new Error('PDF não encontrado');
         }
       })
