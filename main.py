@@ -2,7 +2,7 @@ import os
 import shutil
 import re
 import json
-from fastapi import FastAPI, UploadFile, File, Form, HTTPException, BackgroundTasks, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, UploadFile, File, Form, HTTPException, BackgroundTasks, WebSocket, WebSocketDisconnect, Response
 from fastapi.responses import HTMLResponse, FileResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
@@ -478,6 +478,20 @@ async def stream_temp_uploads(path: str):
     gcs_path = f"temp_uploads/{path}"
     try:
         return stream_blob(gcs_path)
+    except HTTPException:
+        raise HTTPException(status_code=404, detail="Arquivo não encontrado.")
+
+@app.head("/temp_uploads/{path:path}")
+async def head_temp_uploads(path: str):
+    """Responder rapidamente a verificações de HEAD para PDFs e outros arquivos."""
+    local_path = os.path.join(UPLOAD_DIR, path)
+    if os.path.isfile(local_path):
+        return Response(status_code=200)
+    # Tentar verificar existência no GCS
+    try:
+        # Se stream_blob não lançar 404, considerar existente
+        stream_blob(f"temp_uploads/{path}")
+        return Response(status_code=200)
     except HTTPException:
         raise HTTPException(status_code=404, detail="Arquivo não encontrado.")
 
