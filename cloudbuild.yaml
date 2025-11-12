@@ -35,7 +35,7 @@ steps:
       - '--set-env-vars'
       - 'GCS_BUCKET=${_BUCKET},UPLOADS_BUCKET=${_BUCKET},DB_USER=${_DB_USER},DB_NAME=${_DB_NAME},DB_HOST=${_DB_HOST}'
       - '--update-secrets'
-      - 'DB_PASSWORD=${_DB_SECRET}:latest,GOOGLE_CLIENT_ID=${_GOOGLE_CLIENT_ID_SECRET}:latest,GOOGLE_CLIENT_SECRET=${_GOOGLE_CLIENT_SECRET_SECRET}:latest'
+      - 'DB_PASSWORD=${_DB_SECRET}:latest'
       - '--vpc-connector'
       - '${_VPC_CONNECTOR}'
       - '--vpc-egress'
@@ -61,5 +61,4 @@ substitutions:
   _DB_HOST: '10.54.192.3'
   _DB_SECRET: 'resumopro-db-secret'
   _VPC_CONNECTOR: 'serverless-conn'
-  _GOOGLE_CLIENT_ID_SECRET: 'google-oauth-client-id'
-  _GOOGLE_CLIENT_SECRET_SECRET: 'google-oauth-client-secret'
+  # Google OAuth secrets will be added later via Secret Manager and deploy flags

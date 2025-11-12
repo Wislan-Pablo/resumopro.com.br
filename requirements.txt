@@ -16,3 +16,4 @@ passlib[argon2]
 python-jose
 authlib
 email-validator
+httpx
