@@ -911,6 +911,13 @@ export async function setGalleryMode(mode) {
   setGalleryModeState(m);
   const selectEl = document.getElementById('gallerySelect');
   if (selectEl) selectEl.value = m;
+  // Evitar flicker: ocultar imediatamente estado vazio e conteúdo anterior
+  try { hideGalleryEmptyState(); } catch (_) {}
+  try { setGalleryLoading('Carregando...', true); } catch (_) {}
+  try {
+    const gallery = document.getElementById('imageGallery');
+    if (gallery) gallery.innerHTML = '';
+  } catch (_) {}
   updateUploadsControlsVisibility();
   renderGallerySwitchLabelCount();
   updateDeleteAllLabel();
@@ -924,6 +931,8 @@ export async function setGalleryMode(mode) {
       await loadUploadsGallery();
     }
   } catch (e) { console.error(e); }
+  // Encerrar indicador de carregamento após atualizar a sessão
+  try { setGalleryLoading('', false); } catch (_) {}
 }
 
 export function updateDeleteAllLabel() {
@@ -942,6 +951,9 @@ export function initGallerySwitch() {
   if (!selectEl) return;
   selectEl.addEventListener('change', async function(){
     const val = String(this.value || 'pdf');
+    // Evitar flicker logo ao mudar o select
+    try { hideGalleryEmptyState(); } catch (_) {}
+    try { setGalleryLoading('Carregando...', true); } catch (_) {}
     await setGalleryMode(val);
   });
   // Inicializar valor e visibilidade dos controles
@@ -1335,6 +1347,11 @@ export async function deleteAllGalleryImages() {
 export function showGalleryEmptyState() {
   const actions = document.querySelector('.gallery-actions');
   const empty = document.getElementById('galleryEmptyState');
+  // Garantir que só um estado vazio esteja visível e evitar resquícios da sessão anterior
+  try {
+    const allMsgs = document.querySelectorAll('.gallery-empty-message');
+    allMsgs.forEach((el) => { el.style.visibility = 'hidden'; });
+  } catch (_) {}
   if (actions) actions.style.display = 'none';
   if (empty) {
     empty.style.display = '';
@@ -1365,7 +1382,7 @@ export function showGalleryEmptyState() {
       if (recoverCapturesBtn) recoverCapturesBtn.style.display = '';
       if (uploadsCtrls) uploadsCtrls.style.display = 'none';
     } else {
-      if (msg) msg.textContent = 'Nenhuma imagem enviada. Use o botão abaixo para enviar novas imagens.';
+      if (msg) msg.textContent = 'Nenhuma imagem enviada. Use o botão abaixo para enviar novas imagens ou use o ícone de upload-image no canto superior direito da barra de ferramentas do Editor.';
       if (ctrls) ctrls.style.display = '';
       // Ocultar botão de recuperar neste modo e mostrar o de upload sob a mensagem
       if (recoverBtn) recoverBtn.style.display = 'none';
@@ -1374,6 +1391,8 @@ export function showGalleryEmptyState() {
       if (uploadBtn && ctrls && uploadBtn.parentElement !== ctrls) {
         ctrls.appendChild(uploadBtn);
       }
+      // Tornar a mensagem visível somente após ajustar botões
+      if (msg) msg.style.visibility = 'visible';
     }
   }
 }
