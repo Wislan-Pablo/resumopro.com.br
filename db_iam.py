@@ -3,13 +3,8 @@ from typing import Optional, Dict, Any
 from google.cloud.sql.connector import Connector
 import asyncio
 
-_connector: Optional[Connector] = None
-
-def _get_connector() -> Connector:
-    global _connector
-    if _connector is None:
-        _connector = Connector()
-    return _connector
+# Não manter Connector global para evitar conflito de loops de eventos.
+# Crie um novo Connector por chamada (ou por request) usando context manager.
 
 def _get_db_env() -> Dict[str, str]:
     return {
@@ -23,7 +18,6 @@ async def connect_asyncpg():
     env = _get_db_env()
     if not env["instance"] or not env["user"] or not env["db"]:
         raise RuntimeError("INSTANCE_CONNECTION_NAME, DB_USER, DB_NAME devem estar definidos no ambiente")
-    connector = _get_connector()
     # Usar autenticação por senha inicialmente para simplificar; IAM pode ser habilitado depois
     kwargs = {
         "user": env["user"],
@@ -31,8 +25,9 @@ async def connect_asyncpg():
     }
     if env["password"]:
         kwargs["password"] = env["password"]
-    conn = await connector.connect_async(env["instance"], driver="asyncpg", **kwargs)
-    return conn
+    async with Connector() as connector:
+        conn = await connector.connect_async(env["instance"], driver="asyncpg", **kwargs)
+        return conn
 
 async def iam_fetch_user_by_email(email: str) -> Optional[Dict[str, Any]]:
     conn = await connect_asyncpg()
