@@ -1707,6 +1707,17 @@ def _get_current_user_from_cookie(access_token: Optional[str]) -> Optional[dict]
     payload = decode_access_token(access_token)
     return payload
 
+def require_user(request: Request) -> dict:
+    """Retorna dict com user_id/email a partir do cookie; lança 401 se não autenticado."""
+    try:
+        access_token = request.cookies.get("access_token")
+    except Exception:
+        access_token = None
+    payload = _get_current_user_from_cookie(access_token)
+    if not payload or not payload.get("sub"):
+        raise HTTPException(status_code=401, detail="Não autenticado")
+    return {"user_id": int(payload["sub"]), "email": payload.get("email")}
+
 
 @app.get("/me")
 async def me(request: Request):
