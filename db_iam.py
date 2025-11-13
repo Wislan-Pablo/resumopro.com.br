@@ -1,5 +1,6 @@
 import os
 from typing import Optional, Dict, Any
+import datetime
 from google.cloud.sql.connector import Connector
 import asyncio
 
@@ -120,12 +121,12 @@ async def iam_update_last_login(user_id: int) -> None:
     finally:
         await conn.close()
 
-async def iam_insert_refresh_token(user_id: int, token_hash: str, expires_at_iso: str) -> None:
+async def iam_insert_refresh_token(user_id: int, token_hash: str, expires_at_dt: datetime.datetime) -> None:
     conn = await connect_asyncpg()
     try:
         await conn.execute(
-            "INSERT INTO refresh_tokens (user_id, token_hash, expires_at, revoked) VALUES ($1, $2, $3::timestamptz, false)",
-            user_id, token_hash, expires_at_iso
+            "INSERT INTO refresh_tokens (user_id, token_hash, expires_at, revoked) VALUES ($1, $2, $3, false)",
+            user_id, token_hash, expires_at_dt
         )
     finally:
         await conn.close()

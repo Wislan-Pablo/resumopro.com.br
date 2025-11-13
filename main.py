@@ -1657,13 +1657,15 @@ async def auth_signup(email: str = Form(...), password: str = Form(...), name: s
 @app.post("/auth/login")
 async def auth_login(response: Response, email: str = Form(...), password: str = Form(...)):
     user = await iam_fetch_user_by_email(email)
-    if not user or not user.get("password_hash") or not verify_password(password, user.get("password_hash")):
+    if not user or not user.get("password_hash"):
+        raise HTTPException(status_code=401, detail="Credenciais inválidas")
+    if not verify_password(password, user.get("password_hash")):
         raise HTTPException(status_code=401, detail="Credenciais inválidas")
     await iam_update_last_login(user_id=int(user["id"]))
     access = create_access_token(user_id=int(user["id"]), email=user["email"])
     raw_refresh, hashed_refresh = generate_refresh_token()
-    expires_at = (datetime.datetime.utcnow() + datetime.timedelta(days=30)).isoformat()
-    await iam_insert_refresh_token(user_id=int(user["id"]), token_hash=hashed_refresh, expires_at_iso=expires_at)
+    expires_at = datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(days=30)
+    await iam_insert_refresh_token(user_id=int(user["id"]), token_hash=hashed_refresh, expires_at_dt=expires_at)
     # Cookies
     cs = _cookie_settings()
     response.set_cookie("access_token", access, **cs)
@@ -1676,10 +1678,13 @@ async def auth_refresh(response: Response, refresh_token: str = Form(...)):
     tokens = await iam_find_valid_refresh_tokens()
     matched = None
     for t in tokens:
-        # expires_at vem como string em ISO; validar
+        # expires_at vem como datetime (tz-aware) do asyncpg; validar
         try:
-            if t.get("expires_at") and datetime.datetime.fromisoformat(str(t["expires_at"]).replace("Z","")) < datetime.datetime.utcnow():
-                continue
+            exp = t.get("expires_at")
+            now = datetime.datetime.now(datetime.timezone.utc)
+            if isinstance(exp, datetime.datetime):
+                if exp < now:
+                    continue
         except Exception:
             pass
         if verify_refresh_token(refresh_token, t.get("token_hash", "")):
