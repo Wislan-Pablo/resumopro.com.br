@@ -33,7 +33,7 @@ steps:
       - '--service-account'
       - '${_SERVICE_ACCOUNT}'
       - '--set-env-vars'
-      - 'GCS_BUCKET=${_BUCKET},UPLOADS_BUCKET=${_BUCKET},DB_USER=${_DB_USER},DB_NAME=${_DB_NAME},DB_HOST=${_DB_HOST},INSTANCE_CONNECTION_NAME=${_INSTANCE_CONN}'
+      - 'GCS_BUCKET=${_BUCKET},UPLOADS_BUCKET=${_BUCKET},DB_USER=${_DB_USER},DB_NAME=${_DB_NAME},DB_HOST=${_DB_HOST},INSTANCE_CONNECTION_NAME=${_INSTANCE_CONN},ADOBE_CLIENT_ID=${_ADOBE_CLIENT_ID}'
       - '--update-secrets'
       - 'DB_PASSWORD=${_DB_SECRET}:latest,GOOGLE_CLIENT_ID=${_GOOGLE_CLIENT_ID_SECRET}:latest,GOOGLE_CLIENT_SECRET=${_GOOGLE_CLIENT_SECRET_SECRET}:latest'
       - '--vpc-connector'
@@ -64,4 +64,5 @@ substitutions:
   _GOOGLE_CLIENT_ID_SECRET: 'google-oauth-client-id'
   _GOOGLE_CLIENT_SECRET_SECRET: 'google-oauth-client-secret'
   _INSTANCE_CONN: 'affable-grin-477621-f0:southamerica-east1:wislanpablo'
+  _ADOBE_CLIENT_ID: '94eb2d4faf7b436797f27e7e20b5e2dd'
   # Google OAuth secrets will be added later via Secret Manager and deploy flags

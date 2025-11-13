@@ -18,61 +18,69 @@ export function initAdobeViewer(url, fileName) {
     .then(() => {
       if (state.adobeView || state.pdfLoadedForCapture) return;
       try {
-        // Seleciona o clientId conforme o hostname para permitir desenvolvimento em localhost
-        const hostname = (window && window.location && window.location.hostname) || '';
-        const CLIENT_ID_LOCALHOST = '6bd75db0774d4c1da4477dcbd0904aaf';
-        const CLIENT_ID_PROD = 'b06000c70bd143a0adc54a2f6d394b2a';
-        const selectedClientId = (hostname === 'localhost' || hostname === '127.0.0.1')
-          ? CLIENT_ID_LOCALHOST
-          : CLIENT_ID_PROD;
-        const view = new AdobeDC.View({ clientId: selectedClientId, divId });
-        setAdobeView(view);
-
-        // Atualiza o título da toolbar com o nome do PDF em uso (sem extensão) e ícone
-        try {
-          const titleEl = document.getElementById('adobeToolbarTitle');
-          if (titleEl) {
-            const base = String(fileName || 'documento.pdf')
-              .split(/[\\\/]/).pop()
-              .replace(/\.pdf$/i, '');
-            titleEl.innerHTML = `
+        // Obter o clientId dinamicamente do backend (/api/config-viewer)
+        const getClientId = async () => {
+          try {
+            const res = await fetch('/api/config-viewer', { credentials: 'include' });
+            if (!res.ok) throw new Error('Falha ao buscar config-viewer');
+            const data = await res.json();
+            if (data && data.adobe_client_id && typeof data.adobe_client_id === 'string') return data.adobe_client_id;
+          } catch (_) {}
+          // Fallback para desenvolvimento
+          const hostname = (window && window.location && window.location.hostname) || '';
+          const CLIENT_ID_LOCALHOST = '6bd75db0774d4c1da4477dcbd0904aaf';
+          return (hostname === 'localhost' || hostname === '127.0.0.1') ? CLIENT_ID_LOCALHOST : 'b06000c70bd143a0adc54a2f6d394b2a';
+        };
+        const init = async () => {
+          const selectedClientId = await getClientId();
+          const view = new AdobeDC.View({ clientId: selectedClientId, divId });
+          setAdobeView(view);
+          // Atualiza o título da toolbar com o nome do PDF
+          try {
+            const titleEl = document.getElementById('adobeToolbarTitle');
+            if (titleEl) {
+              const base = String(fileName || 'documento.pdf')
+                .split(/[\\\/]/).pop()
+                .replace(/\.pdf$/i, '');
+              titleEl.innerHTML = `
               <img src="../images/icon_pdf_name_gallery.svg" alt="PDF" class="pdf-title-icon" />
               <span class="pdf-title-text">${base}</span>
             `;
-          }
-        } catch (_) {}
-
-        // Registrar callback para GET_FEATURE_FLAG para evitar erros "No callback registered"
-        try {
-          const enumCallbacks = AdobeDC && AdobeDC.View && AdobeDC.View.EnumCallbacks;
-          const GET_FEATURE_FLAG = enumCallbacks && enumCallbacks.GET_FEATURE_FLAG;
-          if (GET_FEATURE_FLAG && typeof view.registerCallback === 'function') {
-            view.registerCallback(GET_FEATURE_FLAG, (flag) => {
-              return false; // desabilitar flags por padrão
-            });
-          }
-        } catch (cbErr) {
-          console.warn('Falha ao registrar GET_FEATURE_FLAG:', cbErr);
-        }
-        view
-          .previewFile(
-            {
-              content: { location: { url } },
-              metaData: { fileName: fileName || 'documento.pdf' }
-            },
-            {
-              embedMode: 'SIZED_CONTAINER',
-              showDownloadPDF: false,
-              showPrintPDF: false,
-              showFullScreen: true
             }
-          )
-          .then(() => {
-            setPdfLoadedForCapture(true);
-          })
-          .catch((e) => {
-            console.error('Falha ao inicializar Adobe Viewer:', e);
-          });
+          } catch (_) {}
+          // Registrar callback para GET_FEATURE_FLAG
+          try {
+            const enumCallbacks = AdobeDC && AdobeDC.View && AdobeDC.View.EnumCallbacks;
+            const GET_FEATURE_FLAG = enumCallbacks && enumCallbacks.GET_FEATURE_FLAG;
+            if (GET_FEATURE_FLAG && typeof view.registerCallback === 'function') {
+              view.registerCallback(GET_FEATURE_FLAG, (flag) => {
+                return false;
+              });
+            }
+          } catch (cbErr) {
+            console.warn('Falha ao registrar GET_FEATURE_FLAG:', cbErr);
+          }
+          view
+            .previewFile(
+              {
+                content: { location: { url } },
+                metaData: { fileName: fileName || 'documento.pdf' }
+              },
+              {
+                embedMode: 'SIZED_CONTAINER',
+                showDownloadPDF: false,
+                showPrintPDF: false,
+                showFullScreen: true
+              }
+            )
+            .then(() => {
+              setPdfLoadedForCapture(true);
+            })
+            .catch((e) => {
+              console.error('Falha ao inicializar Adobe Viewer:', e);
+            });
+        };
+        init();
       } catch (e) {
         console.error('Erro ao criar AdobeDC.View:', e);
       }
