@@ -1411,7 +1411,17 @@ export function showGalleryEmptyState() {
       // Tornar a mensagem visível após ajustar controles
       if (msg) msg.style.visibility = 'visible';
     } else {
-      if (msg) msg.textContent = 'Nenhuma imagem enviada. Use o botão abaixo para enviar novas imagens ou use o ícone de upload-image no canto superior direito da barra de ferramentas do Editor.';
+      if (msg) {
+        msg.innerHTML = 'Nenhuma imagem enviada. Use o botão abaixo para enviar novas imagens ou use o ícone de upload-image no canto superior direito da barra de ferramentas do Editor. Faça <a href="#" id="inlineLoginLink">login</a> para ver seus projetos e uploads salvos.';
+        const inlineLoginLink = document.getElementById('inlineLoginLink');
+        if (inlineLoginLink) {
+          inlineLoginLink.addEventListener('click', (e) => {
+            e.preventDefault();
+            const btnLoginEl = document.getElementById('btnLogin');
+            if (btnLoginEl) btnLoginEl.click();
+          });
+        }
+      }
       if (ctrls) ctrls.style.display = '';
       // Ocultar botão de recuperar neste modo e mostrar o de upload sob a mensagem
       if (recoverBtn) recoverBtn.style.display = 'none';
