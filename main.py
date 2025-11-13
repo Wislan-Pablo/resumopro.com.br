@@ -912,12 +912,12 @@ async def get_preview_data():
         raise HTTPException(status_code=500, detail="Erro interno do servidor")
 
 @app.get("/api/get-editor-data")
-async def get_editor_data():
+async def get_editor_data(request: Request):
     """Retorna os dados necessários para a interface de edição."""
     try:
-        # Tentar identificar usuário autenticado
-        # Nota: sem restrições por plano ainda
-        user_id = None
+        # Requer sessão; usar user_id para GCS-first
+        user = require_user(request)
+        user_id = user["user_id"]
         estrutura_path = os.path.join(UPLOAD_DIR, "estrutura_edicao.json")
         estrutura = None
         if os.path.exists(estrutura_path):
@@ -991,17 +991,14 @@ async def get_editor_data():
             # Preferir PDFs e imagens do GCS para persistência
             try:
                 from storage import list_prefix
-                if user_id:
-                    pdfs_gcs = [os.path.basename(n) for n, _ in list_prefix(f"uploads/{user_id}/pdfs") if n.lower().endswith('.pdf')]
-                else:
-                    pdfs_gcs = [os.path.basename(n) for n, _ in list_prefix("uploads/anonymous/pdfs") if n.lower().endswith('.pdf')]
+                pdfs_gcs = [os.path.basename(n) for n, _ in list_prefix(f"uploads/{user_id}/pdfs") if n.lower().endswith('.pdf')]
             except Exception:
                 pdfs_gcs = []
             base_name = None
             if pdfs_gcs:
                 estrutura["pdf_name"] = pdfs_gcs[0]
                 base_name = os.path.splitext(estrutura["pdf_name"])[0]
-                base_prefix = f"uploads/{user_id or 'anonymous'}/imagens_extraidas/{base_name}"
+                base_prefix = f"uploads/{user_id}/imagens_extraidas/{base_name}"
                 try:
                     imgs_gcs = [os.path.basename(n) for n, _ in list_prefix(base_prefix) if n.lower().endswith('.png')]
                 except Exception:
@@ -1156,7 +1153,7 @@ async def generate_final_pdf(request_data: dict):
         raise HTTPException(status_code=500, detail=f"Erro interno: {str(e)}")
 
 @app.post("/api/upload-pdf")
-async def upload_pdf(originalPdf: UploadFile = File(...)):
+async def upload_pdf(request: Request, originalPdf: UploadFile = File(...)):
     # Limpar o diretório de imagens extraídas para garantir que não haja imagens antigas.
     imagens_dir = os.path.join(UPLOAD_DIR, "imagens_extraidas")
     if os.path.exists(imagens_dir):
@@ -1206,14 +1203,9 @@ async def upload_pdf(originalPdf: UploadFile = File(...)):
             arquivo_pdf_output_name=f"output_{base_name}.pdf",
             manager=manager
         )
-        # Persistir no GCS por usuário (ou 'anonymous' se não autenticado)
-        # Obter user_id do access_token se disponível
-        try:
-            # Nota: em upload via fetch, o cookie HttpOnly existe; aqui mantemos 'anonymous' se falhar
-            user_id = None
-        except Exception:
-            user_id = None
-        user_prefix = f"uploads/{user_id or 'anonymous'}"
+        # Persistir no GCS por usuário autenticado
+        user = require_user(request)
+        user_prefix = f"uploads/{user['user_id']}"
         # Enviar PDF
         try:
             upload_local_file(f"{user_prefix}/pdfs", pdf_path, dest_name=candidate_name)
@@ -1530,7 +1522,8 @@ async def api_delete_all_images():
         raise HTTPException(status_code=500, detail="Erro interno ao deletar imagens")
 # --- ROTA: Listar imagens enviadas (uploads) ---
 @app.get("/api/uploads/list")
-async def uploads_list():
+async def uploads_list(request: Request):
+    user = require_user(request)
     try:
         images = []
         # Primeiro listar localmente para evitar timeouts
@@ -1550,13 +1543,14 @@ async def uploads_list():
 
         # Complementar com GCS quando disponível
         try:
-            for name, _ in list_prefix("temp_uploads/Imagens_de_Uploads"):
+            base_prefix = f"uploads/{user['user_id']}/Imagens_de_Uploads"
+            for name, _ in list_prefix(base_prefix):
                 base = os.path.basename(name)
                 if any(base.lower().endswith(ext) for ext in ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.svg']):
                     if not any(img.get("filename") == base for img in images):
                         images.append({
                             "filename": base,
-                            "url": f"/temp_uploads/Imagens_de_Uploads/{base}"
+                            "url": f"/gcs/{base_prefix}/{base}"
                         })
         except HTTPException as e:
             print(f"[WARN] Falha ao listar uploads no GCS: {e}")
@@ -1568,24 +1562,22 @@ async def uploads_list():
 
 # --- ROTA: Listar PDFs disponíveis em temp_uploads ---
 @app.get("/api/list-pdfs")
-async def list_pdfs():
+async def list_pdfs(request: Request):
+    user = require_user(request)
     try:
         # Priorizar listagem local para evitar timeouts quando egress estiver restrito
         try:
             local_pdfs = [f for f in os.listdir(UPLOAD_DIR) if f.lower().endswith('.pdf')]
         except Exception:
             local_pdfs = []
-
-        pdfs: List[str] = list(local_pdfs)
-        # Tentar complementar com GCS apenas se necessário
+        # Preferir GCS por usuário
         try:
-            for name, _ in list_prefix("temp_uploads"):
-                base = os.path.basename(name)
-                if base.lower().endswith('.pdf') and base not in pdfs:
-                    pdfs.append(base)
+            pdfs_gcs = [os.path.basename(n) for n, _ in list_prefix(f"uploads/{user['user_id']}/pdfs") if n.lower().endswith('.pdf')]
+            if pdfs_gcs:
+                return {"pdfs": pdfs_gcs, "count": len(pdfs_gcs)}
         except HTTPException as e:
             print(f"[WARN] Falha ao listar PDFs no GCS: {e}")
-        return {"pdfs": pdfs, "count": len(pdfs)}
+        return {"pdfs": local_pdfs, "count": len(local_pdfs)}
     except Exception as e:
         print(f"Erro ao listar PDFs: {e}")
         raise HTTPException(status_code=500, detail="Erro ao listar PDFs")
