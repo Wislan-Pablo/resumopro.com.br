@@ -17,3 +17,5 @@ python-jose
 authlib
 email-validator
 httpx
+cloud-sql-python-connector
+asyncpg

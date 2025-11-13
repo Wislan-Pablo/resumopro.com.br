@@ -22,6 +22,13 @@ from main_pipeline import start_full_processing, extrair_titulo_do_resumo, setup
 from websocket_manager import ConnectionManager
 from sqlalchemy.ext.asyncio import AsyncSession
 from db import SessionLocal, init_db, User, RefreshToken
+from db_iam import (
+    iam_fetch_user_by_email,
+    iam_create_user,
+    iam_update_last_login,
+    iam_insert_refresh_token,
+    iam_find_valid_refresh_tokens,
+)
 from auth import hash_password, verify_password, create_access_token, decode_access_token, generate_refresh_token, verify_refresh_token
 from email.utils import parseaddr
 import datetime
@@ -1626,66 +1633,59 @@ async def auth_signup(email: str = Form(...), password: str = Form(...), name: s
         raise HTTPException(status_code=400, detail="Email inválido")
     if not password or len(password) < 6:
         raise HTTPException(status_code=400, detail="Senha muito curta")
-    async with SessionLocal() as session:
-        # Checar se já existe
-        from sqlalchemy import select
-        existing = await session.execute(select(User).where(User.email == email))
-        if existing.scalar_one_or_none():
-            raise HTTPException(status_code=409, detail="Email já cadastrado")
-        user = User(email=email, name=name or email.split('@')[0], password_hash=hash_password(password))
-        session.add(user)
-        await session.commit()
-        await session.refresh(user)
-        return {"status": "ok", "user_id": user.id}
+    # Usar Cloud SQL Connector (IAM) para evitar dependência de VPC/IP
+    existing = await iam_fetch_user_by_email(email)
+    if existing:
+        raise HTTPException(status_code=409, detail="Email já cadastrado")
+    created = await iam_create_user(email=email, name=(name or email.split('@')[0]), password_hash=hash_password(password))
+    return {"status": "ok", "user_id": created.get("id")}
 
 
 @app.post("/auth/login")
 async def auth_login(response: Response, email: str = Form(...), password: str = Form(...)):
-    async with SessionLocal() as session:
-        from sqlalchemy import select
-        result = await session.execute(select(User).where(User.email == email))
-        user = result.scalar_one_or_none()
-        if not user or not user.password_hash or not verify_password(password, user.password_hash):
-            raise HTTPException(status_code=401, detail="Credenciais inválidas")
-        user.last_login = datetime.datetime.utcnow()
-        await session.commit()
-        access = create_access_token(user_id=user.id, email=user.email)
-        raw_refresh, hashed_refresh = generate_refresh_token()
-        rt = RefreshToken(user_id=user.id, token_hash=hashed_refresh, expires_at=datetime.datetime.utcnow() + datetime.timedelta(days=30))
-        session.add(rt)
-        await session.commit()
-        # Cookies
-        cs = _cookie_settings()
-        response.set_cookie("access_token", access, **cs)
-        response.set_cookie("refresh_token", raw_refresh, **cs)
-        return {"status": "ok"}
+    user = await iam_fetch_user_by_email(email)
+    if not user or not user.get("password_hash") or not verify_password(password, user.get("password_hash")):
+        raise HTTPException(status_code=401, detail="Credenciais inválidas")
+    await iam_update_last_login(user_id=int(user["id"]))
+    access = create_access_token(user_id=int(user["id"]), email=user["email"])
+    raw_refresh, hashed_refresh = generate_refresh_token()
+    expires_at = (datetime.datetime.utcnow() + datetime.timedelta(days=30)).isoformat()
+    await iam_insert_refresh_token(user_id=int(user["id"]), token_hash=hashed_refresh, expires_at_iso=expires_at)
+    # Cookies
+    cs = _cookie_settings()
+    response.set_cookie("access_token", access, **cs)
+    response.set_cookie("refresh_token", raw_refresh, **cs)
+    return {"status": "ok"}
 
 
 @app.post("/auth/refresh")
 async def auth_refresh(response: Response, refresh_token: str = Form(...)):
+    tokens = await iam_find_valid_refresh_tokens()
+    matched = None
+    for t in tokens:
+        # expires_at vem como string em ISO; validar
+        try:
+            if t.get("expires_at") and datetime.datetime.fromisoformat(str(t["expires_at"]).replace("Z","")) < datetime.datetime.utcnow():
+                continue
+        except Exception:
+            pass
+        if verify_refresh_token(refresh_token, t.get("token_hash", "")):
+            matched = t
+            break
+    if not matched:
+        raise HTTPException(status_code=401, detail="Refresh inválido")
+    user = await iam_fetch_user_by_email(email=None)  # placeholder; obter por id abaixo
+    # buscar por id
     async with SessionLocal() as session:
         from sqlalchemy import select
-        # Buscar tokens não revogados
-        result = await session.execute(select(RefreshToken).where(RefreshToken.revoked == False))
-        tokens = result.scalars().all()
-        matched = None
-        for t in tokens:
-            if t.expires_at and t.expires_at < datetime.datetime.utcnow():
-                continue
-            if verify_refresh_token(refresh_token, t.token_hash):
-                matched = t
-                break
-        if not matched:
-            raise HTTPException(status_code=401, detail="Refresh inválido")
-        # Carregar usuário
-        ures = await session.execute(select(User).where(User.id == matched.user_id))
-        user = ures.scalar_one_or_none()
-        if not user:
+        ures = await session.execute(select(User).where(User.id == int(matched["user_id"])))
+        u = ures.scalar_one_or_none()
+        if not u:
             raise HTTPException(status_code=401, detail="Usuário não encontrado")
-        access = create_access_token(user_id=user.id, email=user.email)
-        cs = _cookie_settings()
-        response.set_cookie("access_token", access, **cs)
-        return {"status": "ok"}
+        access = create_access_token(user_id=u.id, email=u.email)
+    cs = _cookie_settings()
+    response.set_cookie("access_token", access, **cs)
+    return {"status": "ok"}
 
 
 @app.post("/auth/logout")
