@@ -907,6 +907,8 @@ export async function deleteCaptureImage(id) {
 }
 
 export async function setGalleryMode(mode) {
+  const MIN_SPINNER_MS = 180; // tempo mínimo para percepção de carregamento
+  const t0 = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
   const m = (mode === 'captures') ? 'captures' : (mode === 'uploads' ? 'uploads' : 'pdf');
   setGalleryModeState(m);
   const selectEl = document.getElementById('gallerySelect');
@@ -923,16 +925,24 @@ export async function setGalleryMode(mode) {
   updateDeleteAllLabel();
   try {
     if (m === 'pdf') {
-      loadImageGallery();
-      updateImageCountInfo();
+      await Promise.resolve().then(() => loadImageGallery());
+      await Promise.resolve().then(() => updateImageCountInfo());
     } else if (m === 'captures') {
-      loadCaptureGallery();
+      await Promise.resolve().then(() => loadCaptureGallery());
     } else {
       await loadUploadsGallery();
     }
   } catch (e) { console.error(e); }
   // Encerrar indicador de carregamento após atualizar a sessão
-  try { setGalleryLoading('', false); } catch (_) {}
+  try {
+    const t1 = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
+    const elapsed = Math.max(0, t1 - t0);
+    const waitMs = Math.max(0, MIN_SPINNER_MS - elapsed);
+    if (waitMs > 0) {
+      await new Promise((resolve) => setTimeout(resolve, waitMs));
+    }
+    setGalleryLoading('', false);
+  } catch (_) {}
 }
 
 export function updateDeleteAllLabel() {
