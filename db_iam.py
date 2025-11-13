@@ -35,6 +35,63 @@ async def connect_asyncpg():
         )
         return conn
 
+async def ensure_schema():
+    conn = await connect_asyncpg()
+    try:
+        # Criar tabela users
+        await conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS users (
+              id SERIAL PRIMARY KEY,
+              email TEXT UNIQUE NOT NULL,
+              name TEXT,
+              password_hash TEXT,
+              is_active BOOLEAN NOT NULL DEFAULT true,
+              role TEXT,
+              created_at TIMESTAMPTZ DEFAULT NOW(),
+              last_login TIMESTAMPTZ
+            );
+            """
+        )
+        # oauth_accounts
+        await conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS oauth_accounts (
+              id SERIAL PRIMARY KEY,
+              provider TEXT NOT NULL,
+              subject TEXT NOT NULL,
+              user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+              created_at TIMESTAMPTZ DEFAULT NOW(),
+              CONSTRAINT oauth_unique UNIQUE (provider, subject)
+            );
+            """
+        )
+        # refresh_tokens
+        await conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS refresh_tokens (
+              id SERIAL PRIMARY KEY,
+              user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+              token_hash TEXT NOT NULL,
+              expires_at TIMESTAMPTZ NOT NULL,
+              revoked BOOLEAN NOT NULL DEFAULT false,
+              created_at TIMESTAMPTZ DEFAULT NOW()
+            );
+            """
+        )
+    finally:
+        await conn.close()
+
+async def iam_fetch_user_by_id(user_id: int) -> Optional[Dict[str, Any]]:
+    conn = await connect_asyncpg()
+    try:
+        row = await conn.fetchrow("SELECT id, email, name, password_hash, is_active, role, last_login FROM users WHERE id=$1", user_id)
+        if not row:
+            return None
+        return dict(row)
+    finally:
+        await conn.close()
+
 async def iam_fetch_user_by_email(email: str) -> Optional[Dict[str, Any]]:
     conn = await connect_asyncpg()
     try:

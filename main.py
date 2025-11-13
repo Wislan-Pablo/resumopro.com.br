@@ -28,6 +28,8 @@ from db_iam import (
     iam_update_last_login,
     iam_insert_refresh_token,
     iam_find_valid_refresh_tokens,
+    ensure_schema,
+    iam_fetch_user_by_id,
 )
 from auth import hash_password, verify_password, create_access_token, decode_access_token, generate_refresh_token, verify_refresh_token
 from email.utils import parseaddr
@@ -1611,6 +1613,12 @@ async def on_startup():
         await init_db()
     except Exception as e:
         print(f"DB init failed: {e}")
+    # Garantir schema mínimo via conector (sem depender de VPC/IP)
+    try:
+        await ensure_schema()
+        print("Schema ensured via Cloud SQL Connector")
+    except Exception as e:
+        print(f"ensure_schema failed: {e}")
 
 
 @app.get("/health/db")
@@ -1679,15 +1687,10 @@ async def auth_refresh(response: Response, refresh_token: str = Form(...)):
             break
     if not matched:
         raise HTTPException(status_code=401, detail="Refresh inválido")
-    user = await iam_fetch_user_by_email(email=None)  # placeholder; obter por id abaixo
-    # buscar por id
-    async with SessionLocal() as session:
-        from sqlalchemy import select
-        ures = await session.execute(select(User).where(User.id == int(matched["user_id"])))
-        u = ures.scalar_one_or_none()
-        if not u:
-            raise HTTPException(status_code=401, detail="Usuário não encontrado")
-        access = create_access_token(user_id=u.id, email=u.email)
+    u = await iam_fetch_user_by_id(int(matched["user_id"]))
+    if not u:
+        raise HTTPException(status_code=401, detail="Usuário não encontrado")
+    access = create_access_token(user_id=int(u["id"]), email=u["email"]) 
     cs = _cookie_settings()
     response.set_cookie("access_token", access, **cs)
     return {"status": "ok"}
