@@ -27,7 +27,12 @@ async def connect_asyncpg():
         kwargs["password"] = env["password"]
     import asyncio
     async with Connector(loop=asyncio.get_running_loop()) as connector:
-        conn = await connector.connect_async(env["instance"], driver="asyncpg", **kwargs)
+        conn = await connector.connect_async(
+            env["instance"],
+            driver="asyncpg",
+            ip_type="PRIVATE",
+            **kwargs,
+        )
         return conn
 
 async def iam_fetch_user_by_email(email: str) -> Optional[Dict[str, Any]]:
