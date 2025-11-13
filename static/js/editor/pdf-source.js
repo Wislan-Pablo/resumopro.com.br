@@ -5,7 +5,7 @@ import { buildImagemInfoLookup, setCurrentPdfLabel } from './utils.js?v=8';
 export async function refreshPdfAvailability() {
   try {
     const btnRecover = document.getElementById('btnRecoverInitialImages');
-    const res = await fetch('/api/list-pdfs', { headers: { 'Accept': 'application/json' } });
+    const res = await fetch('/api/list-pdfs', { headers: { 'Accept': 'application/json' }, credentials: 'include' });
     if (!res.ok) throw new Error('Falha ao listar PDFs');
     const data = await res.json();
     const pdfs = Array.isArray(data.pdfs) ? data.pdfs : [];
@@ -101,6 +101,7 @@ export async function uploadPdfAndReload(file) {
     const response = await fetch('/api/upload-pdf', {
       method: 'POST',
       body: fd,
+      credentials: 'include'
     });
 
     if (response.ok) {

@@ -130,9 +130,10 @@ export function loadCaptureGallery() {
 export async function preloadUploads() {
   try {
     if (!Array.isArray(state.uploadedImages) || state.uploadedImages.length === 0) {
+      const isCloudRun = /run\.app/i.test(location.host);
       // Tenta endpoint do backend
       try {
-        const response = await fetch('/api/uploads/list');
+        const response = await fetch('/api/uploads/list', { credentials: 'include' });
         if (response.ok) {
           const data = await response.json();
           if (Array.isArray(data.images) && data.images.length > 0) {
@@ -146,7 +147,7 @@ export async function preloadUploads() {
         }
       } catch (_) {}
       // Fallback: listar diretório estático quando backend não está disponível
-      if (!Array.isArray(state.uploadedImages) || state.uploadedImages.length === 0) {
+      if (!isCloudRun && (!Array.isArray(state.uploadedImages) || state.uploadedImages.length === 0)) {
         try {
           const dirHtml = await fetch('/temp_uploads/Imagens_de_Uploads/').then(r => r.text());
           const parser = new DOMParser();
@@ -186,7 +187,7 @@ export async function loadUploadsGallery() {
   // Se não há imagens no estado, tenta carregar do servidor
   if (!Array.isArray(state.uploadedImages) || state.uploadedImages.length === 0) {
     try {
-      const response = await fetch('/api/uploads/list');
+      const response = await fetch('/api/uploads/list', { credentials: 'include' });
       if (response.ok) {
         const data = await response.json();
         if (data.images && data.images.length > 0) {

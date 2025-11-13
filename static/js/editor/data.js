@@ -6,7 +6,11 @@ import { refreshPdfAvailability } from './pdf-source.js';
 // Carregar dados da estrutura de edição e preparar galeria/conteúdo
 export async function loadEditorData() {
   const tryFetchJSON = async (url) => {
-    const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
+    const isApi = url.startsWith('/api/');
+    const res = await fetch(url, {
+      headers: { 'Accept': 'application/json' },
+      credentials: isApi ? 'include' : undefined
+    });
     if (!res.ok) throw new Error('HTTP ' + res.status + ' ' + url);
     const ct = (res.headers.get('content-type') || '').toLowerCase();
     if (!ct.includes('json')) throw new Error('Conteúdo não JSON em ' + url + ' (' + ct + ')');
@@ -19,27 +23,83 @@ export async function loadEditorData() {
   };
 
   try {
+    const isCloudRun = /run\.app/i.test(location.host);
+    // Verificar autenticação antes de chamar endpoints protegidos
+    let isAuth = false;
+    try {
+      const me = await fetch('/me', { credentials: 'include' });
+      if (me.ok) {
+        isAuth = true;
+        try { window.__currentUser = await me.json(); } catch (_) {}
+      }
+    } catch (_) {}
+
     let estruturaEdicao;
     // Tentar backend, depois fallback local
-    try {
-      estruturaEdicao = await tryFetchJSON('/api/get-editor-data');
-    } catch (e1) {
+    if (isAuth) {
       try {
-        estruturaEdicao = await tryFetchJSON('/temp_uploads/estrutura_edicao.json');
-      } catch (e2) {
-        const [htmlText, imagensInfo] = await Promise.all([
-          tryFetchText('/static/resumo_estruturado_formatado.html').catch(() => tryFetchText('/temp_uploads/temp_doc.html')),
-          tryFetchJSON('/temp_uploads/imagens_extraidas/imagens_info.json').catch(() => null)
-        ]);
+        estruturaEdicao = await tryFetchJSON('/api/get-editor-data');
+      } catch (e1) {
+        if (!isCloudRun) {
+          try {
+            estruturaEdicao = await tryFetchJSON('/temp_uploads/estrutura_edicao.json');
+          } catch (e2) {
+            const [htmlText, imagensInfo] = await Promise.all([
+              tryFetchText('/static/resumo_estruturado_formatado.html').catch(() => tryFetchText('/temp_uploads/temp_doc.html')),
+              tryFetchJSON('/temp_uploads/imagens_extraidas/imagens_info.json').catch(() => null)
+            ]);
 
-        const images = imagensInfo ? Object.keys(imagensInfo) : [];
+            const images = imagensInfo ? Object.keys(imagensInfo) : [];
+            estruturaEdicao = {
+              pdf_name: (localStorage.getItem('selectedPdfName') || null),
+              pdf_path: null,
+              resumo_formatado: true,
+              resumo_text: htmlText || '<p>Conteúdo indisponível.</p>',
+              images,
+              imagens_info: imagensInfo || {}
+            };
+          }
+        } else {
+          // Produção sem dados iniciais
+          estruturaEdicao = {
+            pdf_name: null,
+            pdf_path: null,
+            resumo_formatado: true,
+            resumo_text: '',
+            images: [],
+            imagens_info: {}
+          };
+        }
+      }
+    } else {
+      // Usuário não autenticado: evitar fallbacks locais em Cloud Run
+      if (!isCloudRun) {
+        try {
+          estruturaEdicao = await tryFetchJSON('/temp_uploads/estrutura_edicao.json');
+        } catch (e2) {
+          const [htmlText, imagensInfo] = await Promise.all([
+            tryFetchText('/static/resumo_estruturado_formatado.html').catch(() => tryFetchText('/temp_uploads/temp_doc.html')),
+            tryFetchJSON('/temp_uploads/imagens_extraidas/imagens_info.json').catch(() => null)
+          ]);
+
+          const images = imagensInfo ? Object.keys(imagensInfo) : [];
+          estruturaEdicao = {
+            pdf_name: (localStorage.getItem('selectedPdfName') || null),
+            pdf_path: null,
+            resumo_formatado: true,
+            resumo_text: htmlText || '<p>Conteúdo indisponível.</p>',
+            images,
+            imagens_info: imagensInfo || {}
+          };
+        }
+      } else {
         estruturaEdicao = {
-          pdf_name: (localStorage.getItem('selectedPdfName') || null),
+          pdf_name: null,
           pdf_path: null,
           resumo_formatado: true,
-          resumo_text: htmlText || '<p>Conteúdo indisponível.</p>',
-          images,
-          imagens_info: imagensInfo || {}
+          resumo_text: '',
+          images: [],
+          imagens_info: {}
         };
       }
     }

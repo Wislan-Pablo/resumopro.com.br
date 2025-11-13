@@ -256,8 +256,9 @@
         <div id="authError" style="color:#c00; margin-top:8px; display:none;" aria-live="polite"></div>
       </div>
     </div>
-    <script type="module" src="/static/js/editor/main.js"></script>
+    <!-- Carregar auth antes do main para checagem inicial de login -->
     <script type="module" src="/static/js/editor/auth.js"></script>
+    <script type="module" src="/static/js/editor/main.js"></script>
 </body>
 
 </html>

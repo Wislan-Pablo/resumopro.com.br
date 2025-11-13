@@ -116,6 +116,18 @@ window.deleteSavedState = deleteSavedState;
 
 // Rewire de listeners para garantir uso das funções modularizadas
 document.addEventListener('DOMContentLoaded', () => {
+  const isCloudRun = /run\.app/i.test(location.host);
+  let isAuth = false;
+  // Checar auth antes de chamadas protegidas
+  (async () => {
+    try {
+      const me = await fetch('/me', { credentials: 'include' });
+      if (me.ok) {
+        isAuth = true;
+        try { window.__currentUser = await me.json(); } catch (_) {}
+      }
+    } catch (_) {}
+  })();
   // Botão: salvar estado de projeto
   const btnSaveProjectState = document.getElementById('btnSaveProjectState');
   if (btnSaveProjectState) {
@@ -294,10 +306,15 @@ document.addEventListener('DOMContentLoaded', () => {
   try { setupDropZones(); } catch (_) {}
   // Pré-carregar uploads para sincronizar contador do select
   try {
-    Promise.resolve(preloadUploads()).finally(() => {
+    if (isAuth || !isCloudRun) {
+      Promise.resolve(preloadUploads()).finally(() => {
+        try { initGallerySwitch(); } catch (_) {}
+        try { initUploadControls(); } catch (_) {}
+      });
+    } else {
       try { initGallerySwitch(); } catch (_) {}
       try { initUploadControls(); } catch (_) {}
-    });
+    }
   } catch (_) {
     try { initGallerySwitch(); } catch (_) {}
     try { initUploadControls(); } catch (_) {}
@@ -312,5 +329,5 @@ document.addEventListener('DOMContentLoaded', () => {
   try { initHeaderHeightSync(); } catch (_) {}
 
   // Atualizar disponibilidade de PDF em temp_uploads
-  try { refreshPdfAvailability(); } catch (_) {}
+  try { if (isAuth || !isCloudRun) refreshPdfAvailability(); } catch (_) {}
 });
