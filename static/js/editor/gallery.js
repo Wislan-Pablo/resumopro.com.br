@@ -1366,12 +1366,14 @@ export async function deleteAllGalleryImages() {
 export function showGalleryEmptyState() {
   const actions = document.querySelector('.gallery-actions');
   const empty = document.getElementById('galleryEmptyState');
+  const infoMsg = document.getElementById('galleryInfoMessage');
   // Garantir que só um estado vazio esteja visível e evitar resquícios da sessão anterior
   try {
     const allMsgs = document.querySelectorAll('.gallery-empty-message');
     allMsgs.forEach((el) => { el.style.visibility = 'hidden'; });
   } catch (_) {}
   if (actions) actions.style.display = 'none';
+  if (infoMsg) infoMsg.style.display = 'none';
   if (empty) {
     empty.style.display = '';
     const msg = empty.querySelector('.gallery-empty-message');
@@ -1385,7 +1387,7 @@ export function showGalleryEmptyState() {
       if (msg) msg.textContent = 'Você não tem mais imagens pré-carregadas automaticamente na galeria. clique no botão abaixo para recuperar automaticamente os elementos de imagens do PDF.';
       if (ctrls) ctrls.style.display = '';
       // Garantir que o botão de recuperar esteja visível e o de upload volte ao contêiner original
-      if (recoverBtn) recoverBtn.style.display = '';
+      if (recoverBtn) recoverBtn.style.display = recoverBtn.disabled ? 'none' : '';
       if (recoverCapturesBtn) recoverCapturesBtn.style.display = 'none';
       if (uploadBtn && uploadsCtrls && uploadBtn.parentElement === ctrls) {
         uploadsCtrls.appendChild(uploadBtn);
@@ -1430,6 +1432,7 @@ export function hideGalleryEmptyState() {
   const uploadsCtrls = document.getElementById('uploadsControls');
   const uploadBtn = document.getElementById('btnUploadImages');
   const ctrls = empty ? empty.querySelector('.gallery-empty-controls') : null;
+  const infoMsg = document.getElementById('galleryInfoMessage');
   if (actions) actions.style.display = '';
   if (empty) empty.style.display = 'none';
   // Resetar visibilidade de todas as mensagens para estado padrão
@@ -1437,6 +1440,8 @@ export function hideGalleryEmptyState() {
     const allMsgs = document.querySelectorAll('.gallery-empty-message');
     allMsgs.forEach((el) => { el.style.visibility = ''; });
   } catch (_) {}
+  // Reexibir cabeçalho informativo quando aplicável
+  if (infoMsg) infoMsg.style.display = '';
   // Restaurar o botão de upload ao contêiner original se estiver dentro dos controles do estado vazio
   if (uploadBtn && uploadsCtrls && ctrls && uploadBtn.parentElement === ctrls) {
     uploadsCtrls.appendChild(uploadBtn);

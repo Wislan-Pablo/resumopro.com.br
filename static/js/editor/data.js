@@ -119,8 +119,16 @@ export async function loadEditorData() {
     // Ocultar spinner e mostrar conteúdo da galeria
     try { setGalleryLoading('', false); } catch (_) {}
     try {
-      if (state.estruturaEdicao && Array.isArray(state.estruturaEdicao.images) && state.estruturaEdicao.images.length > 0) {
+      const hasImages = !!(state.estruturaEdicao && Array.isArray(state.estruturaEdicao.images) && state.estruturaEdicao.images.length);
+      if (hasImages) {
         hideGalleryEmptyState();
+      } else {
+        // Estado inicial vazio: mostrar mensagem e controles adequados (Enviar PDF)
+        showGalleryEmptyState();
+        const infoMsg = document.getElementById('galleryInfoMessage');
+        if (infoMsg) infoMsg.style.display = 'none';
+        const actions = document.querySelector('.gallery-actions');
+        if (actions) actions.style.display = 'none';
       }
     } catch (_) {}
 
