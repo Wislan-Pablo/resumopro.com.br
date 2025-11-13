@@ -25,7 +25,8 @@ async def connect_asyncpg():
     }
     if env["password"]:
         kwargs["password"] = env["password"]
-    async with Connector() as connector:
+    import asyncio
+    async with Connector(loop=asyncio.get_running_loop()) as connector:
         conn = await connector.connect_async(env["instance"], driver="asyncpg", **kwargs)
         return conn
 
