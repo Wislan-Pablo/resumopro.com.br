@@ -941,6 +941,15 @@ export function updateDeleteAllLabel() {
   const span = btn.querySelector('span');
   const isCaptures = state.galleryMode === 'captures';
   const isUploads = state.galleryMode === 'uploads';
+  // Ocultar botão quando não houver itens para deletar (PDF vazio/sem imagens)
+  try {
+    const hasPdfImages = !!(state.estruturaEdicao && Array.isArray(state.estruturaEdicao.images) && state.estruturaEdicao.images.length);
+    const hasCaptures = Array.isArray(state.capturedImages) && state.capturedImages.length > 0;
+    const hasUploads = Array.isArray(state.uploadedImages) && state.uploadedImages.length > 0;
+    const shouldShow = (isUploads && hasUploads) || (isCaptures && hasCaptures) || (!isUploads && !isCaptures && hasPdfImages);
+    const actions = document.querySelector('.gallery-actions');
+    if (actions) actions.style.display = shouldShow ? '' : 'none';
+  } catch (_) {}
   if (span) span.textContent = isCaptures ? 'Excluir Todas as Capturas' : (isUploads ? 'Excluir Todos os Uploads' : 'Excluir Todas as Imagens');
   btn.title = isCaptures ? 'Excluir todas as capturas' : (isUploads ? 'Excluir todos os uploads' : 'Excluir todas as imagens');
   btn.setAttribute('aria-label', btn.title);
@@ -1361,6 +1370,7 @@ export function showGalleryEmptyState() {
     const uploadBtn = document.getElementById('btnUploadImages');
     const recoverBtn = document.getElementById('btnRecoverInitialImages');
     const recoverCapturesBtn = document.getElementById('btnRecoverCaptures');
+    const uploadPdfBtn = document.getElementById('btnUploadPdf');
     if (state.galleryMode === 'pdf') {
       if (msg) msg.textContent = 'Você não tem mais imagens pré-carregadas automaticamente na galeria. clique no botão abaixo para recuperar automaticamente os elementos de imagens do PDF.';
       if (ctrls) ctrls.style.display = '';
@@ -1371,6 +1381,7 @@ export function showGalleryEmptyState() {
         uploadsCtrls.appendChild(uploadBtn);
       }
       if (uploadsCtrls && state.galleryMode !== 'uploads') uploadsCtrls.style.display = 'none';
+      if (uploadPdfBtn) uploadPdfBtn.style.display = '';
       // Tornar a mensagem visível após ajustar controles
       if (msg) msg.style.visibility = 'visible';
     } else if (state.galleryMode === 'captures') {
@@ -1383,6 +1394,7 @@ export function showGalleryEmptyState() {
       if (recoverBtn) recoverBtn.style.display = 'none';
       if (recoverCapturesBtn) recoverCapturesBtn.style.display = '';
       if (uploadsCtrls) uploadsCtrls.style.display = 'none';
+      if (uploadPdfBtn) uploadPdfBtn.style.display = 'none';
       // Tornar a mensagem visível após ajustar controles
       if (msg) msg.style.visibility = 'visible';
     } else {
@@ -1395,6 +1407,7 @@ export function showGalleryEmptyState() {
       if (uploadBtn && ctrls && uploadBtn.parentElement !== ctrls) {
         ctrls.appendChild(uploadBtn);
       }
+      if (uploadPdfBtn) uploadPdfBtn.style.display = 'none';
       // Tornar a mensagem visível somente após ajustar botões
       if (msg) msg.style.visibility = 'visible';
     }

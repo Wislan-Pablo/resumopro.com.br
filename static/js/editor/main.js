@@ -223,6 +223,30 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  // Botão: Enviar PDF (na galeria vazia)
+  const btnUploadPdf = document.getElementById('btnUploadPdf');
+  const inpUploadPdf = document.getElementById('inpUploadPdf');
+  if (btnUploadPdf && inpUploadPdf) {
+    const clone = btnUploadPdf.cloneNode(true);
+    btnUploadPdf.replaceWith(clone);
+    clone.addEventListener('click', () => { try { inpUploadPdf.click(); } catch (e) { console.error(e); } });
+    const inpClone = inpUploadPdf.cloneNode(true);
+    inpUploadPdf.replaceWith(inpClone);
+    inpClone.addEventListener('change', async () => {
+      try {
+        const file = (inpClone.files && inpClone.files[0]) ? inpClone.files[0] : null;
+        if (!file) return;
+        try { setGalleryLoading('Enviando PDF...', true); } catch (_) {}
+        await uploadPdfAndReload(file);
+      } catch (e) {
+        console.error('Falha ao enviar PDF:', e);
+      } finally {
+        try { setGalleryLoading('', false); } catch (_) {}
+        try { inpClone.value = ''; } catch (_) {}
+      }
+    });
+  }
+
   // Toggle de retração/expansão da galeria (sidebar)
   const sidebar = document.getElementById('sidebar');
   const sidebarToggleEl = document.getElementById('sidebarToggle');

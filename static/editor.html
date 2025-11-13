@@ -68,8 +68,8 @@
                     </button>
                     <input id="inpUploadImages" type="file" accept="image/*" multiple style="display:none;" />
                 </div>
-                <div class="info-message" id="galleryInfoMessage">
-                    <h3 id="imageCountInfo">Identifiquei 0 imagens vetoriais no PDF</h3>
+                <div class="info-message" id="galleryInfoMessage" style="display:none;">
+                    <h3 id="imageCountInfo"></h3>
                     <button class="info-close" id="galleryInfoClose" title="Fechar" aria-label="Fechar">×</button>
                 </div>
                 <div id="galleryEmptyState" style="display:none;">
@@ -85,12 +85,17 @@
                             <img src="../images/view_pdf.svg" alt="Capturar Imagem no PDF" class="btn-icon-24" />
                             <span>Capturar Imagem no PDF</span>
                         </button>
+                        <button class="btn btn-secondary" id="btnUploadPdf" title="Enviar PDF" aria-label="Enviar PDF">
+                            <img src="../images/upload_file.svg" alt="Enviar PDF" class="btn-icon-24" />
+                            <span>Enviar PDF</span>
+                        </button>
+                        <input id="inpUploadPdf" type="file" accept="application/pdf" style="display:none;" />
                     </div>
                 </div>
                 <div class="image-gallery" id="imageGallery">
                     <!-- Imagens serão carregadas dinamicamente -->
                 </div>
-                <div class="gallery-actions">
+                <div class="gallery-actions" style="display:none;">
                     <button class="btn btn-danger delete-all-btn" onclick="deleteAllGalleryImages()" title="Excluir todas as imagens" aria-label="Excluir todas as imagens">
                         <img src="../images/delete_all_items.svg" alt="Excluir todas" class="btn-icon-24" />
                         <span>Excluir Todas as Imagens</span>
@@ -145,7 +150,6 @@
                     <div id="editorSection" class="editor-section" style="margin-top: 0;">
                         
                         <div id="structuredSummary" class="formatted-summary">
-                            <div class="drop-zone">Solte a imagem aqui para inserir</div>
                             <!-- Conteúdo do resumo será carregado aqui -->
                         </div>
                     </div>

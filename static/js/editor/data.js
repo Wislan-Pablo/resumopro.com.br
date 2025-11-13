@@ -140,10 +140,14 @@ export async function loadEditorData() {
     try { await refreshPdfAvailability(); } catch (_) {}
   } catch (error) {
     console.error('Erro ao carregar dados:', error);
-    const galleryEl = document.getElementById('imageGallery');
-    if (galleryEl) {
-      galleryEl.innerHTML = '<p>Não foi possível carregar a galeria.</p>';
-    }
+    // Em vez de mensagem genérica, mostrar estado vazio amigável
+    try { showGalleryEmptyState(); } catch (_) {}
+    try {
+      const infoMsg = document.getElementById('galleryInfoMessage');
+      if (infoMsg) infoMsg.style.display = 'none';
+      const actions = document.querySelector('.gallery-actions');
+      if (actions) actions.style.display = 'none';
+    } catch (_) {}
     try { setGalleryLoading('', false); } catch (_) {}
     try { await refreshPdfAvailability(); } catch (_) {}
   }
