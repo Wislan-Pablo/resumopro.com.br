@@ -1393,7 +1393,8 @@ export function showGalleryEmptyState() {
         uploadsCtrls.appendChild(uploadBtn);
       }
       if (uploadsCtrls && state.galleryMode !== 'uploads') uploadsCtrls.style.display = 'none';
-      if (uploadPdfBtn) uploadPdfBtn.style.display = '';
+      const showUploadPdf = recoverBtn ? !!recoverBtn.disabled : true;
+      if (uploadPdfBtn) uploadPdfBtn.style.display = showUploadPdf ? '' : 'none';
       // Tornar a mensagem visível após ajustar controles
       if (msg) msg.style.visibility = 'visible';
     } else if (state.galleryMode === 'captures') {

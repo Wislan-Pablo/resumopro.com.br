@@ -1,5 +1,5 @@
 import { setEstruturaEdicao, setGalleryCacheBust, state } from './state.js?v=8';
-import { loadImageGallery, setGalleryLoading, hideGalleryEmptyState } from './gallery.js';
+import { loadImageGallery, setGalleryLoading, hideGalleryEmptyState, showGalleryEmptyState, setGalleryMode } from './gallery.js';
 import { convertMarkdownToHtml, buildImagemInfoLookup, setCurrentPdfLabel } from './utils.js?v=8';
 import { refreshPdfAvailability } from './pdf-source.js';
 
@@ -118,6 +118,8 @@ export async function loadEditorData() {
     loadImageGallery();
     // Ocultar spinner e mostrar conteúdo da galeria
     try { setGalleryLoading('', false); } catch (_) {}
+    // Atualizar disponibilidade de PDF antes de decidir quais controles exibir no estado vazio
+    try { await refreshPdfAvailability(); } catch (_) {}
     try {
       const hasImages = !!(state.estruturaEdicao && Array.isArray(state.estruturaEdicao.images) && state.estruturaEdicao.images.length);
       if (hasImages) {
@@ -144,8 +146,7 @@ export async function loadEditorData() {
       try { setGalleryMode('pdf'); } catch (_) {}
     } catch (_) {}
 
-    // Atualizar disponibilidade de PDF para recaptura
-    try { await refreshPdfAvailability(); } catch (_) {}
+    // Disponibilidade de PDF já foi atualizada acima para refletir os controles do estado vazio
   } catch (error) {
     console.error('Erro ao carregar dados:', error);
     // Em vez de mensagem genérica, mostrar estado vazio amigável
