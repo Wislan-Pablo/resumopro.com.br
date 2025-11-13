@@ -1371,6 +1371,8 @@ export function showGalleryEmptyState() {
         uploadsCtrls.appendChild(uploadBtn);
       }
       if (uploadsCtrls && state.galleryMode !== 'uploads') uploadsCtrls.style.display = 'none';
+      // Tornar a mensagem visível após ajustar controles
+      if (msg) msg.style.visibility = 'visible';
     } else if (state.galleryMode === 'captures') {
       if (msg) msg.textContent = 'Nenhuma captura de tela salva. Use o botão abaixo para capturar uma nova imagem no PDF e depois cole (Ctrl+V) no Editor para salvar aqui.';
       if (ctrls) ctrls.style.display = '';
@@ -1381,6 +1383,8 @@ export function showGalleryEmptyState() {
       if (recoverBtn) recoverBtn.style.display = 'none';
       if (recoverCapturesBtn) recoverCapturesBtn.style.display = '';
       if (uploadsCtrls) uploadsCtrls.style.display = 'none';
+      // Tornar a mensagem visível após ajustar controles
+      if (msg) msg.style.visibility = 'visible';
     } else {
       if (msg) msg.textContent = 'Nenhuma imagem enviada. Use o botão abaixo para enviar novas imagens ou use o ícone de upload-image no canto superior direito da barra de ferramentas do Editor.';
       if (ctrls) ctrls.style.display = '';
@@ -1405,6 +1409,11 @@ export function hideGalleryEmptyState() {
   const ctrls = empty ? empty.querySelector('.gallery-empty-controls') : null;
   if (actions) actions.style.display = '';
   if (empty) empty.style.display = 'none';
+  // Resetar visibilidade de todas as mensagens para estado padrão
+  try {
+    const allMsgs = document.querySelectorAll('.gallery-empty-message');
+    allMsgs.forEach((el) => { el.style.visibility = ''; });
+  } catch (_) {}
   // Restaurar o botão de upload ao contêiner original se estiver dentro dos controles do estado vazio
   if (uploadBtn && uploadsCtrls && ctrls && uploadBtn.parentElement === ctrls) {
     uploadsCtrls.appendChild(uploadBtn);
