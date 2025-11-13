@@ -1384,7 +1384,7 @@ export function showGalleryEmptyState() {
     const recoverCapturesBtn = document.getElementById('btnRecoverCaptures');
     const uploadPdfBtn = document.getElementById('btnUploadPdf');
     if (state.galleryMode === 'pdf') {
-      if (msg) msg.textContent = 'Você não tem mais imagens pré-carregadas automaticamente na galeria. clique no botão abaixo para recuperar automaticamente os elementos de imagens do PDF.';
+      if (msg) msg.textContent = 'Você não tem imagens pré-carregadas na galeria. clique no botão abaixo para enviar fazer um novo Upload de PDF e extrair os seus elementos de imagens.';
       if (ctrls) ctrls.style.display = '';
       // Garantir que o botão de recuperar esteja visível e o de upload volte ao contêiner original
       if (recoverBtn) recoverBtn.style.display = recoverBtn.disabled ? 'none' : '';
