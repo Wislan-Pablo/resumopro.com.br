@@ -27,6 +27,7 @@ from email.utils import parseaddr
 import datetime
 import secrets
 import httpx
+import asyncio
 
 # Carregar variáveis do arquivo .env (se existir)
 load_dotenv(os.path.join(os.path.dirname(__file__), '.env'))
@@ -1603,6 +1604,20 @@ async def on_startup():
         await init_db()
     except Exception as e:
         print(f"DB init failed: {e}")
+
+
+@app.get("/health/db")
+async def health_db():
+    """Ping rápido ao banco para diagnosticar conectividade."""
+    try:
+        async with SessionLocal() as session:
+            from sqlalchemy import text
+            res = await session.execute(text("SELECT 1"))
+            _ = res.scalar_one()
+        return {"status": "ok"}
+    except Exception as e:
+        # Expor causa raiz para rápido diagnóstico
+        return {"status": "error", "detail": str(e)}
 
 
 @app.post("/auth/signup")
