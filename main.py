@@ -1617,11 +1617,16 @@ async def on_startup():
 async def health_db():
     """Ping rápido ao banco para diagnosticar conectividade."""
     try:
-        async with SessionLocal() as session:
-            from sqlalchemy import text
-            res = await session.execute(text("SELECT 1"))
-            _ = res.scalar_one()
-        return {"status": "ok"}
+        # Usar Cloud SQL Connector (asyncpg) para validar conexão sem depender de VPC/IP
+        from db_iam import connect_asyncpg
+        conn = await connect_asyncpg()
+        try:
+            row = await conn.fetchrow("SELECT 1 AS ok")
+            if row and row.get("ok") == 1:
+                return {"status": "ok"}
+            return {"status": "error", "detail": "Query retornou resultado inesperado"}
+        finally:
+            await conn.close()
     except Exception as e:
         # Expor causa raiz para rápido diagnóstico
         return {"status": "error", "detail": str(e)}

@@ -16,6 +16,7 @@ def _get_db_env() -> Dict[str, str]:
         "instance": os.getenv("INSTANCE_CONNECTION_NAME", "").strip(),
         "user": os.getenv("DB_USER", "").strip(),
         "db": os.getenv("DB_NAME", "").strip(),
+        "password": os.getenv("DB_PASSWORD", "").strip(),
     }
 
 async def connect_asyncpg():
@@ -23,13 +24,14 @@ async def connect_asyncpg():
     if not env["instance"] or not env["user"] or not env["db"]:
         raise RuntimeError("INSTANCE_CONNECTION_NAME, DB_USER, DB_NAME devem estar definidos no ambiente")
     connector = _get_connector()
-    conn = await connector.connect_async(
-        env["instance"],
-        driver="asyncpg",
-        user=env["user"],
-        db=env["db"],
-        enable_iam_auth=True,
-    )
+    # Usar autenticação por senha inicialmente para simplificar; IAM pode ser habilitado depois
+    kwargs = {
+        "user": env["user"],
+        "db": env["db"],
+    }
+    if env["password"]:
+        kwargs["password"] = env["password"]
+    conn = await connector.connect_async(env["instance"], driver="asyncpg", **kwargs)
     return conn
 
 async def iam_fetch_user_by_email(email: str) -> Optional[Dict[str, Any]]:
