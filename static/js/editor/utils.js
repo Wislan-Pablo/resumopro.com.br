@@ -34,7 +34,10 @@ export function setCurrentPdfLabel(name) {
             <img src="../images/icon_pdf_name_gallery.svg" alt="PDF" class="pdf-title-icon" />
             <span class="pdf-title-text">${base}</span>
           `
-          : toolbarTitle.innerHTML;
+          : `
+            <img src="../images/icon_pdf_name_gallery.svg" alt="PDF" class="pdf-title-icon" />
+            <span class="pdf-title-text">Nenhum PDF encontrado</span>
+          `;
       }
     } catch (_) {}
   } catch (e) {}

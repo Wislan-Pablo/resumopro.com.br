@@ -60,10 +60,19 @@ export function initAdobeViewer(url, fileName) {
           } catch (cbErr) {
             console.warn('Falha ao registrar GET_FEATURE_FLAG:', cbErr);
           }
+          // Suporte a blob:/data: URLs no ambiente local: usa promessa de ArrayBuffer
+          const content = (typeof url === 'string' && (url.startsWith('blob:') || url.startsWith('data:')))
+            ? {
+                promise: fetch(url)
+                  .then((r) => r.arrayBuffer())
+                  .then((data) => ({ data }))
+              }
+            : { location: { url } };
+
           view
             .previewFile(
               {
-                content: { location: { url } },
+                content,
                 metaData: { fileName: fileName || 'documento.pdf' }
               },
               {
@@ -95,6 +104,16 @@ export function loadPdfForCapture() {
   if (!container) return;
 
   const candidatePaths = [];
+  // Se houver um blob URL temporário do upload local, priorizar carregamento direto
+  try {
+    if (window.__tempPdfBlobUrl && typeof window.__tempPdfBlobUrl === 'string') {
+      const fileName = (() => {
+        try { return localStorage.getItem('selectedPdfName'); } catch (_) { return null; }
+      })();
+      initAdobeViewer(window.__tempPdfBlobUrl, fileName || 'documento.pdf');
+      return;
+    }
+  } catch (_) {}
   const selectedName = (() => {
     try {
       return localStorage.getItem('selectedPdfName');

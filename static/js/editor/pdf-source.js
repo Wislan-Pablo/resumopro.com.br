@@ -96,6 +96,11 @@ export async function uploadPdfAndReload(file) {
   if (!file) return;
   const fd = new FormData();
   fd.append('originalPdf', file);
+  // Gerar um blob URL temporário para visualização imediata (ambiente local)
+  try {
+    const blobUrl = URL.createObjectURL(file);
+    window.__tempPdfBlobUrl = blobUrl;
+  } catch (_) {}
 
   try {
     const response = await fetch('/api/upload-pdf', {
@@ -136,6 +141,17 @@ export async function uploadPdfAndReload(file) {
     } catch (e) {
       console.warn('Não foi possível ativar a seção de captura após upload:', e);
     }
+    // Limpar blob temporário quando o viewer estiver pronto em outra origem
+    try {
+      const clearTemp = () => {
+        if (window.__tempPdfBlobUrl) {
+          try { URL.revokeObjectURL(window.__tempPdfBlobUrl); } catch (e) {}
+          window.__tempPdfBlobUrl = null;
+        }
+      };
+      // Pequeno atraso para evitar revogar antes de uso
+      setTimeout(clearTemp, 5000);
+    } catch (_) {}
   }
 }
 
