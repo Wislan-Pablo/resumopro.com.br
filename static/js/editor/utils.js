@@ -39,6 +39,13 @@ export function setCurrentPdfLabel(name) {
             <span class="pdf-title-text">Nenhum PDF encontrado</span>
           `;
       }
+      // Atualiza também o cabeçalho da sidebar para refletir o mesmo nome/estado
+      try {
+        const galleryPdfNameEl = document.getElementById('galleryHeaderPdfName');
+        if (galleryPdfNameEl) {
+          galleryPdfNameEl.textContent = baseName ? `— ${baseName}` : '';
+        }
+      } catch (_) {}
     } catch (_) {}
   } catch (e) {}
 }

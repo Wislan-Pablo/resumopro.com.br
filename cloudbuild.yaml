@@ -1,3 +1,4 @@
+approval: {}
 steps:
   # Passo 1: Build da imagem Docker
   - name: 'gcr.io/cloud-builders/docker'

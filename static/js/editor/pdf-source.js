@@ -1,5 +1,5 @@
 import { state, setGalleryCacheBust } from './state.js?v=8';
-import { loadImageGallery, updateImageCountInfo, hideGalleryEmptyState, setGalleryLoading } from './gallery.js';
+import { loadImageGallery, updateImageCountInfo, hideGalleryEmptyState, setGalleryLoading, setGalleryMode } from './gallery.js';
 import { buildImagemInfoLookup, setCurrentPdfLabel } from './utils.js?v=8';
 
 export async function refreshPdfAvailability() {
@@ -124,6 +124,11 @@ export async function uploadPdfAndReload(file) {
   } finally {
     // A extração de imagens no backend é síncrona, então podemos recarregar imediatamente.
     await reloadInitialPdfImages();
+
+    // Garantir que a sessão ativa da galeria seja "Imagens Pré-Carregadas" para o novo PDF
+    try {
+      await setGalleryMode('pdf');
+    } catch (_) {}
 
     // Após recarregar, ativar/mostrar a seção de captura automaticamente
     try {

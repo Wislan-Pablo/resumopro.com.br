@@ -1022,7 +1022,17 @@ export function updateSidebarGalleryHeaderCount(total) {
     const headerTitle = document.querySelector('.sidebar-header h2');
     if (!headerTitle) return;
     const n = (typeof total === 'number' && isFinite(total) && total >= 0) ? total : 0;
-    headerTitle.textContent = `Galeria (${n})`;
+    const countEl = document.getElementById('galleryHeaderCount');
+    const titleEl = document.getElementById('galleryHeaderTitle');
+    if (countEl) {
+      countEl.textContent = `(${n})`;
+    } else {
+      // Fallback para estrutura antiga
+      headerTitle.textContent = `Galeria (${n})`;
+    }
+    if (titleEl && !countEl) {
+      titleEl.textContent = 'Galeria';
+    }
   } catch (_) {}
 }
 
