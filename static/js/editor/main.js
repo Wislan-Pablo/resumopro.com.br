@@ -241,9 +241,10 @@ document.addEventListener('DOMContentLoaded', () => {
   if (btnUploadPdf && inpUploadPdf) {
     const clone = btnUploadPdf.cloneNode(true);
     btnUploadPdf.replaceWith(clone);
-    clone.addEventListener('click', () => { try { inpUploadPdf.click(); } catch (e) { console.error(e); } });
     const inpClone = inpUploadPdf.cloneNode(true);
     inpUploadPdf.replaceWith(inpClone);
+    // Garantir que o botão acione o input CLONADO (o original foi substituído)
+    clone.addEventListener('click', () => { try { inpClone.click(); } catch (e) { console.error(e); } });
     inpClone.addEventListener('change', async () => {
       try {
         const file = (inpClone.files && inpClone.files[0]) ? inpClone.files[0] : null;
