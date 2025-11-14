@@ -29,15 +29,19 @@ export function setCurrentPdfLabel(name) {
       const toolbarTitle = document.getElementById('adobeToolbarTitle');
       if (toolbarTitle) {
         const base = baseName;
-        toolbarTitle.innerHTML = base
-          ? `
-            <img src="../images/icon_pdf_name_gallery.svg" alt="PDF" class="pdf-title-icon" />
-            <span class="pdf-title-text">${base}</span>
-          `
-          : `
-            <img src="../images/icon_pdf_name_gallery.svg" alt="PDF" class="pdf-title-icon" />
-            <span class="pdf-title-text">Nenhum PDF encontrado</span>
-          `;
+        // Evitar sobrescrever o título do viewer para fallback quando um PDF já foi carregado
+        // Atualiza apenas se há um nome válido, ou se o viewer ainda não está carregado
+        if (base || !state.pdfLoadedForCapture) {
+          toolbarTitle.innerHTML = base
+            ? `
+              <img src="../images/icon_pdf_name_gallery.svg" alt="PDF" class="pdf-title-icon" />
+              <span class="pdf-title-text">${base}</span>
+            `
+            : `
+              <img src="../images/icon_pdf_name_gallery.svg" alt="PDF" class="pdf-title-icon" />
+              <span class="pdf-title-text">Nenhum PDF encontrado</span>
+            `;
+        }
       }
       // Atualiza também o cabeçalho da sidebar para refletir o mesmo nome/estado
       try {

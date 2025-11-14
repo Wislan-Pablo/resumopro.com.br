@@ -44,7 +44,6 @@ export async function refreshPdfAvailability() {
     setCurrentPdfLabel(selected);
   } catch (e) {
     console.warn('refreshPdfAvailability falhou:', e);
-    setCurrentPdfLabel(null);
     const btnRecover = document.getElementById('btnRecoverInitialImages');
     if (btnRecover) {
       btnRecover.disabled = true;
