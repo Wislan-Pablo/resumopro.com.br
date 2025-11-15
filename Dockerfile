@@ -1,5 +1,10 @@
 # Adicionando um comentário para acionar a build final
 
+FROM node:20-alpine AS frontend-builder
+WORKDIR /app/frontend
+COPY frontend/ ./
+RUN npm ci && npm run build
+
 FROM python:3.12-slim
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
@@ -24,6 +29,7 @@ RUN pip install --no-cache-dir -r /app/requirements.txt
 
 # Copy application code
 COPY . /app
+COPY --from=frontend-builder /app/frontend/dist /app/static
 RUN mkdir -p /app/data /app/temp_uploads
 
 # Expose the port Cloud Run will send traffic to
