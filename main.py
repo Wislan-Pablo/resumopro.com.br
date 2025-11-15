@@ -469,14 +469,19 @@ async def cleanup_temp_files(manifest_path: str):
 
 @app.get("/", response_class=HTMLResponse)
 async def serve_frontend():
+    # Serve a SPA moderna (index.html) que está em /app/static
     index_spa = os.path.join("static", "index.html")
+    print(f"[DEBUG] Tentando servir SPA de: {index_spa}")
+    print(f"[DEBUG] Arquivo existe? {os.path.isfile(index_spa)}")
     if os.path.isfile(index_spa):
         return FileResponse(index_spa, media_type="text/html")
+    # Fallback para a UI legada apenas se a SPA não existir
+    print("[DEBUG] SPA não encontrada, servindo UI legada")
     return FileResponse("static/editor.html", media_type="text/html")
 
 @app.get("/editor", response_class=HTMLResponse)
 async def serve_editor():
-    # Redirecionar para a raiz, que serve editor.html
+    # Redirecionar para a raiz, que agora serve a SPA moderna
     return RedirectResponse(url="/")
 
 @app.get("/index.html", response_class=HTMLResponse)
