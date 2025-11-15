@@ -2,6 +2,7 @@ import JoditEditor from 'jodit-react'
 import { useEffect, useRef, useState } from 'react'
 import { useEditorData, useSaveSummary } from '../hooks/useEditorData'
 import { api } from '../services/api-client'
+import { useToast } from '../state/toast.store'
 import { sanitizeHtml } from '../utils/html'
 import { useQueryClient } from '@tanstack/react-query'
 import { useEditorStore } from '../state/editor.store'
@@ -11,13 +12,14 @@ export default function Editor() {
   const save = useSaveSummary()
   const qc = useQueryClient()
   const setInsertImage = useEditorStore((s) => s.setInsertImage)
+  const show = useToast((s) => s.show)
   const [value, setValue] = useState('')
   const timer = useRef<any>(null)
   useEffect(() => { setValue(sanitizeHtml(data || '')) }, [data])
   function onChange(v: string) {
     setValue(v)
     if (timer.current) clearTimeout(timer.current)
-    timer.current = setTimeout(() => { save.mutate(v) }, 600)
+    timer.current = setTimeout(() => { save.mutate(v, { onSuccess: () => show({ type: 'success', message: 'Resumo salvo' }) }) }, 600)
   }
   useEffect(() => {
     setInsertImage((url: string) => {
@@ -51,6 +53,7 @@ export default function Editor() {
           // @ts-ignore
           const editor = (editorRef.current as any)?.editor
           if (editor) editor.selection.insertHTML(`<img src="${url}" />`)
+          show({ type: 'success', message: 'Captura inserida' })
         }
       }
       qc.invalidateQueries({ queryKey: ['uploads'] })

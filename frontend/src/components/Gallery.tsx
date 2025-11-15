@@ -4,6 +4,7 @@ import { useUploads, useDeleteUpload } from '../hooks/useUploads'
 import { usePdfImages } from '../hooks/usePdfImages'
 import { useCaptureImages } from '../hooks/useCaptureImages'
 import { useEditorStore } from '../state/editor.store'
+import { useToast } from '../state/toast.store'
 
 export default function Gallery() {
   const mode = useGallery((s) => s.mode)
@@ -18,6 +19,7 @@ export default function Gallery() {
   const activeItems = mode === 'uploads' ? uploads : mode === 'pdf' ? pdfImages : captureImages
   const rows = Math.ceil(activeItems.length / cols)
   const List: any = (ReactWindow as any).FixedSizeList
+  const show = useToast((s) => s.show)
   const Row = ({ index, style }: any) => {
     const start = index * cols
     const slice = activeItems.slice(start, start + cols)
@@ -31,7 +33,7 @@ export default function Gallery() {
             <div className="mt-2 flex items-center justify-between">
               <span className="text-sm truncate max-w-[140px]">{(it as any).name || it.id}</span>
               <div className="flex items-center gap-2">
-                <button className="text-xs px-2 py-1 border rounded" onClick={() => insertImage?.(it.url)}>Copiar</button>
+                <button className="text-xs px-2 py-1 border rounded" onClick={() => { insertImage?.(it.url); show({ type: 'success', message: 'Imagem copiada para o editor' }) }}>Copiar</button>
                 {mode === 'uploads' && (
                   <button className="text-xs px-2 py-1 border rounded" onClick={() => del.mutate(it.id)}>Excluir</button>
                 )}
@@ -62,6 +64,8 @@ export default function Gallery() {
       </div>
       {loadingUploads || loadingPdf || loadingCaptures ? (
         <div className="text-gray-600 p-3">Carregando...</div>
+      ) : rows === 0 ? (
+        <div className="text-gray-500 p-3">Nenhum item encontrado.</div>
       ) : (
         <List height={600} itemCount={rows} itemSize={200} width={540}>
           {Row as any}
