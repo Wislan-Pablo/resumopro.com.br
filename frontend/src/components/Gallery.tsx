@@ -1,6 +1,8 @@
 import * as ReactWindow from 'react-window'
 import { useGallery } from '../state/gallery.store'
 import { useUploads, useDeleteUpload } from '../hooks/useUploads'
+import { usePdfImages } from '../hooks/usePdfImages'
+import { useCaptureImages } from '../hooks/useCaptureImages'
 import { useEditorStore } from '../state/editor.store'
 
 export default function Gallery() {
@@ -8,14 +10,17 @@ export default function Gallery() {
   const setMode = useGallery((s) => s.setMode)
   const openUpload = useGallery((s) => s.openUpload)
   const insertImage = useEditorStore((s) => s.insertImage)
-  const { data: items = [], isLoading } = useUploads()
+  const { data: uploads = [], isLoading: loadingUploads } = useUploads()
+  const { data: pdfImages = [], isLoading: loadingPdf } = usePdfImages()
+  const { data: captureImages = [], isLoading: loadingCaptures } = useCaptureImages()
   const del = useDeleteUpload()
   const cols = 3
-  const rows = Math.ceil(items.length / cols)
+  const activeItems = mode === 'uploads' ? uploads : mode === 'pdf' ? pdfImages : captureImages
+  const rows = Math.ceil(activeItems.length / cols)
   const List: any = (ReactWindow as any).FixedSizeList
   const Row = ({ index, style }: any) => {
     const start = index * cols
-    const slice = items.slice(start, start + cols)
+    const slice = activeItems.slice(start, start + cols)
     return (
       <div style={style} className="flex">
         {slice.map((it) => (
@@ -24,10 +29,12 @@ export default function Gallery() {
               <img src={it.url} loading="lazy" className="w-full h-36 object-cover" />
             </div>
             <div className="mt-2 flex items-center justify-between">
-              <span className="text-sm truncate max-w-[140px]">{it.name || it.id}</span>
+              <span className="text-sm truncate max-w-[140px]">{(it as any).name || it.id}</span>
               <div className="flex items-center gap-2">
                 <button className="text-xs px-2 py-1 border rounded" onClick={() => insertImage?.(it.url)}>Copiar</button>
-                <button className="text-xs px-2 py-1 border rounded" onClick={() => del.mutate(it.id)}>Excluir</button>
+                {mode === 'uploads' && (
+                  <button className="text-xs px-2 py-1 border rounded" onClick={() => del.mutate(it.id)}>Excluir</button>
+                )}
               </div>
             </div>
           </div>
@@ -44,12 +51,16 @@ export default function Gallery() {
         <button className={`px-2 py-1 rounded border ${mode === 'pdf' ? 'bg-gray-800 text-white' : ''}`} onClick={() => setMode('pdf')}>PDF</button>
         <button className={`px-2 py-1 rounded border ${mode === 'captures' ? 'bg-gray-800 text-white' : ''}`} onClick={() => setMode('captures')}>Capturas</button>
         <button className={`px-2 py-1 rounded border ${mode === 'uploads' ? 'bg-gray-800 text-white' : ''}`} onClick={() => setMode('uploads')}>Uploads</button>
-        <span className="ml-2 text-sm text-gray-600">{mode === 'uploads' ? `${items.length} itens` : '—'}</span>
+        <span className="ml-2 text-sm text-gray-600">
+          {mode === 'uploads' ? `${uploads.length} itens` : mode === 'pdf' ? `${pdfImages.length} itens` : `${captureImages.length} itens`}
+        </span>
         <div className="ml-auto">
-          <button className="px-2 py-1 rounded bg-gray-800 text-white" onClick={() => openUpload()}>Enviar</button>
+          {mode === 'uploads' && (
+            <button className="px-2 py-1 rounded bg-gray-800 text-white" onClick={() => openUpload()}>Enviar</button>
+          )}
         </div>
       </div>
-      {isLoading ? (
+      {loadingUploads || loadingPdf || loadingCaptures ? (
         <div className="text-gray-600 p-3">Carregando...</div>
       ) : (
         <List height={600} itemCount={rows} itemSize={200} width={540}>

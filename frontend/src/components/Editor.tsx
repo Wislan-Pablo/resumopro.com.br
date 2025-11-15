@@ -43,7 +43,16 @@ export default function Editor() {
       for (const image of images) {
         const form = new FormData()
         form.append('file', image)
-        await fetch('/api/upload-captured-image', { method: 'POST', body: form, credentials: 'include' })
+        // @ts-ignore dynamic import to avoid circular
+        const { api } = await import('../services/api-client')
+        const data: any = await api.upload('/api/upload-captured-image', form)
+        const url = typeof data === 'string' ? data : data?.url || data?.file?.url
+        if (url) {
+          // insert immediately
+          // @ts-ignore
+          const editor = (editorRef.current as any)?.editor
+          if (editor) editor.selection.insertHTML(`<img src="${url}" />`)
+        }
       }
       qc.invalidateQueries({ queryKey: ['uploads'] })
     } catch {}
