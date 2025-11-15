@@ -59,10 +59,30 @@ export default function Editor() {
       qc.invalidateQueries({ queryKey: ['uploads'] })
     } catch {}
   }
-  if (isLoading) return <div className="text-gray-600">Carregando editor...</div>
+  if (isLoading) return <div className="text-gray-600 p-4">Carregando editor...</div>
   return (
-    <div className="max-w-4xl">
-      <JoditEditor ref={editorRef} value={value} onChange={onChange} config={{ events: { paste: handlePaste } }} />
+    <div className="w-full max-w-4xl mx-auto p-2 md:p-4 lg:p-6">
+      <div className="border rounded-lg overflow-hidden shadow-sm">
+        <JoditEditor 
+          ref={editorRef} 
+          value={value} 
+          onChange={onChange} 
+          config={{ 
+            events: { paste: handlePaste },
+            style: {
+              fontSize: '16px', // Previne zoom no iOS
+            },
+            minHeight: 400,
+            maxHeight: '60vh',
+            placeholder: 'Digite seu resumo aqui...',
+            toolbarSticky: true,
+            toolbarAdaptive: true,
+            showCharsCounter: false,
+            showWordsCounter: false,
+            showXPathInStatusbar: false,
+          }} 
+        />
+      </div>
     </div>
   )
 }

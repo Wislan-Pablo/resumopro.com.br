@@ -29,9 +29,16 @@ export default function PdfViewer({ url }: { url?: string }) {
     }
   }, [url])
   return (
-    <div className="relative">
-      <div id="adobe-view" ref={ref} className="h-[80vh] border rounded" />
-      {loading && <div className="absolute inset-0 bg-white/60 flex items-center justify-center"><div className="px-3 py-2 border rounded bg-white">Carregando PDF...</div></div>}
+    <div className="relative w-full">
+      <div id="adobe-view" ref={ref} className="h-[60vh] md:h-[70vh] lg:h-[80vh] border rounded-lg shadow-sm bg-white" />
+      {loading && (
+        <div className="absolute inset-0 bg-white/80 flex items-center justify-center backdrop-blur-sm">
+          <div className="px-4 py-3 border rounded-lg bg-white shadow-lg flex items-center gap-3">
+            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-gray-900"></div>
+            <span className="text-sm font-medium">Carregando PDF...</span>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

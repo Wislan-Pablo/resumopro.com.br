@@ -14,15 +14,19 @@ export default function PdfPage() {
   return (
     <AppLayout>
       <ProtectedRoute>
-        <div className={`p-4 space-y-3 ${fullscreen ? 'fixed inset-0 bg-white z-40' : ''}`}>
-          <div className="flex items-center gap-2">
-            <select className="border rounded px-2 py-1" value={url || ''} onChange={(e) => setUrl(e.target.value)}>
+        <div className={`p-2 md:p-4 lg:p-6 space-y-3 md:space-y-4 ${fullscreen ? 'fixed inset-0 bg-white z-50' : ''}`}>
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 md:gap-3">
+            <select className="border rounded px-3 py-2 text-sm md:text-base w-full sm:w-auto" value={url || ''} onChange={(e) => setUrl(e.target.value)}>
               {data.map((p) => (
                 <option key={p.url} value={p.url}>{p.name}</option>
               ))}
             </select>
-            <button className="px-3 py-1 rounded bg-gray-800 text-white" disabled={isLoading || !url} onClick={() => setUrl(url)}>Recarregar</button>
-            <button className="px-3 py-1 rounded border" onClick={() => setFullscreen((f) => !f)}>{fullscreen ? 'Sair do fullscreen' : 'Fullscreen'}</button>
+            <div className="flex gap-2">
+              <button className="px-3 py-2 md:px-4 md:py-2 rounded bg-gray-800 text-white text-sm md:text-base hover:bg-gray-700 transition-colors flex-1 sm:flex-none" disabled={isLoading || !url} onClick={() => setUrl(url)}>Recarregar</button>
+              <button className="px-3 py-2 md:px-4 md:py-2 rounded border text-sm md:text-base hover:bg-gray-50 transition-colors flex-1 sm:flex-none" onClick={() => setFullscreen((f) => !f)}>
+                {fullscreen ? 'Sair do fullscreen' : 'Fullscreen'}
+              </button>
+            </div>
           </div>
           <PdfViewer url={url} />
         </div>

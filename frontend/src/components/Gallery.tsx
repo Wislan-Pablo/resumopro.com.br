@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react'
 import * as ReactWindow from 'react-window'
 import { useGallery } from '../state/gallery.store'
 import { useUploads, useDeleteUpload } from '../hooks/useUploads'
@@ -15,52 +16,73 @@ export default function Gallery() {
   const { data: pdfImages = [], isLoading: loadingPdf } = usePdfImages()
   const { data: captureImages = [], isLoading: loadingCaptures } = useCaptureImages()
   const del = useDeleteUpload()
-  const cols = 3
+  
+  // Responsividade: ajustar número de colunas baseado no tamanho da tela
+  const [cols, setCols] = useState(3)
+  const [listHeight, setListHeight] = useState(600)
+  useEffect(() => {
+    const updateLayout = () => {
+      const width = window.innerWidth
+      if (width < 640) setCols(2) // Mobile
+      else if (width < 1024) setCols(3) // Tablet
+      else setCols(4) // Desktop
+      
+      // Calculate appropriate list height based on viewport
+      setListHeight(Math.min(600, Math.max(400, window.innerHeight - 250)))
+    }
+    updateLayout()
+    window.addEventListener('resize', updateLayout)
+    return () => window.removeEventListener('resize', updateLayout)
+  }, [])
+  
   const activeItems = mode === 'uploads' ? uploads : mode === 'pdf' ? pdfImages : captureImages
-  const [visible, setVisible] = (window as any).React?.useState ? (window as any).React.useState(60) : [60, () => {}]
-  const visibleItems = activeItems.slice(0, visible as number)
+  const [visible, setVisible] = useState(60)
+  const visibleItems = activeItems.slice(0, visible)
   const rows = Math.ceil(activeItems.length / cols)
-  const List: any = (ReactWindow as any).FixedSizeList
+  const FixedSizeList: any = (ReactWindow as any).FixedSizeList
   const show = useToast((s) => s.show)
+  
   const Row = ({ index, style }: any) => {
     const start = index * cols
     const slice = visibleItems.slice(start, start + cols)
     return (
-      <div style={style} className="flex">
+      <div style={style} className="flex px-2">
         {slice.map((it) => (
-          <div key={it.id} className="p-2 w-[180px]">
-            <div className="border rounded overflow-hidden">
-              <img src={it.url} loading="lazy" className="w-full h-36 object-cover" />
+          <div key={it.id} className={`p-1 md:p-2 ${cols === 2 ? 'w-1/2' : cols === 3 ? 'w-1/3' : 'w-1/4'}`}>
+            <div className="border rounded overflow-hidden hover:shadow-md transition-shadow bg-white">
+              <img src={it.url} loading="lazy" className="w-full h-24 sm:h-28 md:h-32 lg:h-36 object-cover" />
             </div>
-            <div className="mt-2 flex items-center justify-between">
-              <span className="text-sm truncate max-w-[140px]">{(it as any).name || it.id}</span>
-              <div className="flex items-center gap-2">
-                <button className="text-xs px-2 py-1 border rounded" onClick={() => { insertImage?.(it.url); show({ type: 'success', message: 'Imagem copiada para o editor' }) }}>Copiar</button>
+            <div className="mt-1 md:mt-2 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-1">
+              <span className="text-xs md:text-sm truncate max-w-full">{(it as any).name || it.id}</span>
+              <div className="flex items-center gap-1 md:gap-2 flex-wrap">
+                <button className="text-xs px-2 py-1 border rounded hover:bg-gray-50 transition-colors" onClick={() => { insertImage?.(it.url); show({ type: 'success', message: 'Imagem copiada para o editor' }) }}>Copiar</button>
                 {mode === 'uploads' && (
-                  <button className="text-xs px-2 py-1 border rounded" onClick={() => del.mutate(it.id, { onSuccess: () => show({ type: 'success', message: 'Upload excluído' }) })}>Excluir</button>
+                  <button className="text-xs px-2 py-1 border rounded hover:bg-red-50 transition-colors text-red-600" onClick={() => del.mutate(it.id, { onSuccess: () => show({ type: 'success', message: 'Upload excluído' }) })}>Excluir</button>
                 )}
               </div>
             </div>
           </div>
         ))}
         {slice.length < cols && Array.from({ length: cols - slice.length }).map((_, i) => (
-          <div key={`empty-${i}`} className="p-2 w-[180px]" />
+          <div key={`empty-${i}`} className={`p-1 md:p-2 ${cols === 2 ? 'w-1/2' : cols === 3 ? 'w-1/3' : 'w-1/4'}`} />
         ))}
       </div>
     )
   }
   return (
-    <div className="p-2">
-      <div className="flex items-center gap-2 mb-2">
-        <button className={`px-2 py-1 rounded border ${mode === 'pdf' ? 'bg-gray-800 text-white' : ''}`} onClick={() => setMode('pdf')}>PDF</button>
-        <button className={`px-2 py-1 rounded border ${mode === 'captures' ? 'bg-gray-800 text-white' : ''}`} onClick={() => setMode('captures')}>Capturas</button>
-        <button className={`px-2 py-1 rounded border ${mode === 'uploads' ? 'bg-gray-800 text-white' : ''}`} onClick={() => setMode('uploads')}>Uploads</button>
-        <span className="ml-2 text-sm text-gray-600">
+    <div className="p-2 md:p-4">
+      <div className="flex flex-wrap items-center gap-2 mb-4">
+        <div className="flex gap-2">
+          <button className={`px-3 py-2 rounded border text-sm ${mode === 'pdf' ? 'bg-gray-800 text-white' : ''}`} onClick={() => setMode('pdf')}>PDF</button>
+          <button className={`px-3 py-2 rounded border text-sm ${mode === 'captures' ? 'bg-gray-800 text-white' : ''}`} onClick={() => setMode('captures')}>Capturas</button>
+          <button className={`px-3 py-2 rounded border text-sm ${mode === 'uploads' ? 'bg-gray-800 text-white' : ''}`} onClick={() => setMode('uploads')}>Uploads</button>
+        </div>
+        <span className="text-sm text-gray-600">
           {mode === 'uploads' ? `${uploads.length} itens` : mode === 'pdf' ? `${pdfImages.length} itens` : `${captureImages.length} itens`}
         </span>
         <div className="ml-auto">
           {mode === 'uploads' && (
-            <button className="px-2 py-1 rounded bg-gray-800 text-white" onClick={() => openUpload()}>Enviar</button>
+            <button className="px-3 py-2 rounded bg-gray-800 text-white text-sm" onClick={() => openUpload()}>Enviar</button>
           )}
         </div>
       </div>
@@ -69,13 +91,21 @@ export default function Gallery() {
       ) : (visibleItems.length === 0) ? (
         <div className="text-gray-500 p-3">Nenhum item encontrado.</div>
       ) : (
-        <List height={600} itemCount={Math.ceil(visibleItems.length / cols)} itemSize={200} width={540}>
-          {Row as any}
-        </List>
+        <div className="w-full">
+          <FixedSizeList
+            height={listHeight} 
+            itemCount={Math.ceil(visibleItems.length / cols)} 
+            itemSize={180} 
+            width="100%"
+            className="w-full"
+          >
+            {Row as any}
+          </FixedSizeList>
+        </div>
       )}
-      {activeItems.length > (visible as number) && (
-        <div className="p-2">
-          <button className="px-3 py-1 rounded border" onClick={() => setVisible((visible as number) + 60)}>Carregar mais</button>
+      {activeItems.length > visible && (
+        <div className="p-2 text-center">
+          <button className="px-4 py-2 rounded border hover:bg-gray-50 transition-colors" onClick={() => setVisible(visible + 60)}>Carregar mais</button>
         </div>
       )}
     </div>
