@@ -9,7 +9,8 @@ export function usePdfList() {
       const res = await fetch('/api/list-pdfs', { credentials: 'include' })
       if (!res.ok) return []
       const data = await res.json()
-      return (data as any) as PdfItem[]
+      const names: string[] = Array.isArray(data?.pdfs) ? data.pdfs : []
+      return names.map((name) => ({ name, url: `/temp_uploads/${name}` }))
     },
     initialData: []
   })

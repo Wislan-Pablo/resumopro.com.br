@@ -18,7 +18,7 @@ export async function getAdobeClientId(): Promise<string | undefined> {
     const res = await fetch('/api/config-viewer', { credentials: 'include' })
     if (!res.ok) return undefined
     const data = await res.json()
-    return data?.clientId as string | undefined
+    return (data as any)?.adobe_client_id as string | undefined
   } catch {
     return undefined
   }

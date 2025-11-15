@@ -9,7 +9,8 @@ export function useCaptureImages() {
       const res = await fetch('/api/captures/list', { credentials: 'include' })
       if (!res.ok) return []
       const data = await res.json()
-      return (data as any) as CaptureImage[]
+      const items = Array.isArray(data?.items) ? data.items : []
+      return items as CaptureImage[]
     },
     initialData: []
   })

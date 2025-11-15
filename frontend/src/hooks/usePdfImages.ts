@@ -9,7 +9,8 @@ export function usePdfImages() {
       const res = await fetch('/api/pdf-images/list', { credentials: 'include' })
       if (!res.ok) return []
       const data = await res.json()
-      return (data as any) as GalleryImage[]
+      const items = Array.isArray(data?.items) ? data.items : []
+      return items as GalleryImage[]
     },
     initialData: []
   })

@@ -16,7 +16,8 @@ describe('ApiClient errors', () => {
     global.fetch = async () => ({ ok: false, status: 404, headers: new Headers(), json: async () => ({}) })
     const before = useToast.getState().toasts.length
     await expect(api.get('/any')).rejects.toThrowError('HTTP_404')
-    const last = useToast.getState().toasts.at(-1)
+    const list = useToast.getState().toasts
+    const last = list[list.length - 1]
     expect(last?.message).toContain('não encontrado')
   })
 })

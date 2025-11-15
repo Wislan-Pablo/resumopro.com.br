@@ -15,7 +15,7 @@ export function useEditorData() {
 export function useSaveSummary() {
   return useMutation({
     mutationFn: async (html: string) => {
-      await api.post('/api/save-structured-summary', { html })
+      await api.post('/api/save-structured-summary', { markdown: html })
     }
   })
 }
