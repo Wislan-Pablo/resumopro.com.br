@@ -39,6 +39,7 @@ export default function Gallery() {
         <button className={`px-2 py-1 rounded border ${mode === 'pdf' ? 'bg-gray-800 text-white' : ''}`} onClick={() => setMode('pdf')}>PDF</button>
         <button className={`px-2 py-1 rounded border ${mode === 'captures' ? 'bg-gray-800 text-white' : ''}`} onClick={() => setMode('captures')}>Capturas</button>
         <button className={`px-2 py-1 rounded border ${mode === 'uploads' ? 'bg-gray-800 text-white' : ''}`} onClick={() => setMode('uploads')}>Uploads</button>
+        <span className="ml-2 text-sm text-gray-600">{mode === 'uploads' ? `${items.length} itens` : '—'}</span>
         <div className="ml-auto">
           <button className="px-2 py-1 rounded bg-gray-800 text-white" onClick={() => openUpload()}>Enviar</button>
         </div>
