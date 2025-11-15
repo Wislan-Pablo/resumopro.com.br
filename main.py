@@ -469,7 +469,9 @@ async def cleanup_temp_files(manifest_path: str):
 
 @app.get("/", response_class=HTMLResponse)
 async def serve_frontend():
-    # Servir diretamente o painel principal
+    index_spa = os.path.join("static", "index.html")
+    if os.path.isfile(index_spa):
+        return FileResponse(index_spa, media_type="text/html")
     return FileResponse("static/editor.html", media_type="text/html")
 
 @app.get("/editor", response_class=HTMLResponse)
@@ -1027,6 +1029,70 @@ async def get_editor_data(request: Request):
     except Exception as e:
         print(f"Erro ao carregar dados de edição: {e}")
         raise HTTPException(status_code=500, detail="Erro interno do servidor")
+
+# --- ROTAS: Listagem de imagens do PDF e capturas ---
+@app.get("/api/pdf-images/list")
+async def pdf_images_list(request: Request):
+    user = require_user(request)
+    try:
+        imagens_dir = os.path.join(UPLOAD_DIR, "imagens_extraidas")
+        items = []
+        if os.path.isdir(imagens_dir):
+            for fn in os.listdir(imagens_dir):
+                if fn.lower().endswith(".png"):
+                    items.append({"id": fn, "url": f"/temp_uploads/imagens_extraidas/{fn}"})
+        # Complementar com GCS quando disponível (por base de imagens do projeto)
+        try:
+            estrutura_path = os.path.join(UPLOAD_DIR, "estrutura_edicao.json")
+            base_url = None
+            base_prefix = None
+            if os.path.exists(estrutura_path):
+                with open(estrutura_path, 'r', encoding='utf-8') as f:
+                    estrutura = json.load(f)
+                base_url = estrutura.get("base_images_url")
+            if base_url and base_url.startswith("/gcs/"):
+                # /gcs/uploads/{user}/imagens_extraidas/{base}/
+                base_prefix = base_url[len("/gcs/"):].rstrip('/')
+                for name, _ in list_prefix(base_prefix):
+                    base = os.path.basename(name)
+                    if base.lower().endswith('.png'):
+                        if not any(x.get("id") == base for x in items):
+                            items.append({"id": base, "url": f"/gcs/{base_prefix}/{base}"})
+        except Exception:
+            pass
+        return {"items": items, "count": len(items)}
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Erro ao listar imagens do PDF: {e}")
+        raise HTTPException(status_code=500, detail="Falha ao listar imagens do PDF")
+
+@app.get("/api/captures/list")
+async def captures_list(request: Request):
+    user = require_user(request)
+    try:
+        cap_dir = os.path.join(UPLOAD_DIR, "capturas_de_tela")
+        items = []
+        if os.path.isdir(cap_dir):
+            for fn in os.listdir(cap_dir):
+                if fn.lower().endswith('.png'):
+                    items.append({"id": fn, "url": f"/temp_uploads/capturas_de_tela/{fn}"})
+        # Complementar com GCS
+        try:
+            base_prefix = f"uploads/{user['user_id']}/capturas_de_tela"
+            for name, _ in list_prefix(base_prefix):
+                base = os.path.basename(name)
+                if base.lower().endswith('.png'):
+                    if not any(x.get("id") == base for x in items):
+                        items.append({"id": base, "url": f"/gcs/{base_prefix}/{base}"})
+        except Exception:
+            pass
+        return {"items": items, "count": len(items)}
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Erro ao listar capturas: {e}")
+        raise HTTPException(status_code=500, detail="Falha ao listar capturas")
 
 # --- ROTAS: Exclusão de capturas ---
 @app.post("/api/captures/delete")
