@@ -1,69 +1,13 @@
-approval: {}
 steps:
-  # Passo 1: Build da imagem Docker
-  - name: 'gcr.io/cloud-builders/docker'
-    args:
-      - 'build'
-      - '-t'
-      - 'southamerica-east1-docker.pkg.dev/$PROJECT_ID/projetollm/app:$COMMIT_SHA'
-      - '-t'
-      - 'southamerica-east1-docker.pkg.dev/$PROJECT_ID/projetollm/app:latest'
-      - '-f'
-      - 'Dockerfile'
-      - '.'
-
-  # Passo 2: Push da imagem com a tag do commit
-  - name: 'gcr.io/cloud-builders/docker'
-    args: ['push', 'southamerica-east1-docker.pkg.dev/$PROJECT_ID/projetollm/app:$COMMIT_SHA']
-
-  # Passo 3: Push da imagem com a tag "latest"
-  - name: 'gcr.io/cloud-builders/docker'
-    args: ['push', 'southamerica-east1-docker.pkg.dev/$PROJECT_ID/projetollm/app:latest']
-
-  # Passo 4: Deploy no Cloud Run
-  - name: 'gcr.io/cloud-builders/gcloud'
-    args:
-      - 'run'
-      - 'deploy'
-      - '${_SERVICE_NAME}'
-      - '--image'
-      - 'southamerica-east1-docker.pkg.dev/$PROJECT_ID/projetollm/app:$COMMIT_SHA'
-      - '--region'
-      - '${_REGION}'
-      - '--allow-unauthenticated'
-      - '--service-account'
-      - '${_SERVICE_ACCOUNT}'
-      - '--set-env-vars'
-      - 'GCS_BUCKET=${_BUCKET},UPLOADS_BUCKET=${_BUCKET},DB_USER=${_DB_USER},DB_NAME=${_DB_NAME},DB_HOST=${_DB_HOST},INSTANCE_CONNECTION_NAME=${_INSTANCE_CONN},ADOBE_CLIENT_ID=${_ADOBE_CLIENT_ID}'
-      - '--update-secrets'
-      - 'DB_PASSWORD=${_DB_SECRET}:latest,GOOGLE_CLIENT_ID=${_GOOGLE_CLIENT_ID_SECRET}:latest,GOOGLE_CLIENT_SECRET=${_GOOGLE_CLIENT_SECRET_SECRET}:latest'
-      - '--vpc-connector'
-      - '${_VPC_CONNECTOR}'
-      - '--vpc-egress'
-      - 'private-ranges-only'
-
-# Imagens a serem enviadas para o Artifact Registry
+- name: gcr.io/cloud-builders/npm
+  dir: frontend
+  args: ['ci']
+- name: gcr.io/cloud-builders/npm
+  dir: frontend
+  args: ['run','build']
+- name: gcr.io/cloud-builders/gcloud
+  args: ['bash','-c','mkdir -p static && cp -r frontend/dist/* static/']
+- name: gcr.io/cloud-builders/docker
+  args: ['build','-t','$_IMAGE','.']
 images:
-  - 'southamerica-east1-docker.pkg.dev/$PROJECT_ID/projetollm/app:$COMMIT_SHA'
-  - 'southamerica-east1-docker.pkg.dev/$PROJECT_ID/projetollm/app:latest'
-
-# Opções de build
-options:
-  logging: CLOUD_LOGGING_ONLY
-
-# Variáveis de substituição
-substitutions:
-  _SERVICE_NAME: 'resumopro-service'
-  _REGION: 'southamerica-east1'
-  _SERVICE_ACCOUNT: 'resumopro-run-sa'
-  _BUCKET: 'resumopro-storage-bucket'
-  _DB_USER: 'postgres'
-  _DB_NAME: 'resumopro-db'
-  _DB_HOST: '10.54.192.3'
-  _DB_SECRET: 'resumopro-db-secret'
-  _VPC_CONNECTOR: 'serverless-conn'
-  _GOOGLE_CLIENT_ID_SECRET: 'google-oauth-client-id'
-  _GOOGLE_CLIENT_SECRET_SECRET: 'google-oauth-client-secret'
-  _INSTANCE_CONN: 'affable-grin-477621-f0:southamerica-east1:wislanpablo'
-  _ADOBE_CLIENT_ID: '94eb2d4faf7b436797f27e7e20b5e2dd'
-  # Google OAuth secrets will be added later via Secret Manager and deploy flags
+- '$_IMAGE'
