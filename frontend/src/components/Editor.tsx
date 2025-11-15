@@ -1,6 +1,7 @@
 import JoditEditor from 'jodit-react'
 import { useEffect, useRef, useState } from 'react'
 import { useEditorData, useSaveSummary } from '../hooks/useEditorData'
+import { api } from '../services/api-client'
 import { sanitizeHtml } from '../utils/html'
 import { useQueryClient } from '@tanstack/react-query'
 import { useEditorStore } from '../state/editor.store'
@@ -43,8 +44,6 @@ export default function Editor() {
       for (const image of images) {
         const form = new FormData()
         form.append('file', image)
-        // @ts-ignore dynamic import to avoid circular
-        const { api } = await import('../services/api-client')
         const data: any = await api.upload('/api/upload-captured-image', form)
         const url = typeof data === 'string' ? data : data?.url || data?.file?.url
         if (url) {
