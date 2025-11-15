@@ -1,13 +1,14 @@
 steps:
-- name: gcr.io/cloud-builders/npm
-  dir: frontend
-  args: ['ci']
-- name: gcr.io/cloud-builders/npm
-  dir: frontend
-  args: ['run','build']
-- name: gcr.io/cloud-builders/gcloud
-  args: ['bash','-c','mkdir -p static && cp -r frontend/dist/* static/']
-- name: gcr.io/cloud-builders/docker
-  args: ['build','-t','$_IMAGE','.']
+  - name: gcr.io/cloud-builders/npm
+    dir: frontend
+    args: ['ci']
+  - name: gcr.io/cloud-builders/npm
+    dir: frontend
+    args: ['run','build']
+  - name: gcr.io/cloud-builders/docker
+    entrypoint: bash
+    args: ['-c','mkdir -p static && rm -rf static/* && cp -r frontend/dist/* static/']
+  - name: gcr.io/cloud-builders/docker
+    args: ['build','-t','$_IMAGE','.']
 images:
-- '$_IMAGE'
+  - '$_IMAGE'
