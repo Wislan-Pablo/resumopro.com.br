@@ -1,11 +1,13 @@
 import * as ReactWindow from 'react-window'
 import { useGallery } from '../state/gallery.store'
 import { useUploads, useDeleteUpload } from '../hooks/useUploads'
+import { useEditorStore } from '../state/editor.store'
 
 export default function Gallery() {
   const mode = useGallery((s) => s.mode)
   const setMode = useGallery((s) => s.setMode)
   const openUpload = useGallery((s) => s.openUpload)
+  const insertImage = useEditorStore((s) => s.insertImage)
   const { data: items = [], isLoading } = useUploads()
   const del = useDeleteUpload()
   const cols = 3
@@ -23,7 +25,10 @@ export default function Gallery() {
             </div>
             <div className="mt-2 flex items-center justify-between">
               <span className="text-sm truncate max-w-[140px]">{it.name || it.id}</span>
-              <button className="text-xs px-2 py-1 border rounded" onClick={() => del.mutate(it.id)}>Excluir</button>
+              <div className="flex items-center gap-2">
+                <button className="text-xs px-2 py-1 border rounded" onClick={() => insertImage?.(it.url)}>Copiar</button>
+                <button className="text-xs px-2 py-1 border rounded" onClick={() => del.mutate(it.id)}>Excluir</button>
+              </div>
             </div>
           </div>
         ))}
