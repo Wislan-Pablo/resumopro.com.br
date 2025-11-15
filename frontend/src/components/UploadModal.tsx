@@ -2,6 +2,7 @@ import { useGallery } from '../state/gallery.store'
 import { useState } from 'react'
 import { api } from '../services/api-client'
 import { useQueryClient } from '@tanstack/react-query'
+import { useToast } from '../state/toast.store'
 
 export default function UploadModal() {
   const isOpen = useGallery((s) => s.isUploadOpen)
@@ -9,6 +10,7 @@ export default function UploadModal() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const qc = useQueryClient()
+  const show = useToast((s) => s.show)
   if (!isOpen) return null
   async function onFilesChange(e: any) {
     setError('')
@@ -22,9 +24,11 @@ export default function UploadModal() {
       })
       await Promise.all(uploads)
       qc.invalidateQueries({ queryKey: ['uploads'] })
+      show({ type: 'success', message: 'Uploads concluídos' })
       close()
     } catch (err: any) {
       setError(err?.message || 'Erro ao enviar')
+      show({ type: 'error', message: 'Falha no envio' })
     } finally {
       setLoading(false)
     }

@@ -17,12 +17,14 @@ export default function Gallery() {
   const del = useDeleteUpload()
   const cols = 3
   const activeItems = mode === 'uploads' ? uploads : mode === 'pdf' ? pdfImages : captureImages
+  const [visible, setVisible] = (window as any).React?.useState ? (window as any).React.useState(60) : [60, () => {}]
+  const visibleItems = activeItems.slice(0, visible as number)
   const rows = Math.ceil(activeItems.length / cols)
   const List: any = (ReactWindow as any).FixedSizeList
   const show = useToast((s) => s.show)
   const Row = ({ index, style }: any) => {
     const start = index * cols
-    const slice = activeItems.slice(start, start + cols)
+    const slice = visibleItems.slice(start, start + cols)
     return (
       <div style={style} className="flex">
         {slice.map((it) => (
@@ -35,7 +37,7 @@ export default function Gallery() {
               <div className="flex items-center gap-2">
                 <button className="text-xs px-2 py-1 border rounded" onClick={() => { insertImage?.(it.url); show({ type: 'success', message: 'Imagem copiada para o editor' }) }}>Copiar</button>
                 {mode === 'uploads' && (
-                  <button className="text-xs px-2 py-1 border rounded" onClick={() => del.mutate(it.id)}>Excluir</button>
+                  <button className="text-xs px-2 py-1 border rounded" onClick={() => del.mutate(it.id, { onSuccess: () => show({ type: 'success', message: 'Upload excluído' }) })}>Excluir</button>
                 )}
               </div>
             </div>
@@ -64,12 +66,17 @@ export default function Gallery() {
       </div>
       {loadingUploads || loadingPdf || loadingCaptures ? (
         <div className="text-gray-600 p-3">Carregando...</div>
-      ) : rows === 0 ? (
+      ) : (visibleItems.length === 0) ? (
         <div className="text-gray-500 p-3">Nenhum item encontrado.</div>
       ) : (
-        <List height={600} itemCount={rows} itemSize={200} width={540}>
+        <List height={600} itemCount={Math.ceil(visibleItems.length / cols)} itemSize={200} width={540}>
           {Row as any}
         </List>
+      )}
+      {activeItems.length > (visible as number) && (
+        <div className="p-2">
+          <button className="px-3 py-1 rounded border" onClick={() => setVisible((visible as number) + 60)}>Carregar mais</button>
+        </div>
       )}
     </div>
   )
