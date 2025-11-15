@@ -9,8 +9,8 @@ steps:
     entrypoint: bash
     args: ['-c','mkdir -p static && rm -rf static/* && cp -r frontend/dist/* static/']
   - name: gcr.io/cloud-builders/docker
-    args: ['build','-t','$_IMAGE','.']
+    args: ['build','-t','southamerica-east1-docker.pkg.dev/affable-grin-477621-f0/projetollm/app:latest','.']
 images:
-  - '$_IMAGE'
+  - 'southamerica-east1-docker.pkg.dev/affable-grin-477621-f0/projetollm/app:latest'
 options:
   logging: CLOUD_LOGGING_ONLY
